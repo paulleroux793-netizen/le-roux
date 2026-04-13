@@ -1,38 +1,73 @@
-# Dr Le Roux AI Receptionist
+# Dr Chalita le Roux AI Receptionist
 
-An AI-powered phone receptionist for Dr Le Roux's medical practice. Built with Rails 8 (API-only), Twilio, Google Calendar, and Claude AI.
+A premium AI receptionist system for **Dr Chalita le Roux Inc** (dental practice). Handles WhatsApp conversations, inbound/outbound voice calls, appointment booking, morning confirmations, and cancellation recovery — all focused on maximizing patient bookings.
 
 ## What It Does
 
-Patients call the practice phone number. The AI receptionist answers, understands their request using natural language processing, and handles:
+### For Patients
+- **WhatsApp chat** — instant, natural conversation to book, reschedule, or ask questions
+- **Phone calls** — AI answers after hours and during overflow, guides toward booking
+- **Appointment confirmations** — morning calls to confirm same-day appointments
+- **Reminders** — automated WhatsApp reminders before appointments
 
-- **Book appointments** — checks doctor availability on Google Calendar and books a slot
-- **Reschedule appointments** — finds existing booking and moves it to a new time
-- **Cancel appointments** — locates and removes the appointment
-- **Answer FAQs** — office hours, location, services offered
-- **Route urgent calls** — transfers to the doctor or on-call staff when needed
+### For the Practice
+- **Reception dashboard** — view conversations, flagged patients, appointment stats
+- **Cancellation tracking** — captures reasons (price, fear, timing, etc.) for analysis
+- **Manual follow-up lists** — flagged patients sent to reception when AI can't reach them
+- **Conversion analytics** — track booking rates, common objections, channel performance
+
+## Architecture
+
+```
+                    ┌─────────────────────────────┐
+                    │     Reception Dashboard      │
+                    │    (Inertia.js + React)       │
+                    └──────────┬──────────────────┘
+                               │
+┌──────────┐    ┌──────────────┴──────────────┐    ┌────────────────┐
+│  Twilio   │───▶│        Rails 8 API          │───▶│ Google Calendar│
+│ WhatsApp  │◀──│                              │◀──│    (Booking)   │
+│  Voice    │    │  ┌────────────────────────┐  │    └────────────────┘
+└──────────┘    │  │   Claude AI (Brain)     │  │
+                │  │   - Intent recognition  │  │
+                │  │   - Conversation mgmt   │  │
+                │  │   - Tone & personality  │  │
+                │  └────────────────────────┘  │
+                │                              │
+                │  ┌────────────────────────┐  │
+                │  │   Solid Queue (Jobs)    │  │
+                │  │   - Morning confirms    │  │
+                │  │   - Reminders           │  │
+                │  │   - WhatsApp fallbacks  │  │
+                │  └────────────────────────┘  │
+                └──────────────────────────────┘
+```
 
 ## Tech Stack
 
 | Component | Technology |
 |---|---|
-| Framework | Rails 8.1.3 (API-only) |
+| Framework | Rails 8.1.3 |
 | Ruby | 3.3.2 |
-| Database | PostgreSQL |
-| Voice/SMS | Twilio (`twilio-ruby`) |
-| Calendar | Google Calendar API (`google-apis-calendar_v3`) |
-| AI/NLU | Claude API (`anthropic` gem) |
-| Background Jobs | Solid Queue (Rails 8 default) |
+| Database | PostgreSQL (Supabase) |
+| Frontend | Inertia.js + React + Vite |
+| WhatsApp | Twilio WhatsApp Business API |
+| Voice | Twilio Programmable Voice |
+| AI Brain | Claude API (Anthropic) |
+| Calendar | Google Calendar API |
+| Background Jobs | Solid Queue |
 | Deployment | Kamal (Docker) |
 
 ## Prerequisites
 
 - Ruby 3.3.2
+- Node.js 20+ and npm
 - PostgreSQL
-- Twilio account (with a phone number)
+- Twilio account (phone number + WhatsApp Business)
 - Google Cloud project with Calendar API enabled
-- Google service account JSON key file
+- Google service account JSON key
 - Anthropic API key (Claude)
+- ngrok (for local Twilio webhook development)
 
 ## Setup
 
@@ -41,11 +76,14 @@ Patients call the practice phone number. The AI receptionist answers, understand
 git clone https://github.com/your-username/dr-leroux-receptionist.git
 cd dr-leroux-receptionist
 
-# Install dependencies
+# Install Ruby dependencies
 bundle install
 
+# Install JavaScript dependencies
+npm install
+
 # Setup database
-rails db:create db:migrate
+bin/rails db:create db:migrate db:seed
 
 # Copy environment variables
 cp .env.example .env
@@ -54,35 +92,35 @@ cp .env.example .env
 
 ## Environment Variables
 
-Create a `.env` file in the project root with:
-
 ```env
 # Twilio
 TWILIO_ACCOUNT_SID=your_account_sid
 TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_PHONE_NUMBER=+1234567890
+TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
 
 # Google Calendar
 GOOGLE_CALENDAR_ID=your_calendar_id
-GOOGLE_SERVICE_ACCOUNT_FILE=path/to/service-account.json
+GOOGLE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 
 # Anthropic (Claude AI)
 ANTHROPIC_API_KEY=your_api_key
 
-# Rails
-RAILS_ENV=development
-DATABASE_URL=postgres://localhost/dr_leroux_receptionist_development
+# Database
+DATABASE_URL=postgresql://localhost/dr_leroux_receptionist_development
+
+# App
+BASE_URL=https://your-ngrok-url.ngrok.io
 ```
 
 ## Running the App
 
 ```bash
-# Start the server
-bin/rails server
+# Start Rails + Vite dev servers
+bin/dev
 
-# For Twilio webhooks in development, use ngrok:
+# For Twilio webhooks in development:
 ngrok http 3000
-# Then configure your Twilio phone number webhook to: https://your-ngrok-url.ngrok.io/twilio/voice
+# Configure Twilio webhook URLs to your ngrok URL
 ```
 
 ## Testing
@@ -91,16 +129,13 @@ ngrok http 3000
 bundle exec rspec
 ```
 
-## Architecture
+## Key Business Rules
 
-```
-Incoming Call (Twilio)
-  → POST /twilio/voice (webhook)
-    → TwilioController gathers speech input
-      → AI Service (Claude) interprets intent
-        → Calendar Service checks/books/cancels on Google Calendar
-          → TwiML response speaks result back to caller
-```
+- **Pricing**: Only quote consultation (~R850 incl x-rays) and cleaning (~R1,300). All other treatments require a consultation.
+- **Availability**: Never expose full calendar or number of open slots. Ask patient preference first, then match.
+- **Tone**: Human, warm, friendly, slightly energetic. Education-based approach: educate, reassure, book.
+- **Cancellations**: Always try to reschedule first. If declined, capture the reason.
+- **Conversion focus**: Every interaction should guide toward booking a consultation.
 
 ## Project Roadmap
 
@@ -108,4 +143,4 @@ See [ROADMAP.md](ROADMAP.md) for the full development plan with phases and check
 
 ## License
 
-Private — All rights reserved.
+Private — All rights reserved. Dr Chalita le Roux Inc.
