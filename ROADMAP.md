@@ -7,19 +7,19 @@
 - [x] Add environment variables (.env)
 - [x] Add all required gems to Gemfile
 - [x] Create README.md and ROADMAP.md
-- [ ] Run `bundle install` and lock dependencies
-- [ ] Set up RSpec testing framework (`rails generate rspec:install`)
-- [ ] Create `.env.example` template
-- [ ] Initial Git commit with conventional commits
+- [x] Run `bundle install` and lock dependencies
+- [x] Set up RSpec testing framework (`rails generate rspec:install`)
+- [x] Create `.env.example` template
+- [x] Initial Git commit with conventional commits
 
 ## Phase 2: Database Models & Migrations
-- [ ] Create `Appointment` model (patient_name, phone, start_time, end_time, status, google_event_id, notes)
-- [ ] Create `Patient` model (name, phone, email, date_of_birth)
-- [ ] Create `CallLog` model (twilio_sid, caller_number, intent, duration, status, transcript)
-- [ ] Create `DoctorSchedule` model (day_of_week, start_time, end_time, break_start, break_end)
-- [ ] Add indexes and validations
-- [ ] Seed doctor schedule with working hours
-- [ ] Run migrations and verify schema
+- [x] Create `Patient` model (first_name, last_name, phone, email, date_of_birth, notes)
+- [x] Create `Appointment` model (patient_id, start_time, end_time, status enum, google_event_id, reason, notes)
+- [x] Create `CallLog` model (twilio_call_sid, caller_number, intent, duration, status, transcript, ai_response)
+- [x] Create `DoctorSchedule` model (day_of_week, start_time, end_time, break_start, break_end, active)
+- [x] Add indexes and validations
+- [x] Seed doctor schedule with working hours (Mon-Fri 8-5, Sat 8-12, Sun closed)
+- [x] Run migrations and verify schema
 
 ## Phase 3: Google Calendar Integration
 - [ ] Create `GoogleCalendarService` (lib/services or app/services)
