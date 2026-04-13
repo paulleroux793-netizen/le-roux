@@ -137,9 +137,38 @@ bundle exec rspec
 - **Cancellations**: Always try to reschedule first. If declined, capture the reason.
 - **Conversion focus**: Every interaction should guide toward booking a consultation.
 
+## Project Status
+
+### ✅ Completed Phases
+- **Phase 1**: Project setup & infrastructure (Rails 8, PostgreSQL/Supabase, Twilio, environment variables, gems, RSpec)
+- **Phase 2**: Database models & migrations
+  - Patient model with phone validation
+  - Appointment model with status enum and Google Calendar integration
+  - CallLog model for tracking Twilio interactions
+  - DoctorSchedule model with working hours (Mon-Fri 8-5, Sat 8-12, Sun closed)
+  - All models have indexes, validations, and factory fixtures
+  - Database uses Supabase with PgBouncer (prepared_statements: false)
+
+### 🔄 In Progress
+- **Phase 8**: Inertia.js + React + Vite + Tailwind CSS setup (frontend infrastructure)
+
+### 📋 Pending
+- **Phase 3**: Google Calendar Integration (available_slots, book_appointment, reschedule, cancel)
+- **Phase 4**: AI Brain — Claude Integration (intent classification, entity extraction, conversation memory)
+- **Phase 4.5**: WhatsApp Message Templates (6 pre-approved templates for compliance)
+- **Phase 5**: WhatsApp Integration (webhook, booking flow, conversation management)
+- **Phase 6**: Voice Call Integration (inbound/outbound, after-hours, overflow)
+- **Phase 7**: Morning Confirmation System (daily 8-9am confirmation calls)
+- **Phase 9**: Dashboard Pages & Features (appointments, conversations, flagged patients, analytics)
+- **Phase 10**: Notifications & Reminders (templated WhatsApp messages)
+- **Phase 11**: Security & Hardening (POPIA compliance, audit logging)
+- **Phase 12**: Training Data & Continuous Improvement
+- **Phase 13**: Deployment & Production (Kamal, production database, SSL)
+- **Phase 14**: Enhancements (multi-language, website integration, wait-list management)
+
 ## Project Roadmap
 
-See [ROADMAP.md](ROADMAP.md) for the full development plan with phases and checklist.
+See [ROADMAP.md](ROADMAP.md) for the full development plan with phases and detailed checklist.
 
 ## License
 

@@ -50,6 +50,19 @@
 - [ ] Objection handling (price concerns, dental fear, timing issues)
 - [ ] Write tests with mocked AI responses
 
+## Phase 4.5: WhatsApp Message Templates (Critical)
+- [ ] **Create templates in Twilio Console:**
+  - `appointment_confirmation` — "Hi {{patient_name}}, your appointment with Dr Chalita le Roux is confirmed for {{date}} at {{time}}. Reply CONFIRM or RESCHEDULE."
+  - `appointment_reminder_24h` — "Hi {{patient_name}}, reminder: you have an appointment tomorrow at {{time}} with Dr Chalita le Roux. Reply to reschedule."
+  - `appointment_reminder_1h` — "Hi {{patient_name}}, reminder: your appointment with Dr Chalita le Roux is in 1 hour at {{time}}."
+  - `cancellation_confirmation` — "Hi {{patient_name}}, your appointment on {{date}} has been cancelled. Reply to reschedule or call us."
+  - `reschedule_confirmation` — "Hi {{patient_name}}, your appointment has been rescheduled to {{new_date}} at {{new_time}}. Reply CONFIRM or call us."
+  - `flagged_patient_alert` — "New flagged patient: {{patient_name}} ({{phone}}) - {{reason}}. Follow-up needed."
+- [ ] Approve all templates with Twilio (they go through review)
+- [ ] Store template names + variables mapping in Rails constants/env
+- [ ] Create helper methods to inject variables into templates
+- [ ] Test template delivery via Twilio API
+
 ## Phase 5: WhatsApp Integration (Primary Channel)
 - [ ] Create `WhatsappController` with `incoming` webhook (POST /webhooks/whatsapp)
 - [ ] Configure Twilio WhatsApp webhook URL
@@ -112,11 +125,14 @@
 - [ ] **Conversion stats**: booking rate by channel, peak times, common objections
 - [ ] **Settings page**: office hours, pricing config, AI prompt tuning
 
-## Phase 10: Notifications & Reminders
-- [ ] WhatsApp appointment confirmation after booking
-- [ ] WhatsApp reminder 24 hours before appointment
-- [ ] WhatsApp reminder 1 hour before appointment
-- [ ] Create recurring Solid Queue jobs for reminders
+## Phase 10: Notifications & Reminders (Using Templates from Phase 4.5)
+- [ ] WhatsApp appointment confirmation after booking (using `appointment_confirmation` template)
+- [ ] WhatsApp reminder 24 hours before appointment (using `appointment_reminder_24h` template)
+- [ ] WhatsApp reminder 1 hour before appointment (using `appointment_reminder_1h` template)
+- [ ] WhatsApp cancellation confirmation (using `cancellation_confirmation` template)
+- [ ] WhatsApp reschedule confirmation (using `reschedule_confirmation` template)
+- [ ] Create recurring Solid Queue jobs for reminders (24h + 1h daily jobs)
+- [ ] Create method to send flagged patient alerts via WhatsApp (using `flagged_patient_alert` template)
 - [ ] Cancellation/reschedule confirmation messages
 - [ ] Reception alerts: new bookings, cancellations, flagged patients
 

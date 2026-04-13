@@ -1,2 +1,9 @@
-#!/usr/bin/env ruby
-exec "./bin/rails", "server", *ARGV
+#!/usr/bin/env bash
+
+if ! gem list foreman -i --quiet; then
+  echo "Installing foreman..."
+  gem install foreman
+fi
+
+# Using Procfile to run both Rails and Vite
+exec foreman start -f Procfile.dev
