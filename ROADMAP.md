@@ -1,10 +1,11 @@
 # Dr Chalita le Roux AI Receptionist — Development Roadmap
 
-## Current Status: 🚀 9 of 14 Phases Complete
+## Current Status: 🚀 9 of 16 Phases Complete
 
 **Completed**: Phases 1-5, 8-9 (Core WhatsApp integration + Dashboard)  
-**In Progress**: Phase 6 (Voice), Phase 7 (Morning Confirmations)  
-**Upcoming**: Phases 10-14 (Notifications, Security, Deployment)
+**Next Priority**: Phase 6 (Voice), Phase 7 (Morning Confirmations)  
+**Recommended**: Phase 10 (Data Capture & Analytics) — *capture real data before building notifications*  
+**Future**: Phase 11 (Billing), Phase 12 (Notifications), Phases 13-16 (Security, Training, Deployment, Enhancements)
 
 ## Phase 1: Project Setup & Infrastructure
 - [x] Create Rails 8 API-only application
@@ -134,7 +135,52 @@
 - [x] **Booking stats**: booking rate by channel (WhatsApp vs Voice), conversion tracking
 - [x] **Settings page**: office hours table, pricing reference, FAQ knowledge base
 
-## Phase 10: Notifications & Reminders (Using Templates from Phase 4.5)
+## Phase 10: Data Capture & Real Analytics Dashboard
+- [ ] **Enhance Conversation Model**: add `outcome` field (booked, lost, rescheduled, pending), `message_count`, `first_response_time`
+- [ ] **Enhance Appointment Model**: add `attended` boolean (for no-shows), `time_to_cancel` (days between booking and cancellation)
+- [ ] **Real Data Queries** (replace dashboard hardcoded stats):
+  - Bookings today by channel (WhatsApp vs Voice count)
+  - Conversion rate: (confirmed appointments this week / total conversations) × 100%
+  - Average messages per booking
+  - Cancellation breakdown by reason (cost, fear, timing, transport, other)
+  - Cancellation rate by day of week
+- [ ] **Channel Performance Analytics**:
+  - WhatsApp: # conversations, # bookings, booking rate, avg messages per booking
+  - Voice: # calls, # bookings, booking rate, avg call duration
+  - Channel comparison: which converts better?
+- [ ] **Patient Behavior Tracking**:
+  - Repeat patients vs new patient ratio
+  - Average appointments per patient
+  - Flag patients with 3+ cancellations (high-churn list)
+  - Time to first appointment (from first message to booking)
+- [ ] **Revenue Analytics**:
+  - Total revenue from confirmed appointments
+  - Revenue impact of cancellations (lost revenue)
+  - Treatment type breakdown (which procedures generate most revenue)
+- [ ] **Real-Time Dashboard Updates**:
+  - Replace placeholder stats with live SQL queries
+  - Show trends: "Bookings up 20% vs last week"
+  - Alert system: "High cancellation rate this week"
+- [ ] **Export & Reporting**:
+  - CSV export: all conversations + outcomes for AI training data
+  - PDF weekly summary for reception
+  - Monthly report: email to doctor with key KPIs
+- [ ] **Testing**: seed conversation and appointment outcomes to verify analytics queries work
+
+## Phase 11: Billing & Invoicing System
+- [ ] Create `Invoice` model (appointment_id, patient_id, amount, due_date, invoice_number, status enum)
+- [ ] Create `Payment` model (invoice_id, amount, payment_date, payment_method, transaction_id, status)
+- [ ] Invoice PDF generation using `wicked_pdf` or `prawn` gem
+- [ ] Integrate **PayFast** (or **Stripe**) webhook for payment confirmation
+- [ ] Auto-send invoice via WhatsApp/email after appointment confirmation
+- [ ] Payment webhook endpoint: receive payment confirmation → update invoice status to "paid"
+- [ ] Send WhatsApp notification to patient: "Payment received! Thank you"
+- [ ] Send WhatsApp notification to reception: "Payment received from [patient] for appointment [date]"
+- [ ] Dashboard widget: revenue this month, pending payments, overdue, payment success rate
+- [ ] Solid Queue job for payment reminders: 1 day before due, 7 days after overdue
+- [ ] Payment receipt generation and delivery
+
+## Phase 12: Notifications & Reminders (Using Templates from Phase 4.5)
 - [ ] WhatsApp appointment confirmation after booking (using `appointment_confirmation` template)
 - [ ] WhatsApp reminder 24 hours before appointment (using `appointment_reminder_24h` template)
 - [ ] WhatsApp reminder 1 hour before appointment (using `appointment_reminder_1h` template)
@@ -145,7 +191,7 @@
 - [ ] Cancellation/reschedule confirmation messages
 - [ ] Reception alerts: new bookings, cancellations, flagged patients
 
-## Phase 11: Security & Hardening
+## Phase 13: Security & Hardening
 - [ ] Validate Twilio webhook signatures on all endpoints
 - [ ] Rate limiting on webhook endpoints
 - [ ] Input sanitization for all patient-provided data
@@ -154,7 +200,7 @@
 - [ ] Audit logging for all appointment changes
 - [ ] Health check endpoint monitoring
 
-## Phase 12: Training Data & Continuous Improvement
+## Phase 14: Training Data & Continuous Improvement
 - [ ] Build interface to upload and transcribe call recordings (Cube ACR)
 - [ ] Import historical WhatsApp chat logs
 - [ ] Store all conversations and transcripts for future training
@@ -162,7 +208,7 @@
 - [ ] Identify high-converting conversation patterns
 - [ ] Feedback loop: refine AI prompts based on real conversation data
 
-## Phase 13: Deployment & Production
+## Phase 15: Deployment & Production
 - [ ] Configure Kamal deployment (`config/deploy.yml`)
 - [ ] Set up production PostgreSQL database
 - [ ] Configure production environment variables
@@ -172,7 +218,7 @@
 - [ ] Deploy and smoke test all channels
 - [ ] Monitor logs, error tracking, and uptime
 
-## Phase 14: Enhancements (Future)
+## Phase 16: Enhancements (Future)
 - [ ] Multi-language support (English + Afrikaans)
 - [ ] Website "Book Appointment" button → WhatsApp flow
 - [ ] Google Business Profile booking integration
