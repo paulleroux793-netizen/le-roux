@@ -18,3 +18,13 @@ production:
     class: MorningConfirmationJob
     queue: default
     schedule: every day at 8am
+
+  appointment_reminder_24h:
+    class: AppointmentReminder24hJob
+    queue: default
+    schedule: every day at 8am
+
+  appointment_reminder_1h:
+    class: AppointmentReminder1hJob
+    queue: default
+    schedule: every hour
