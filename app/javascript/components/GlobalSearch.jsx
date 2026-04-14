@@ -147,7 +147,7 @@ export default function GlobalSearch() {
         <div
           id="global-search-listbox"
           role="listbox"
-          className="absolute left-0 right-0 z-50 mt-2 max-h-[28rem] overflow-y-auto rounded-3xl border border-brand-accent/80 bg-white shadow-[0_30px_70px_-42px_rgba(57,60,77,0.45)]"
+          className="absolute left-0 right-0 z-50 mt-2 max-h-[28rem] overflow-y-auto rounded-xl border border-brand-accent/80 bg-white shadow-[0_30px_70px_-42px_rgba(57,60,77,0.45)]"
         >
           {!results ? (
             <EmptyState message="Type at least 2 characters to search…" />

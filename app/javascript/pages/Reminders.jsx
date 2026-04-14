@@ -119,7 +119,7 @@ export default function Reminders({ reminders = [], stats }) {
       </div>
 
       {/* List */}
-      <div className="overflow-hidden rounded-[28px] border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+      <div className="overflow-hidden rounded-xl border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         {filtered.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success/10">
@@ -267,7 +267,7 @@ function ActionBtn({ title, icon: Icon, onClick, colorClass }) {
 
 function StatCard({ label, value, color }) {
   return (
-    <div className="rounded-[28px] border border-brand-accent/75 bg-white p-4 text-center shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+    <div className="rounded-xl border border-brand-accent/75 bg-white p-4 text-center shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       <p className="mt-1 text-xs uppercase tracking-wide text-brand-muted">{label}</p>
     </div>

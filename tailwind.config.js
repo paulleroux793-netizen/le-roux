@@ -35,7 +35,7 @@ const tokens = {
   primary:          '#0E9F9F', // teal
   'primary-dark':   '#0B8080',
   accent:           '#E6F7F7', // primary-light tint
-  surface:          '#F7F9FB', // app background
+  surface:          '#EEF0F3', // app background (visibly grey vs white cards/navbar)
   white:            '#FFFFFF',
   ink:              '#0F172A',
   'ink-soft':       '#334155',

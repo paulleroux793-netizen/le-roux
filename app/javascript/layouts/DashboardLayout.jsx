@@ -26,15 +26,15 @@ export default function DashboardLayout({ children }) {
       : url.startsWith(href)
 
   return (
-    <div className="min-h-screen bg-transparent text-brand-ink">
+    <div className="min-h-screen bg-brand-surface text-brand-ink">
 
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-brand-accent/70 bg-white/95 shadow-[0_24px_65px_-52px_rgba(57,60,77,0.35)] backdrop-blur">
+      <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-brand-border bg-white">
 
         {/* Practice identity */}
-        <div className="border-b border-brand-accent/70 px-5 py-5">
+        <div className="border-b border-brand-border px-5 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-primary shadow-[0_18px_35px_-22px_rgba(49,100,222,0.9)]">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-brand-primary">
               <span className="select-none text-sm font-bold text-white">DL</span>
             </div>
             <div className="min-w-0">
@@ -58,10 +58,10 @@ export default function DashboardLayout({ children }) {
                 key={name}
                 href={href}
                 className={cn(
-                  'flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-all',
+                  'flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all',
                   active
-                    ? 'bg-brand-primary text-white shadow-[0_22px_45px_-30px_rgba(49,100,222,0.95)]'
-                    : 'text-brand-muted hover:bg-brand-surface/45 hover:text-brand-ink'
+                    ? 'bg-brand-primary text-white'
+                    : 'text-brand-muted hover:bg-brand-surface hover:text-brand-ink'
                 )}
               >
                 <Icon
@@ -78,14 +78,14 @@ export default function DashboardLayout({ children }) {
         </nav>
 
         {/* Bottom — Settings / Support */}
-        <div className="space-y-1 border-t border-brand-accent/70 px-3 pb-4 pt-3">
+        <div className="space-y-1 border-t border-brand-border px-3 pb-4 pt-3">
           <Link
             href="/settings"
             className={cn(
-              'flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-all',
+              'flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all',
               isActive('/settings')
-                ? 'bg-brand-primary text-white shadow-[0_22px_45px_-30px_rgba(49,100,222,0.95)]'
-                : 'text-brand-muted hover:bg-brand-surface/45 hover:text-brand-ink'
+                ? 'bg-brand-primary text-white'
+                : 'text-brand-muted hover:bg-brand-surface hover:text-brand-ink'
             )}
           >
             <Settings
@@ -101,7 +101,7 @@ export default function DashboardLayout({ children }) {
             )}
           </Link>
 
-          <button className="w-full rounded-2xl px-3.5 py-3 text-left text-sm font-medium text-brand-muted transition-all hover:bg-brand-surface/45 hover:text-brand-ink">
+          <button className="w-full rounded-xl px-3.5 py-3 text-left text-sm font-medium text-brand-muted transition-all hover:bg-brand-surface hover:text-brand-ink">
             <span className="flex items-center gap-3">
               <HelpCircle size={16} className="flex-shrink-0 text-brand-muted" />
               Support
@@ -111,7 +111,7 @@ export default function DashboardLayout({ children }) {
       </aside>
 
       {/* ── Top navbar ──────────────────────────────────────────────── */}
-      <header className="fixed left-64 right-0 top-0 z-20 flex h-16 items-center gap-4 border-b border-brand-accent/70 bg-white/88 px-6 backdrop-blur">
+      <header className="fixed left-64 right-0 top-0 z-20 flex h-16 items-center gap-4 border-b border-brand-border bg-white px-6">
 
         {/* Left spacer — keeps the search visually centered */}
         <div className="flex-1" />
@@ -123,9 +123,9 @@ export default function DashboardLayout({ children }) {
         <div className="flex-1 flex items-center justify-end gap-2">
           <NotificationBell />
 
-          <div className="mx-1 h-6 w-px bg-brand-accent" />
+          <div className="mx-1 h-6 w-px bg-brand-border" />
 
-          <button className="group flex items-center gap-2 rounded-2xl border border-transparent py-1.5 pl-2 pr-2 transition-colors hover:border-brand-accent hover:bg-brand-surface/35">
+          <button className="group flex items-center gap-2 rounded-xl border border-transparent py-1.5 pl-2 pr-2 transition-colors hover:border-brand-border hover:bg-brand-surface">
             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary">
               <span className="text-white text-xs font-semibold select-none">DL</span>
             </div>

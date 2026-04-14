@@ -262,7 +262,7 @@ export default function AppointmentCalendar({
   }
 
   return (
-    <div className="appointment-calendar overflow-hidden rounded-3xl border border-brand-border bg-white shadow-sm">
+    <div className="appointment-calendar overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
       <div className="border-b border-brand-border bg-gradient-to-br from-brand-surface via-white to-white px-6 py-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-3">

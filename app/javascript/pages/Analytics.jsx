@@ -13,7 +13,7 @@ export default function Analytics({ cancellation_stats, booking_stats, channel_s
       </div>
 
       {/* Booking Stats */}
-      <div className="mb-5 rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+      <div className="mb-5 rounded-xl border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         <h2 className="mb-5 text-base font-semibold text-brand-ink">Booking Stats — Last 30 Days</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <StatBlock label="Total Bookings"   value={booking_stats?.total_bookings_30d ?? 0} />
@@ -24,7 +24,7 @@ export default function Analytics({ cancellation_stats, booking_stats, channel_s
       </div>
 
       {/* Channel Stats */}
-      <div className="mb-5 rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+      <div className="mb-5 rounded-xl border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         <h2 className="mb-5 text-base font-semibold text-brand-ink">Channel Performance</h2>
         <div className="grid grid-cols-2 gap-5">
           <div className="rounded-xl border border-brand-success/15 bg-brand-success/10 p-6 text-center">
@@ -41,7 +41,7 @@ export default function Analytics({ cancellation_stats, booking_stats, channel_s
       </div>
 
       {/* Cancellation Reasons */}
-      <div className="rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+      <div className="rounded-xl border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         <h2 className="mb-2 text-base font-semibold text-brand-ink">Cancellation Reasons</h2>
         <div className="flex items-center gap-4 mb-5">
           <p className="text-sm text-brand-muted">

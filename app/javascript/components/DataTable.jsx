@@ -97,7 +97,7 @@ export default function DataTable({
   const pageEnd   = Math.min(pageStart + pagination.pageSize - 1, totalRows)
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-brand-accent/75 bg-white shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)]">
+    <div className="overflow-hidden rounded-xl border border-brand-accent/75 bg-white shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)]">
       {/* ── Header: search + filters + actions ────────────────── */}
       <div className="flex flex-wrap items-center gap-3 border-b border-brand-accent/70 bg-gradient-to-br from-brand-surface/35 via-white to-white p-4">
         <div className="relative flex-1 min-w-[220px] max-w-sm">

@@ -62,7 +62,7 @@ export default function Modal({
 
       {/* Panel */}
       <div
-        className={`relative flex max-h-[90vh] w-full ${sizeClass} flex-col rounded-[28px] border border-brand-accent/80 bg-white shadow-[0_38px_90px_-55px_rgba(57,60,77,0.5)]`}
+        className={`relative flex max-h-[90vh] w-full ${sizeClass} flex-col rounded-xl border border-brand-accent/80 bg-white shadow-[0_38px_90px_-55px_rgba(57,60,77,0.5)]`}
       >
         {/* Header */}
         <div className="flex items-start justify-between border-b border-brand-accent/70 bg-gradient-to-br from-brand-surface/45 via-white to-white p-5">

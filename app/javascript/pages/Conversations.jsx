@@ -66,7 +66,7 @@ export default function Conversations({ conversations = [], filters }) {
       </div>
 
       {/* Toolbar: search + channel/source filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[28px] border border-brand-accent/75 bg-white p-3 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand-accent/75 bg-white p-3 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         <div className="relative flex-1 min-w-[240px]">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
           <input
@@ -99,7 +99,7 @@ export default function Conversations({ conversations = [], filters }) {
       </div>
 
       {/* Row list */}
-      <div className="overflow-hidden rounded-[28px] border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+      <div className="overflow-hidden rounded-xl border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         {/* List header */}
         <div className="flex items-center gap-3 border-b border-brand-accent/60 bg-brand-surface/25 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
           <span className="w-9" />
@@ -280,7 +280,7 @@ function ImportModal({ open, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/30 p-4 backdrop-blur-[4px]">
-      <div className="w-full max-w-md rounded-[28px] border border-brand-accent/80 bg-white shadow-[0_38px_90px_-55px_rgba(57,60,77,0.5)]">
+      <div className="w-full max-w-md rounded-xl border border-brand-accent/80 bg-white shadow-[0_38px_90px_-55px_rgba(57,60,77,0.5)]">
         <div className="flex items-center justify-between border-b border-brand-accent/70 bg-gradient-to-br from-brand-surface/45 via-white to-white px-5 py-4">
           <h2 className="text-sm font-semibold text-brand-ink">Import historical chats</h2>
           <button type="button" onClick={onClose} className="rounded-xl p-1 text-brand-muted transition-colors hover:bg-brand-surface/45 hover:text-brand-ink">

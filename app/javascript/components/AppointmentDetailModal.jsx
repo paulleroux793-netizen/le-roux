@@ -80,7 +80,7 @@ export default function AppointmentDetailModal({
       }
     >
       {/* Patient card */}
-      <div className="mb-5 rounded-[24px] border border-brand-accent/75 bg-gradient-to-br from-brand-surface/35 to-white p-5">
+      <div className="mb-5 rounded-xl border border-brand-accent/75 bg-gradient-to-br from-brand-surface/35 to-white p-5">
         <div className="flex items-start gap-4">
           <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-primary">
             <span className="text-white font-semibold">
@@ -108,7 +108,7 @@ export default function AppointmentDetailModal({
       {/* Booking Info */}
       <div>
         <h4 className="mb-3 text-sm font-semibold text-brand-ink">Booking Information</h4>
-        <div className="space-y-3 rounded-[24px] border border-brand-accent/75 p-4">
+        <div className="space-y-3 rounded-xl border border-brand-accent/75 p-4">
           <Row icon={Calendar} label="Date">
             {fmtDate(appointment.start_time)}
           </Row>
