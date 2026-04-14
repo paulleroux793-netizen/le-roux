@@ -65,7 +65,7 @@ class SearchController < ApplicationController
   def search_appointments(q)
     pattern = "%#{sanitize_like(q)}%"
     Appointment
-      .joins(:patient)
+      .eager_load(:patient)
       .where(
         "patients.first_name ILIKE :p OR patients.last_name ILIKE :p OR " \
         "(patients.first_name || ' ' || patients.last_name) ILIKE :p OR " \
@@ -93,7 +93,7 @@ class SearchController < ApplicationController
   def search_conversations(q)
     pattern = "%#{sanitize_like(q)}%"
     Conversation
-      .joins(:patient)
+      .eager_load(:patient)
       .where(
         "patients.first_name ILIKE :p OR patients.last_name ILIKE :p OR " \
         "(patients.first_name || ' ' || patients.last_name) ILIKE :p",

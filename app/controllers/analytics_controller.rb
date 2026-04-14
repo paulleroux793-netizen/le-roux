@@ -1,24 +1,30 @@
 class AnalyticsController < ApplicationController
   def index
-    render inertia: "Analytics", props: {
-      cancellation_stats: cancellation_stats,
-      booking_stats: booking_stats,
-      channel_stats: channel_stats
-    }
+    page_data = dev_page_cache("analytics", "index") do
+      {
+        cancellation_stats: cancellation_stats,
+        booking_stats: booking_stats,
+        channel_stats: channel_stats
+      }
+    end
+
+    render inertia: "Analytics", props: page_data
   end
 
   private
 
   def cancellation_stats
     reasons = CancellationReason.group(:reason_category).count
-    total_cancelled = Appointment.where(status: :cancelled).count
+    status_counts = Appointment.group(:status).count
+    total_appointments = status_counts.values.sum
+    total_cancelled = status_counts.fetch("cancelled", 0)
 
     {
       by_reason: CancellationReason::CATEGORIES.map { |cat|
         { category: cat, count: reasons[cat] || 0 }
       },
       total_cancelled: total_cancelled,
-      cancellation_rate: calculate_rate(total_cancelled, Appointment.count)
+      cancellation_rate: calculate_rate(total_cancelled, total_appointments)
     }
   end
 
@@ -26,21 +32,27 @@ class AnalyticsController < ApplicationController
     now = Date.current
     last_30_days = (now - 30.days)..now
 
-    appointments_range = Appointment.where(created_at: last_30_days)
+    status_counts = Appointment.where(created_at: last_30_days).group(:status).count
+    total_bookings = status_counts.values.sum
+    completed = status_counts.fetch("completed", 0)
+    no_shows = status_counts.fetch("no_show", 0)
+    conversion_total =
+      status_counts.fetch("completed", 0) +
+      status_counts.fetch("confirmed", 0) +
+      status_counts.fetch("scheduled", 0)
+
     {
-      total_bookings_30d: appointments_range.count,
-      completed_30d: appointments_range.where(status: :completed).count,
-      no_shows_30d: appointments_range.where(status: :no_show).count,
-      conversion_rate: calculate_rate(
-        appointments_range.where(status: [:completed, :confirmed, :scheduled]).count,
-        appointments_range.count
-      )
+      total_bookings_30d: total_bookings,
+      completed_30d: completed,
+      no_shows_30d: no_shows,
+      conversion_rate: calculate_rate(conversion_total, total_bookings)
     }
   end
 
   def channel_stats
-    whatsapp = Conversation.by_channel("whatsapp").count
-    voice = Conversation.by_channel("voice").count
+    channel_counts = Conversation.group(:channel).count
+    whatsapp = channel_counts.fetch("whatsapp", 0)
+    voice = channel_counts.fetch("voice", 0)
     total = whatsapp + voice
 
     {

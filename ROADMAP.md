@@ -348,13 +348,13 @@ Refine the calendar so it matches the clean, premium booking/dashboard feel from
 
 Review the application for avoidable query explosions and fix them without introducing over-fetching or behavior regressions.
 
-- [ ] Audit major pages for N+1 queries: dashboard, appointments, appointment detail, patients, patient detail, conversations, reminders, analytics, settings, and any calendar-related data loads
-- [ ] Check create/update flows that render associated records immediately after writes
-- [ ] Fix each confirmed N+1 with the appropriate eager loading or query restructuring strategy
-- [ ] Avoid loading unnecessary associations or broad datasets while fixing query counts
-- [ ] Add or update tests where practical to lock in the optimized query behavior
-- [ ] Re-run representative page requests and verify improved query counts and response times
-- [ ] Create a conventional commit before moving to UI cleanup
+- [x] Audit major pages for N+1 queries: dashboard, appointments, appointment detail, patients, patient detail, conversations, reminders, analytics, settings, and any calendar-related data loads
+- [x] Check create/update flows that render associated records immediately after writes
+- [x] Fix each confirmed N+1 with the appropriate eager loading or query restructuring strategy
+- [x] Avoid loading unnecessary associations or broad datasets while fixing query counts
+- [x] Add or update tests where practical to lock in the optimized query behavior
+- [x] Re-run representative page requests and verify improved query counts and response times
+- [x] Create a conventional commit before moving to UI cleanup
 
 ## Phase 9.12: Remove “System Status” From the UI
 

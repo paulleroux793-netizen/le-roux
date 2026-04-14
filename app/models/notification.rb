@@ -3,6 +3,8 @@ class Notification < ApplicationRecord
   belongs_to :appointment,  optional: true
   belongs_to :conversation, optional: true
 
+  after_commit :expire_unread_count_cache
+
   # Whitelisted categories so the UI can map each to an icon / colour
   # without relying on free-text. Keep this list in sync with the
   # render switch in NotificationBell.jsx.
@@ -25,11 +27,21 @@ class Notification < ApplicationRecord
   scope :unread, -> { where(read_at: nil) }
   scope :recent, -> { order(created_at: :desc) }
 
+  def self.expire_unread_count_cache!
+    Rails.cache.delete("notifications/unread_count")
+  end
+
   def read?
     read_at.present?
   end
 
   def mark_read!
     update!(read_at: Time.current) unless read?
+  end
+
+  private
+
+  def expire_unread_count_cache
+    self.class.expire_unread_count_cache!
   end
 end

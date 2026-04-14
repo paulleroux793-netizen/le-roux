@@ -21,12 +21,14 @@ class NotificationsController < ApplicationController
   def mark_read
     notification = Notification.find(params[:id])
     notification.mark_read!
+    Notification.expire_unread_count_cache!
     render json: { ok: true, unread_count: Notification.unread.count }
   end
 
   # POST /notifications/mark_all_read
   def mark_all_read
     Notification.unread.update_all(read_at: Time.current)
+    Notification.expire_unread_count_cache!
     render json: { ok: true, unread_count: 0 }
   end
 

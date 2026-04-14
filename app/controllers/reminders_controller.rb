@@ -15,27 +15,29 @@ class RemindersController < ApplicationController
     today = Date.current
     window_end = (today + WINDOW_DAYS.days).end_of_day
 
-    # Upcoming unconfirmed appointments — the set of rows the
-    # receptionist might want to chase up.
-    scope = Appointment
-      .includes(:patient, :confirmation_logs)
-      .where(status: [:scheduled])
-      .where(start_time: today.beginning_of_day..window_end)
-      .order(:start_time)
+    page_data = dev_page_cache("reminders", "index", today.iso8601) do
+      # Upcoming unconfirmed appointments — the set of rows the
+      # receptionist might want to chase up.
+      reminders = Appointment
+        .includes(:patient, :confirmation_logs)
+        .where(status: [:scheduled])
+        .where(start_time: today.beginning_of_day..window_end)
+        .order(:start_time)
+        .to_a
 
-    render inertia: "Reminders", props: {
-      reminders: scope.map { |a| reminder_props(a) },
-      stats: {
-        total_pending: scope.size,
-        today: scope.count { |a| a.start_time.to_date == today },
-        tomorrow: scope.count { |a| a.start_time.to_date == today + 1 },
-        this_week: scope.size,
-        flagged: ConfirmationLog.flagged
-          .joins(:appointment)
-          .where(appointments: { start_time: today.beginning_of_day..window_end })
-          .count
+      {
+        reminders: reminders.map { |a| reminder_props(a) },
+        stats: {
+          total_pending: reminders.size,
+          today: reminders.count { |a| a.start_time.to_date == today },
+          tomorrow: reminders.count { |a| a.start_time.to_date == today + 1 },
+          this_week: reminders.size,
+          flagged: reminders.count { |a| a.confirmation_logs.any?(&:flagged) }
+        }
       }
-    }
+    end
+
+    render inertia: "Reminders", props: page_data
   end
 
   # POST /reminders/:appointment_id/send
@@ -49,6 +51,7 @@ class RemindersController < ApplicationController
     channel = params[:method].to_s.presence || "whatsapp"
 
     ConfirmationService.send_reminder(appointment, method: channel)
+    expire_reminder_caches!
 
     redirect_back fallback_location: reminders_path,
       notice: "#{channel.titleize} reminder sent to #{appointment.patient.full_name}",
@@ -83,5 +86,10 @@ class RemindersController < ApplicationController
         created_at: latest_log.created_at.iso8601
       }
     }
+  end
+
+  def expire_reminder_caches!
+    expire_dev_page_cache("reminders/index")
+    expire_dev_page_cache("dashboard")
   end
 end

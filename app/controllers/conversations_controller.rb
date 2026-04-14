@@ -1,14 +1,18 @@
 class ConversationsController < ApplicationController
   def index
-    conversations = Conversation.includes(:patient).order(updated_at: :desc)
-    conversations = conversations.by_channel(params[:channel]) if params[:channel].present?
-    conversations = conversations.where(status: params[:status]) if params[:status].present?
-    conversations = conversations.where(source: params[:source]) if params[:source].present?
+    page_data = dev_page_cache("conversations", "index", params[:channel], params[:status], params[:source]) do
+      conversations = Conversation.includes(:patient).order(updated_at: :desc)
+      conversations = conversations.by_channel(params[:channel]) if params[:channel].present?
+      conversations = conversations.where(status: params[:status]) if params[:status].present?
+      conversations = conversations.where(source: params[:source]) if params[:source].present?
 
-    render inertia: "Conversations", props: {
-      conversations: conversations.limit(100).map { |c| conversation_props(c) },
-      filters: { channel: params[:channel], status: params[:status], source: params[:source] }
-    }
+      {
+        conversations: conversations.limit(100).map { |c| conversation_props(c) },
+        filters: { channel: params[:channel], status: params[:status], source: params[:source] }
+      }
+    end
+
+    render inertia: "Conversations", props: page_data
   end
 
   # POST /conversations/import
@@ -30,6 +34,7 @@ class ConversationsController < ApplicationController
 
     notice = "Import complete — #{result.created} created, #{result.updated} updated"
     notice += ", #{result.skipped} skipped" if result.skipped.positive?
+    expire_conversation_caches!
     redirect_to conversations_path, notice: notice, status: :see_other
   rescue WhatsappImportService::ImportError => e
     redirect_to conversations_path, alert: "Import failed: #{e.message}", status: :see_other
@@ -61,6 +66,7 @@ class ConversationsController < ApplicationController
     WhatsappTemplateService.new.send_text(conversation.patient.phone, body)
     conversation.add_message(role: "assistant", content: body, timestamp: Time.current)
     conversation.update!(status: "active") if conversation.status == "closed"
+    expire_conversation_caches!
 
     redirect_to conversation_path(conversation),
       notice: "Reply sent to #{conversation.patient.full_name}.",
@@ -71,11 +77,15 @@ class ConversationsController < ApplicationController
   end
 
   def show
-    conversation = Conversation.includes(:patient).find(params[:id])
+    page_data = dev_page_cache("conversations", "show", params[:id]) do
+      conversation = Conversation.includes(:patient).find(params[:id])
 
-    render inertia: "ConversationShow", props: {
-      conversation: detailed_conversation_props(conversation)
-    }
+      {
+        conversation: detailed_conversation_props(conversation)
+      }
+    end
+
+    render inertia: "ConversationShow", props: page_data
   end
 
   private
@@ -123,5 +133,11 @@ class ConversationsController < ApplicationController
       started_at: conversation.started_at&.iso8601,
       ended_at: conversation.ended_at&.iso8601
     }
+  end
+
+  def expire_conversation_caches!
+    expire_dev_page_cache("conversations/index")
+    expire_dev_page_cache("conversations/show")
+    expire_dev_page_cache("dashboard")
   end
 end

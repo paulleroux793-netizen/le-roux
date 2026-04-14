@@ -26,12 +26,14 @@ RSpec.describe 'Notifications', type: :request do
   describe 'PATCH /notifications/:id/mark_read' do
     it 'marks a single notification as read' do
       n = create(:notification, :unread)
+      Rails.cache.write('notifications/unread_count', 4)
 
       patch "/notifications/#{n.id}/mark_read"
 
       expect(response).to have_http_status(:ok)
       expect(n.reload.read?).to be(true)
       expect(response.parsed_body['unread_count']).to eq(0)
+      expect(Rails.cache.exist?('notifications/unread_count')).to be(false)
     end
 
     it 'is idempotent on already-read notifications' do
@@ -45,12 +47,14 @@ RSpec.describe 'Notifications', type: :request do
     it 'clears the unread queue' do
       create_list(:notification, 3, :unread)
       create(:notification, :read)
+      Rails.cache.write('notifications/unread_count', 3)
 
       post '/notifications/mark_all_read'
 
       expect(response).to have_http_status(:ok)
       expect(Notification.unread.count).to eq(0)
       expect(response.parsed_body['unread_count']).to eq(0)
+      expect(Rails.cache.exist?('notifications/unread_count')).to be(false)
     end
   end
 end
@@ -96,11 +100,13 @@ RSpec.describe NotificationService do
   describe '.patient_created' do
     it 'emits a patient_created notification' do
       patient = create(:patient)
+      Rails.cache.write('notifications/unread_count', 99)
       described_class.patient_created(patient)
 
       n = Notification.last
       expect(n.category).to eq('patient_created')
       expect(n.patient_id).to eq(patient.id)
+      expect(Rails.cache.exist?('notifications/unread_count')).to be(false)
     end
   end
 
