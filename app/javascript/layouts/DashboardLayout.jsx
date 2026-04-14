@@ -116,8 +116,11 @@ export default function DashboardLayout({ children }) {
       {/* ── Top navbar ──────────────────────────────────────────────── */}
       <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-100 flex items-center px-6 gap-4 z-20">
 
-        {/* Search */}
-        <div className="flex-1 max-w-sm">
+        {/* Left spacer — keeps the search visually centered */}
+        <div className="flex-1" />
+
+        {/* Search — centered, wider */}
+        <div className="w-full max-w-xl">
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -131,7 +134,7 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* Right side — bell + doctor */}
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex-1 flex items-center justify-end gap-2">
           <button
             className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
             aria-label="Notifications"

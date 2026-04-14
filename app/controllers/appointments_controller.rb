@@ -24,7 +24,62 @@ class AppointmentsController < ApplicationController
     }
   end
 
+  # PATCH /appointments/:id
+  #
+  # Currently used by the Phase 9.6 calendar drag-and-drop reschedule flow.
+  # Only `start_time` and `end_time` are accepted; status/other fields stay
+  # untouched. When a Google Calendar event is linked we keep it in sync via
+  # the existing GoogleCalendarService — on sync failure we still persist the
+  # local change and surface the error in the flash so the dashboard reflects
+  # the drop, and an operator can investigate.
+  def update
+    appointment = Appointment.find(params[:id])
+
+    new_start = parse_time(update_params[:start_time])
+    new_end   = parse_time(update_params[:end_time])
+
+    if new_start.nil? || new_end.nil?
+      return redirect_back fallback_location: appointments_path,
+        alert: "Invalid start or end time", status: :see_other
+    end
+
+    Appointment.transaction do
+      appointment.update!(start_time: new_start, end_time: new_end)
+    end
+
+    sync_google_calendar(appointment)
+
+    redirect_back fallback_location: appointments_path,
+      notice: "Appointment rescheduled", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: appointments_path,
+      alert: e.record.errors.full_messages.to_sentence, status: :see_other
+  end
+
   private
+
+  def update_params
+    params.require(:appointment).permit(:start_time, :end_time)
+  end
+
+  def parse_time(value)
+    return nil if value.blank?
+    Time.zone.parse(value.to_s)
+  rescue ArgumentError
+    nil
+  end
+
+  def sync_google_calendar(appointment)
+    return unless appointment.google_event_id.present?
+
+    GoogleCalendarService.new.reschedule_appointment(
+      appointment.google_event_id,
+      new_start: appointment.start_time,
+      new_end: appointment.end_time
+    )
+  rescue StandardError => e
+    Rails.logger.error("[AppointmentsController#update] Google sync failed: #{e.message}")
+  end
 
   def apply_filters(scope)
     scope = scope.where(status: filter_params[:status]) if filter_params[:status].present?

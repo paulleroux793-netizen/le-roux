@@ -1,17 +1,8 @@
 import React from 'react'
-import { Link } from '@inertiajs/react'
 import DashboardLayout from '../layouts/DashboardLayout'
+import AppointmentCalendar from '../components/AppointmentCalendar'
 
-const STATUS_STYLES = {
-  scheduled:   'bg-amber-100 text-amber-800',
-  confirmed:   'bg-emerald-100 text-emerald-800',
-  completed:   'bg-blue-100 text-blue-800',
-  cancelled:   'bg-red-100 text-red-800',
-  no_show:     'bg-gray-100 text-gray-600',
-  rescheduled: 'bg-purple-100 text-purple-800',
-}
-
-export default function Dashboard({ stats, upcoming_appointments, system_status }) {
+export default function Dashboard({ stats, calendar_appointments, system_status }) {
   return (
     <DashboardLayout>
       <div className="mb-8">
@@ -47,35 +38,16 @@ export default function Dashboard({ stats, upcoming_appointments, system_status 
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Upcoming Appointments */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
-          <h2 className="text-base font-semibold text-brand-brown mb-4">Upcoming Appointments</h2>
-          {upcoming_appointments?.length > 0 ? (
-            <div className="divide-y divide-gray-100">
-              {upcoming_appointments.map((apt) => (
-                <div key={apt.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
-                  <div className="min-w-0 mr-4">
-                    <p className="font-medium text-gray-900 text-sm truncate">{apt.patient_name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{apt.reason || 'General'}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0 mr-3">
-                    <p className="text-xs font-medium text-gray-700">
-                      {new Date(apt.start_time).toLocaleDateString('en-ZA', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {new Date(apt.start_time).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                  <StatusBadge status={apt.status} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm py-4 text-center">No upcoming appointments</p>
-          )}
+      {/* Interactive Calendar — Phase 9.6 sub-area 1 */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-semibold text-brand-brown">Schedule</h2>
+          <p className="text-xs text-gray-400">Drag an event to reschedule</p>
         </div>
+        <AppointmentCalendar appointments={calendar_appointments || []} />
+      </div>
 
+      <div className="grid grid-cols-1 gap-6">
         {/* System Status */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h2 className="text-base font-semibold text-brand-brown mb-4">System Status</h2>
@@ -118,10 +90,3 @@ function StatCard({ title, value, subtitle, accent }) {
   )
 }
 
-function StatusBadge({ status }) {
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[status] || 'bg-gray-100 text-gray-600'}`}>
-      {status}
-    </span>
-  )
-}

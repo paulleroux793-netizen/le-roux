@@ -22,7 +22,7 @@ Rails.application.routes.draw do
   get "dashboard", to: "pages#dashboard"
 
   # Dashboard pages
-  resources :appointments, only: [:index, :show]
+  resources :appointments, only: [:index, :show, :update]
   resources :patients, only: [:index, :show]
   resources :conversations, only: [:index, :show]
   get "analytics", to: "analytics#index"
