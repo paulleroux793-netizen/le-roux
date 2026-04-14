@@ -1,11 +1,12 @@
 # Dr Chalita le Roux AI Receptionist — Development Roadmap
 
-## Current Status: 🚀 9 of 16 Phases Complete
+## Current Status: 🚀 9 of 17 Phases Complete
 
 **Completed**: Phases 1-5, 8-9 (Core WhatsApp integration + Dashboard)  
 **Next Priority**: Phase 6 (Voice), Phase 7 (Morning Confirmations)  
-**Recommended**: Phase 10 (Data Capture & Analytics) — *capture real data before building notifications*  
-**Future**: Phase 11 (Billing), Phase 12 (Notifications), Phases 13-16 (Security, Training, Deployment, Enhancements)
+**Recommended**: Phase 10 (Import Historical Chats) — *backfill data so the dashboard is useful from day one*  
+**Then**: Phase 11 (Data Capture & Analytics) — *capture real data before building notifications*  
+**Future**: Phase 12 (Billing), Phase 13 (Notifications), Phases 14-17 (Security, Training, Deployment, Enhancements)
 
 ## Phase 1: Project Setup & Infrastructure
 - [x] Create Rails 8 API-only application
@@ -71,6 +72,74 @@
 - [x] Create helper methods to inject variables into templates via `WhatsappTemplateService`
 - [x] Test template delivery via Twilio API
 
+### Template Testing Instructions
+
+Use the Rails console (`bin/rails console`) to test each template. Ensure all `WHATSAPP_TPL_*` env vars are set first.
+
+**`appointment_confirmation`**
+```ruby
+patient = Patient.new(first_name: "Sarah", phone: "+27821234567")
+appointment = Appointment.new(start_time: Time.zone.parse("2026-04-20 09:00"))
+WhatsappTemplateService.new.send_confirmation(patient, appointment)
+```
+Variables: `{{1}}` patient first name, `{{2}}` formatted date (e.g. `Monday, Apr 20`), `{{3}}` formatted time (e.g. `09:00 AM`)  
+Expected message: *"Hi Sarah, your appointment with Dr Chalita le Roux is confirmed for Monday, Apr 20 at 09:00 AM. Reply CONFIRM or RESCHEDULE."*
+
+---
+
+**`appointment_reminder_24h`**
+```ruby
+patient = Patient.new(first_name: "Sarah", phone: "+27821234567")
+appointment = Appointment.new(start_time: Time.zone.parse("2026-04-20 09:00"))
+WhatsappTemplateService.new.send_reminder_24h(patient, appointment)
+```
+Variables: `{{1}}` patient first name, `{{2}}` formatted time (e.g. `09:00 AM`)  
+Expected message: *"Hi Sarah, reminder: you have an appointment tomorrow at 09:00 AM with Dr Chalita le Roux. Reply to reschedule."*
+
+---
+
+**`appointment_reminder_1h`**
+```ruby
+patient = Patient.new(first_name: "Sarah", phone: "+27821234567")
+appointment = Appointment.new(start_time: Time.zone.parse("2026-04-20 09:00"))
+WhatsappTemplateService.new.send_reminder_1h(patient, appointment)
+```
+Variables: `{{1}}` patient first name, `{{2}}` formatted time (e.g. `09:00 AM`)  
+Expected message: *"Hi Sarah, reminder: your appointment with Dr Chalita le Roux is in 1 hour at 09:00 AM."*
+
+---
+
+**`cancellation_confirmation`**
+```ruby
+patient = Patient.new(first_name: "Sarah", phone: "+27821234567")
+appointment = Appointment.new(start_time: Time.zone.parse("2026-04-20 09:00"))
+WhatsappTemplateService.new.send_cancellation(patient, appointment)
+```
+Variables: `{{1}}` patient first name, `{{2}}` formatted date (e.g. `Monday, Apr 20`)  
+Expected message: *"Hi Sarah, your appointment on Monday, Apr 20 has been cancelled. Reply to reschedule or call us."*
+
+---
+
+**`reschedule_confirmation`**
+```ruby
+patient = Patient.new(first_name: "Sarah", phone: "+27821234567")
+appointment = Appointment.new(start_time: Time.zone.parse("2026-04-22 14:00"))
+WhatsappTemplateService.new.send_reschedule(patient, appointment)
+```
+Variables: `{{1}}` patient first name, `{{2}}` new formatted date (e.g. `Wednesday, Apr 22`), `{{3}}` new formatted time (e.g. `02:00 PM`)  
+Expected message: *"Hi Sarah, your appointment has been rescheduled to Wednesday, Apr 22 at 02:00 PM. Reply CONFIRM or call us."*
+
+---
+
+**`flagged_patient_alert`** *(sends to reception, not patient)*
+```ruby
+patient = Patient.new(first_name: "Sarah", last_name: "Smith", phone: "+27821234567")
+WhatsappTemplateService.new.send_flagged_alert(patient, "3rd cancellation this month")
+```
+Variables: `{{1}}` patient full name, `{{2}}` patient phone number, `{{3}}` reason string  
+Expected message: *"New flagged patient: Sarah Smith (+27821234567) - 3rd cancellation this month. Follow-up needed."*  
+Note: message is sent to `RECEPTION_WHATSAPP_NUMBER`, not the patient.
+
 ## Phase 5: WhatsApp Integration (Primary Channel) ✅ COMPLETE
 - [x] Create `WhatsappController` with `incoming` webhook (POST /webhooks/whatsapp)
 - [x] Configure Twilio WhatsApp webhook URL via ngrok
@@ -135,7 +204,25 @@
 - [x] **Booking stats**: booking rate by channel (WhatsApp vs Voice), conversion tracking
 - [x] **Settings page**: office hours table, pricing reference, FAQ knowledge base
 
-## Phase 10: Data Capture & Real Analytics Dashboard
+## Phase 10: Import Historical WhatsApp Chats
+
+The dashboard should be useful from day one, not just for future conversations. This phase backfills the database with real historical data by importing exported WhatsApp chats through the dashboard.
+
+- [ ] **Dashboard upload UI**: add an "Import Conversations" page to the dashboard (file upload input for `.txt` WhatsApp export files, one file per conversation)
+- [ ] **Parser service** (`WhatsappImportService`): parse the standard WhatsApp export format
+  - Extract sender, timestamp, and message body from each line
+  - Identify patient phone number from the conversation file name or first message
+  - Group messages into a single `Conversation` record with `channel: "whatsapp"` and `status: "closed"`
+- [ ] **Patient matching**: match phone number to existing `Patient` record; create a stub patient if none exists (first_name from phone, flagged for manual review)
+- [ ] **Appointment detection**: scan conversation text for booking keywords; link to existing `Appointment` records where a match is found by date/time mentioned
+- [ ] **Duplicate prevention**: skip import if a `Conversation` with the same patient + date range already exists
+- [ ] **Import summary**: return a result object showing: conversations imported, patients created, patients matched, lines skipped
+- [ ] **Dashboard feedback**: display import summary after upload (e.g. "Imported 24 conversations, created 6 new patients, skipped 2 duplicates")
+- [ ] **Bulk import**: support importing a `.zip` of multiple `.txt` files in one upload
+- [ ] **Manual review queue**: conversations with unmatched patients surface in a "Needs Review" list on the Patients page
+- [ ] Test the import flow with a real exported WhatsApp `.txt` file from the current sandbox or production number
+
+## Phase 11: Data Capture & Real Analytics Dashboard
 - [ ] **Enhance Conversation Model**: add `outcome` field (booked, lost, rescheduled, pending), `message_count`, `first_response_time`
 - [ ] **Enhance Appointment Model**: add `attended` boolean (for no-shows), `time_to_cancel` (days between booking and cancellation)
 - [ ] **Real Data Queries** (replace dashboard hardcoded stats):
@@ -167,7 +254,7 @@
   - Monthly report: email to doctor with key KPIs
 - [ ] **Testing**: seed conversation and appointment outcomes to verify analytics queries work
 
-## Phase 11: Billing & Invoicing System
+## Phase 12: Billing & Invoicing System
 - [ ] Create `Invoice` model (appointment_id, patient_id, amount, due_date, invoice_number, status enum)
 - [ ] Create `Payment` model (invoice_id, amount, payment_date, payment_method, transaction_id, status)
 - [ ] Invoice PDF generation using `wicked_pdf` or `prawn` gem
@@ -180,7 +267,7 @@
 - [ ] Solid Queue job for payment reminders: 1 day before due, 7 days after overdue
 - [ ] Payment receipt generation and delivery
 
-## Phase 12: Notifications & Reminders (Using Templates from Phase 4.5)
+## Phase 13: Notifications & Reminders (Using Templates from Phase 4.5)
 - [ ] WhatsApp appointment confirmation after booking (using `appointment_confirmation` template)
 - [ ] WhatsApp reminder 24 hours before appointment (using `appointment_reminder_24h` template)
 - [ ] WhatsApp reminder 1 hour before appointment (using `appointment_reminder_1h` template)
@@ -191,7 +278,7 @@
 - [ ] Cancellation/reschedule confirmation messages
 - [ ] Reception alerts: new bookings, cancellations, flagged patients
 
-## Phase 13: Security & Hardening
+## Phase 14: Security & Hardening
 - [ ] Validate Twilio webhook signatures on all endpoints
 - [ ] Rate limiting on webhook endpoints
 - [ ] Input sanitization for all patient-provided data
@@ -200,7 +287,7 @@
 - [ ] Audit logging for all appointment changes
 - [ ] Health check endpoint monitoring
 
-## Phase 14: Training Data & Continuous Improvement
+## Phase 15: Training Data & Continuous Improvement
 - [ ] Build interface to upload and transcribe call recordings (Cube ACR)
 - [ ] Import historical WhatsApp chat logs
 - [ ] Store all conversations and transcripts for future training
@@ -208,7 +295,7 @@
 - [ ] Identify high-converting conversation patterns
 - [ ] Feedback loop: refine AI prompts based on real conversation data
 
-## Phase 15: Deployment & Production
+## Phase 16: Deployment & Production
 - [ ] Configure Kamal deployment (`config/deploy.yml`)
 - [ ] Set up production PostgreSQL database
 - [ ] Configure production environment variables
@@ -218,7 +305,7 @@
 - [ ] Deploy and smoke test all channels
 - [ ] Monitor logs, error tracking, and uptime
 
-## Phase 16: Enhancements (Future)
+## Phase 17: Enhancements (Future)
 - [ ] Multi-language support (English + Afrikaans)
 - [ ] Website "Book Appointment" button → WhatsApp flow
 - [ ] Google Business Profile booking integration
