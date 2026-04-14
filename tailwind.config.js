@@ -8,13 +8,25 @@ export default {
     extend: {
       colors: {
         brand: {
-          brown:       '#3c3532', // rgb(60,53,50)  — primary, sidebar, CTA
-          'brown-mid': '#4a4240', // hover state for brown
-          taupe:       '#785f51', // rgb(120,95,81) — secondary actions
-          'taupe-mid': '#8a6e60', // hover state for taupe
-          gold:        '#c9a96e', // antique gold — accent, logo, highlights
-          'gold-light':'#e8d5b0', // light gold for tinted backgrounds
-          cream:       '#f5f4f2', // warm off-white page background
+          primary:        '#3164DE',
+          'primary-dark': '#274FB5',
+          secondary:      '#769BF5',
+          'secondary-dark': '#5D83E8',
+          accent:         '#B1C5F6',
+          surface:        '#D6E0F8',
+          white:          '#FFFFFF',
+          ink:            '#393C4D',
+          muted:          '#8592AD',
+          success:        '#19A14E',
+          danger:         '#EF6161',
+          // Backwards-compatible aliases for pre-theme-rollout classes.
+          brown:          '#393C4D',
+          'brown-mid':    '#2F3341',
+          taupe:          '#3164DE',
+          'taupe-mid':    '#274FB5',
+          gold:           '#769BF5',
+          'gold-light':   '#B1C5F6',
+          cream:          '#D6E0F8',
         },
       },
       fontFamily: {

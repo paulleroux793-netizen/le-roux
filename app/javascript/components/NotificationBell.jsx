@@ -30,10 +30,10 @@ const ICONS = {
 }
 
 const LEVEL_STYLES = {
-  info:    'bg-blue-50 text-blue-600',
-  success: 'bg-emerald-50 text-emerald-600',
-  warning: 'bg-amber-50 text-amber-600',
-  danger:  'bg-red-50 text-red-600',
+  info:    'bg-[#EEF4FF] text-brand-primary',
+  success: 'bg-[#EAF8F0] text-brand-success',
+  warning: 'bg-[#FFF8E8] text-[#C58A22]',
+  danger:  'bg-[#FFF1F1] text-brand-danger',
 }
 
 export default function NotificationBell() {
@@ -138,26 +138,26 @@ export default function NotificationBell() {
     <div ref={containerRef} className="relative">
       <button
         onClick={toggle}
-        className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        className="relative rounded-2xl border border-transparent p-2 text-brand-muted transition-colors hover:border-brand-accent hover:bg-brand-surface/35 hover:text-brand-ink"
         aria-label="Notifications"
         aria-haspopup="true"
         aria-expanded={open}
       >
         <Bell size={18} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-semibold">
+          <span className="absolute right-1 top-1 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-brand-danger px-1 text-[10px] font-semibold text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl border border-gray-200 shadow-lg max-h-[32rem] overflow-hidden flex flex-col z-50">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="absolute right-0 z-50 mt-2 flex max-h-[32rem] w-96 flex-col overflow-hidden rounded-3xl border border-brand-accent/80 bg-white shadow-[0_30px_70px_-42px_rgba(57,60,77,0.45)]">
+          <div className="flex items-center justify-between border-b border-brand-accent/70 px-4 py-3">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-brand-brown">Notifications</h3>
+              <h3 className="text-sm font-semibold text-brand-ink">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600">
+                <span className="rounded-full bg-[#FFF1F1] px-1.5 py-0.5 text-[10px] font-semibold text-brand-danger">
                   {unreadCount} new
                 </span>
               )}
@@ -166,7 +166,7 @@ export default function NotificationBell() {
               <button
                 type="button"
                 onClick={markAllRead}
-                className="inline-flex items-center gap-1 text-xs font-medium text-brand-taupe hover:text-brand-brown transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-medium text-brand-primary transition-colors hover:text-brand-primary-dark"
               >
                 <Check size={12} /> Mark all as read
               </button>
@@ -197,8 +197,8 @@ function NotificationRow({ n, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`w-full flex items-start gap-3 px-4 py-3 text-left border-b border-gray-50 last:border-b-0 transition-colors ${
-        n.read ? 'hover:bg-gray-50' : 'bg-brand-cream/40 hover:bg-brand-cream/70'
+      className={`w-full border-b border-brand-accent/35 px-4 py-3 text-left transition-colors last:border-b-0 ${
+        n.read ? 'hover:bg-brand-surface/18' : 'bg-brand-surface/22 hover:bg-brand-surface/48'
       }`}
     >
       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${toneClass}`}>
@@ -206,15 +206,15 @@ function NotificationRow({ n, onClick }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
-          <p className={`text-sm truncate ${n.read ? 'text-gray-600' : 'font-semibold text-gray-900'}`}>
+          <p className={`truncate text-sm ${n.read ? 'text-brand-muted' : 'font-semibold text-brand-ink'}`}>
             {n.title}
           </p>
           {!n.read && (
-            <span className="w-1.5 h-1.5 rounded-full bg-brand-taupe flex-shrink-0 mt-1.5" />
+            <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-primary" />
           )}
         </div>
-        {n.body && <p className="text-xs text-gray-500 truncate">{n.body}</p>}
-        <p className="text-[10px] text-gray-400 mt-1">{relativeTime(n.created_at)}</p>
+        {n.body && <p className="truncate text-xs text-brand-muted">{n.body}</p>}
+        <p className="mt-1 text-[10px] text-brand-muted">{relativeTime(n.created_at)}</p>
       </div>
     </button>
   )
@@ -222,7 +222,7 @@ function NotificationRow({ n, onClick }) {
 
 function EmptyState({ message }) {
   return (
-    <div className="px-4 py-10 text-center text-sm text-gray-400">{message}</div>
+    <div className="px-4 py-10 text-center text-sm text-brand-muted">{message}</div>
   )
 }
 

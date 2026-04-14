@@ -2,7 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global styles go here */
+@layer base {
+  html {
+    background: #D6E0F8;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at top left, rgba(177, 197, 246, 0.42), transparent 32%),
+      linear-gradient(180deg, rgba(214, 224, 248, 0.8) 0%, #F8FAFF 32%, #FFFFFF 100%);
+    color: #393C4D;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(49, 100, 222, 0.16);
+    color: #393C4D;
+  }
+}
 
 /* ── FullCalendar brand overrides ──────────────────────────────────
  * Scoped under `.appointment-calendar` so we never accidentally

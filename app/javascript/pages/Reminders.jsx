@@ -24,12 +24,12 @@ import CancelAppointmentModal from '../components/CancelAppointmentModal'
 // flows stay consistent.
 
 const OUTCOME_CHIPS = {
-  confirmed:   { label: 'Confirmed',   class: 'bg-emerald-100 text-emerald-700' },
-  rescheduled: { label: 'Rescheduled', class: 'bg-purple-100 text-purple-700' },
-  cancelled:   { label: 'Cancelled',   class: 'bg-red-100 text-red-700' },
-  no_answer:   { label: 'No answer',   class: 'bg-amber-100 text-amber-700' },
-  voicemail:   { label: 'Voicemail',   class: 'bg-amber-100 text-amber-700' },
-  unclear:     { label: 'Unclear',     class: 'bg-gray-100 text-gray-600' },
+  confirmed:   { label: 'Confirmed',   class: 'bg-[#EAF8F0] text-brand-success' },
+  rescheduled: { label: 'Rescheduled', class: 'bg-[#EEF4FF] text-brand-primary' },
+  cancelled:   { label: 'Cancelled',   class: 'bg-[#FFF1F1] text-brand-danger' },
+  no_answer:   { label: 'No answer',   class: 'bg-[#FFF8E8] text-[#C58A22]' },
+  voicemail:   { label: 'Voicemail',   class: 'bg-[#FFF8E8] text-[#C58A22]' },
+  unclear:     { label: 'Unclear',     class: 'bg-[#F3F6FB] text-brand-muted' },
 }
 
 const WINDOWS = [
@@ -80,11 +80,14 @@ export default function Reminders({ reminders = [], stats }) {
     <DashboardLayout>
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-brand-brown flex items-center gap-2">
-            <BellRing size={22} className="text-brand-taupe" />
+          <span className="inline-flex items-center rounded-full border border-brand-accent bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
+            Follow-up queue
+          </span>
+          <h1 className="mt-3 flex items-center gap-2 text-3xl font-semibold tracking-tight text-brand-ink">
+            <BellRing size={22} className="text-brand-primary" />
             Pre-Appointment Reminders
           </h1>
-          <p className="text-gray-500 mt-1 text-sm">
+          <p className="mt-2 text-sm leading-6 text-brand-muted">
             Chase up unconfirmed appointments in the next 7 days
           </p>
         </div>
@@ -92,22 +95,22 @@ export default function Reminders({ reminders = [], stats }) {
 
       {/* Stat row */}
       <div className="grid grid-cols-4 gap-4 mb-6">
-        <StatCard label="Pending total" value={stats?.total_pending ?? 0} color="text-brand-brown" />
-        <StatCard label="Today"         value={stats?.today ?? 0}         color="text-amber-600" />
-        <StatCard label="Tomorrow"      value={stats?.tomorrow ?? 0}      color="text-blue-600" />
-        <StatCard label="Flagged"       value={stats?.flagged ?? 0}       color="text-red-500" />
+        <StatCard label="Pending total" value={stats?.total_pending ?? 0} color="text-brand-primary" />
+        <StatCard label="Today"         value={stats?.today ?? 0}         color="text-brand-secondary" />
+        <StatCard label="Tomorrow"      value={stats?.tomorrow ?? 0}      color="text-brand-ink" />
+        <StatCard label="Flagged"       value={stats?.flagged ?? 0}       color="text-brand-danger" />
       </div>
 
       {/* Window tabs */}
-      <div className="inline-flex items-center bg-gray-100 rounded-lg p-1 mb-5">
+      <div className="mb-5 inline-flex items-center rounded-2xl border border-brand-accent/80 bg-white p-1 shadow-[0_20px_45px_-34px_rgba(57,60,77,0.25)]">
         {WINDOWS.map((w) => (
           <button
             key={w.key}
             onClick={() => setWindowKey(w.key)}
-            className={`px-4 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+            className={`rounded-2xl px-4 py-2 text-xs font-semibold transition-colors ${
               windowKey === w.key
-                ? 'bg-white text-brand-brown shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
+                ? 'bg-brand-primary text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)]'
+                : 'text-brand-muted hover:bg-brand-surface/45 hover:text-brand-ink'
             }`}
           >
             {w.label}
@@ -116,16 +119,16 @@ export default function Reminders({ reminders = [], stats }) {
       </div>
 
       {/* List */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="overflow-hidden rounded-[28px] border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         {filtered.length === 0 ? (
           <div className="px-6 py-16 text-center">
-            <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 flex items-center justify-center mb-3">
-              <CheckCircle size={20} className="text-emerald-500" />
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#EAF8F0]">
+              <CheckCircle size={20} className="text-brand-success" />
             </div>
-            <p className="text-sm text-gray-500">No pending reminders — all caught up.</p>
+            <p className="text-sm text-brand-muted">No pending reminders — all caught up.</p>
           </div>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <ul className="divide-y divide-brand-accent/35">
             {filtered.map((r) => (
               <ReminderRow
                 key={r.id}
@@ -153,12 +156,12 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
   const isVeryUrgent = reminder.hours_until != null && reminder.hours_until < 3
 
   return (
-    <li className={`flex items-center gap-4 px-5 py-4 hover:bg-brand-cream/30 transition-colors ${
-      isVeryUrgent ? 'bg-red-50/40' : isUrgent ? 'bg-amber-50/30' : ''
+    <li className={`flex items-center gap-4 px-5 py-4 transition-colors hover:bg-brand-surface/25 ${
+      isVeryUrgent ? 'bg-[#FFF1F1]/80' : isUrgent ? 'bg-[#FFF8E8]/65' : ''
     }`}>
       {/* Avatar */}
-      <div className="w-10 h-10 rounded-full bg-brand-cream flex items-center justify-center flex-shrink-0">
-        <span className="text-brand-brown text-xs font-semibold">
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
+        <span className="text-xs font-semibold text-brand-primary">
           {initials(reminder.patient_name)}
         </span>
       </div>
@@ -166,26 +169,26 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
       {/* Patient + time */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium text-gray-900 truncate">{reminder.patient_name}</p>
+          <p className="truncate text-sm font-medium text-brand-ink">{reminder.patient_name}</p>
           {reminder.last_attempt?.flagged && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-red-100 text-red-700">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF1F1] px-1.5 py-0.5 text-[10px] font-semibold text-brand-danger">
               <Flag size={9} /> Flagged
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 mt-0.5">
+        <p className="mt-0.5 text-xs text-brand-muted">
           <Clock size={11} className="inline mr-1 -mt-0.5" />
           {formatDateTime(reminder.start_time)}
-          {reminder.reason && <span className="text-gray-400"> · {reminder.reason}</span>}
+          {reminder.reason && <span className="text-brand-muted/70"> · {reminder.reason}</span>}
         </p>
-        <p className="text-[11px] text-gray-400 mt-0.5">{reminder.patient_phone}</p>
+        <p className="mt-0.5 text-[11px] text-brand-muted">{reminder.patient_phone}</p>
       </div>
 
       {/* Time until + last attempt */}
       <div className="hidden md:flex flex-col items-end gap-1 flex-shrink-0 min-w-[140px]">
         {reminder.hours_until != null && (
           <span className={`text-xs font-semibold ${
-            isVeryUrgent ? 'text-red-600' : isUrgent ? 'text-amber-600' : 'text-gray-500'
+            isVeryUrgent ? 'text-brand-danger' : isUrgent ? 'text-[#C58A22]' : 'text-brand-muted'
           }`}>
             {reminder.hours_until < 1
               ? `${Math.round(reminder.hours_until * 60)}m away`
@@ -213,7 +216,7 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
           title="Confirm"
           icon={CheckCircle}
           onClick={() => onConfirm(reminder)}
-          colorClass="text-brand-taupe hover:bg-brand-cream"
+          colorClass="text-brand-primary hover:bg-brand-surface/65"
         />
         <ActionBtn
           title="Cancel"
@@ -229,20 +232,20 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
 function LastAttempt({ attempt }) {
   if (!attempt) {
     return (
-      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-400">
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-muted">
         <AlertTriangle size={10} /> Never contacted
       </span>
     )
   }
   const chip = OUTCOME_CHIPS[attempt.outcome]
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-gray-500">
+    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-brand-muted">
       via <span className="capitalize">{attempt.method}</span>
       {chip && (
         <span className={`ml-1 px-1.5 py-0.5 rounded-full ${chip.class}`}>{chip.label}</span>
       )}
       {!attempt.outcome && (
-        <span className="ml-1 px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">Awaiting reply</span>
+        <span className="ml-1 rounded-full bg-[#F3F6FB] px-1.5 py-0.5 text-brand-muted">Awaiting reply</span>
       )}
     </span>
   )
@@ -264,9 +267,9 @@ function ActionBtn({ title, icon: Icon, onClick, colorClass }) {
 
 function StatCard({ label, value, color }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+    <div className="rounded-[28px] border border-brand-accent/75 bg-white p-4 text-center shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
-      <p className="text-xs text-gray-400 mt-1 uppercase tracking-wide">{label}</p>
+      <p className="mt-1 text-xs uppercase tracking-wide text-brand-muted">{label}</p>
     </div>
   )
 }

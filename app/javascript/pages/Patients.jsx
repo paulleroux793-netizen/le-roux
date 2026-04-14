@@ -40,15 +40,15 @@ export default function Patients({ patients = [], stats }) {
       header: 'Patient Name',
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-brand-cream flex items-center justify-center flex-shrink-0">
-            <span className="text-brand-brown text-xs font-semibold">
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
+            <span className="text-xs font-semibold text-brand-primary">
               {initials(row.original.full_name)}
             </span>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">{row.original.full_name}</p>
+            <p className="truncate text-sm font-medium text-brand-ink">{row.original.full_name}</p>
             {row.original.email && (
-              <p className="text-xs text-gray-400 truncate">{row.original.email}</p>
+              <p className="truncate text-xs text-brand-muted">{row.original.email}</p>
             )}
           </div>
         </div>
@@ -73,14 +73,14 @@ export default function Patients({ patients = [], stats }) {
       accessorKey: 'phone',
       header: 'Phone',
       cell: ({ getValue }) => (
-        <span className="text-sm text-gray-600">{getValue() || '—'}</span>
+        <span className="text-sm text-brand-muted">{getValue() || '—'}</span>
       ),
     },
     {
       accessorKey: 'age',
       header: 'Age',
       cell: ({ getValue }) => (
-        <span className="text-sm text-gray-600">{getValue() ?? '—'}</span>
+        <span className="text-sm text-brand-muted">{getValue() ?? '—'}</span>
       ),
     },
     {
@@ -97,9 +97,9 @@ export default function Patients({ patients = [], stats }) {
       },
       cell: ({ getValue }) => {
         const v = getValue()
-        if (!v) return <span className="text-sm text-gray-300">—</span>
+        if (!v) return <span className="text-sm text-brand-muted/55">—</span>
         return (
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-brand-ink">
             {new Date(v).toLocaleDateString('en-ZA', {
               year: 'numeric', month: 'short', day: 'numeric',
             })}
@@ -118,7 +118,7 @@ export default function Patients({ patients = [], stats }) {
             href={`/patients/${row.original.id}`}
             title="View"
             aria-label="View patient"
-            className="inline-flex p-1.5 rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
+            className="inline-flex rounded-xl p-1.5 text-brand-muted transition-colors hover:bg-brand-surface/45 hover:text-brand-ink"
           >
             <Eye size={15} />
           </Link>
@@ -127,7 +127,7 @@ export default function Patients({ patients = [], stats }) {
             title="Edit"
             aria-label="Edit patient"
             onClick={() => openEdit(row.original)}
-            className="inline-flex p-1.5 rounded-md text-gray-500 hover:bg-gray-100 transition-colors"
+            className="inline-flex rounded-xl p-1.5 text-brand-muted transition-colors hover:bg-brand-surface/45 hover:text-brand-ink"
           >
             <Pencil size={15} />
           </button>
@@ -140,14 +140,17 @@ export default function Patients({ patients = [], stats }) {
     <DashboardLayout>
       <div className="mb-8 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-brand-brown">Patients</h1>
-          <p className="text-gray-500 mt-1 text-sm">
+          <span className="inline-flex items-center rounded-full border border-brand-accent bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
+            Patient records
+          </span>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-ink">Patients</h1>
+          <p className="mt-2 text-sm leading-6 text-brand-muted">
             {stats?.total ?? 0} registered patients
           </p>
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-taupe hover:bg-brand-brown rounded-lg transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark"
         >
           <Plus size={15} /> New Patient
         </button>
@@ -159,19 +162,22 @@ export default function Patients({ patients = [], stats }) {
           label="Total Patients"
           value={stats?.total ?? 0}
           icon={Users}
-          color="text-brand-brown"
+          color="text-brand-primary"
+          tone="bg-brand-surface"
         />
         <StatCard
           label="Active"
           value={stats?.active ?? 0}
           icon={UserCheck}
           color="text-emerald-600"
+          tone="bg-[#EAF8F0]"
         />
         <StatCard
           label="New This Month"
           value={stats?.new_this_month ?? 0}
           icon={UserPlus}
-          color="text-amber-600"
+          color="text-brand-secondary"
+          tone="bg-[#EEF4FF]"
         />
       </div>
 
@@ -188,7 +194,7 @@ export default function Patients({ patients = [], stats }) {
             <select
               value={getColumnFilter('status')}
               onChange={(e) => setColumnFilter('status', e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+              className="rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             >
               <option value="">All statuses</option>
               {STATUS_OPTIONS.map((s) => (
@@ -199,7 +205,7 @@ export default function Patients({ patients = [], stats }) {
               <button
                 type="button"
                 onClick={() => setColumnFilter('status', '')}
-                className="text-xs text-gray-500 hover:text-brand-brown px-2"
+                className="px-2 text-xs text-brand-muted hover:text-brand-ink"
               >
                 Clear
               </button>
@@ -226,15 +232,15 @@ export default function Patients({ patients = [], stats }) {
   )
 }
 
-function StatCard({ label, value, icon: Icon, color }) {
+function StatCard({ label, value, icon: Icon, color, tone = 'bg-brand-surface' }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
-      <div className="w-10 h-10 rounded-lg bg-brand-cream flex items-center justify-center flex-shrink-0">
+    <div className="flex items-center gap-4 rounded-[28px] border border-brand-accent/75 bg-white p-4 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+      <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${tone}`}>
         <Icon size={18} className={color} />
       </div>
       <div>
         <p className={`text-2xl font-bold ${color}`}>{value}</p>
-        <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
+        <p className="text-xs uppercase tracking-wide text-brand-muted">{label}</p>
       </div>
     </div>
   )
@@ -242,8 +248,8 @@ function StatCard({ label, value, icon: Icon, color }) {
 
 function StatusBadge({ status }) {
   const styles = status === 'active'
-    ? 'bg-emerald-100 text-emerald-800'
-    : 'bg-gray-100 text-gray-600'
+    ? 'border border-brand-success/15 bg-[#EAF8F0] text-brand-success'
+    : 'border border-brand-muted/15 bg-[#F3F6FB] text-brand-muted'
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${styles}`}>
       {status}

@@ -58,20 +58,20 @@ export default function AppointmentDetailModal({
         <>
           <button
             onClick={onCancel}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-medium text-brand-danger transition-colors hover:bg-[#FFF1F1]"
           >
             <XIcon size={15} /> Cancel
           </button>
           <button
             onClick={onEdit}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-brand-surface/45"
           >
             <Edit3 size={15} /> Edit
           </button>
           {appointment.status !== 'confirmed' && appointment.status !== 'cancelled' && (
             <button
               onClick={handleConfirm}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-taupe hover:bg-brand-brown rounded-lg transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark"
             >
               <CheckCircle size={15} /> Confirm
             </button>
@@ -80,18 +80,18 @@ export default function AppointmentDetailModal({
       }
     >
       {/* Patient card */}
-      <div className="border border-gray-200 rounded-xl p-5 mb-5 bg-gradient-to-br from-brand-cream/40 to-white">
+      <div className="mb-5 rounded-[24px] border border-brand-accent/75 bg-gradient-to-br from-brand-surface/35 to-white p-5">
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-full bg-brand-brown flex items-center justify-center flex-shrink-0">
+          <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-primary">
             <span className="text-white font-semibold">
               {(appointment.patient_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 truncate">
+            <h3 className="truncate text-lg font-semibold text-brand-ink">
               {appointment.patient_name}
             </h3>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-gray-500">
+            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-brand-muted">
               {appointment.patient_phone && (
                 <span className="flex items-center gap-1.5">
                   <Phone size={13} /> {appointment.patient_phone}
@@ -107,8 +107,8 @@ export default function AppointmentDetailModal({
 
       {/* Booking Info */}
       <div>
-        <h4 className="text-sm font-semibold text-brand-brown mb-3">Booking Information</h4>
-        <div className="border border-gray-200 rounded-xl p-4 space-y-3">
+        <h4 className="mb-3 text-sm font-semibold text-brand-ink">Booking Information</h4>
+        <div className="space-y-3 rounded-[24px] border border-brand-accent/75 p-4">
           <Row icon={Calendar} label="Date">
             {fmtDate(appointment.start_time)}
           </Row>
@@ -127,10 +127,10 @@ export default function AppointmentDetailModal({
 function Row({ icon: Icon, label, children }) {
   return (
     <div className="flex items-start gap-3">
-      <Icon size={15} className="text-brand-taupe mt-0.5 flex-shrink-0" />
+      <Icon size={15} className="mt-0.5 flex-shrink-0 text-brand-primary" />
       <div className="flex-1">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>
-        <p className="text-sm text-gray-800 mt-0.5">{children}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">{label}</p>
+        <p className="mt-0.5 text-sm text-brand-ink">{children}</p>
       </div>
     </div>
   )

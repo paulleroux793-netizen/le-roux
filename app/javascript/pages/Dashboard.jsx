@@ -4,12 +4,12 @@ import { Clock, Bell, Phone, MessageCircle } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 
 const STATUS_STYLES = {
-  scheduled:   'bg-amber-100 text-amber-800',
-  confirmed:   'bg-emerald-100 text-emerald-800',
-  completed:   'bg-blue-100 text-blue-800',
-  cancelled:   'bg-red-100 text-red-800',
-  no_show:     'bg-gray-100 text-gray-600',
-  rescheduled: 'bg-purple-100 text-purple-800',
+  scheduled:   'border border-brand-accent bg-brand-surface/65 text-brand-primary',
+  confirmed:   'border border-brand-success/15 bg-[#EAF8F0] text-brand-success',
+  completed:   'border border-brand-secondary/15 bg-[#EEF4FF] text-brand-primary',
+  cancelled:   'border border-brand-danger/15 bg-[#FFF1F1] text-brand-danger',
+  no_show:     'border border-brand-muted/15 bg-[#F3F6FB] text-brand-muted',
+  rescheduled: 'border border-brand-accent/30 bg-white text-brand-secondary',
 }
 
 export default function Dashboard({
@@ -20,12 +20,17 @@ export default function Dashboard({
   return (
     <DashboardLayout>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-brand-brown">Dashboard</h1>
-        <p className="text-gray-500 mt-1 text-sm">Overview of today's activity</p>
+        <span className="inline-flex items-center rounded-full border border-brand-accent bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
+          Clinic overview
+        </span>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-ink">Dashboard</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-brand-muted">
+          Review today&apos;s patient activity, outstanding reminders, and front-desk follow-ups from one place.
+        </p>
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-5 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-4">
         <StatCard
           title="Today's Appointments"
           value={stats?.todays_appointments ?? 0}
@@ -52,43 +57,43 @@ export default function Dashboard({
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Today's appointments — spans 2 cols */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-6">
+        <div className="rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)] lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-brand-brown flex items-center gap-2">
-              <Clock size={16} className="text-brand-taupe" />
+            <h2 className="flex items-center gap-2 text-base font-semibold text-brand-ink">
+              <Clock size={16} className="text-brand-primary" />
               Today's Appointments
             </h2>
             <Link
               href="/appointments"
-              className="text-xs text-brand-taupe hover:text-brand-brown font-medium transition-colors"
+              className="text-xs font-medium text-brand-primary transition-colors hover:text-brand-primary-dark"
             >
               View all →
             </Link>
           </div>
           {todays_appointments.length > 0 ? (
-            <div className="divide-y divide-gray-100">
+            <div className="divide-y divide-brand-accent/40">
               {todays_appointments.map((apt) => (
                 <Link
                   key={apt.id}
                   href={`/appointments/${apt.id}`}
-                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:bg-brand-cream -mx-2 px-2 rounded-lg transition-colors"
+                  className="-mx-2 flex items-center gap-3 rounded-2xl px-2 py-3 transition-colors first:pt-0 last:pb-0 hover:bg-brand-surface/35"
                 >
-                  <div className="w-10 h-10 rounded-full bg-brand-cream flex items-center justify-center flex-shrink-0">
-                    <span className="text-brand-brown text-xs font-semibold">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
+                    <span className="text-xs font-semibold text-brand-primary">
                       {initials(apt.patient_name)}
                     </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 text-sm truncate">{apt.patient_name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">{apt.reason || 'General consultation'}</p>
+                    <p className="truncate text-sm font-medium text-brand-ink">{apt.patient_name}</p>
+                    <p className="mt-0.5 truncate text-xs text-brand-muted">{apt.reason || 'General consultation'}</p>
                   </div>
                   <div className="text-right flex-shrink-0">
-                    <p className="text-xs font-semibold text-gray-700">
+                    <p className="text-xs font-semibold text-brand-ink">
                       {formatTime(apt.start_time)}
                     </p>
-                    <p className="text-[11px] text-gray-400">
+                    <p className="text-[11px] text-brand-muted">
                       {formatTime(apt.end_time)}
                     </p>
                   </div>
@@ -97,21 +102,21 @@ export default function Dashboard({
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-sm py-8 text-center">
+            <p className="py-8 text-center text-sm text-brand-muted">
               No appointments scheduled for today
             </p>
           )}
         </div>
 
         {/* Reminders */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <div className="rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)]">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-brand-brown flex items-center gap-2">
-              <Bell size={16} className="text-brand-taupe" />
+            <h2 className="flex items-center gap-2 text-base font-semibold text-brand-ink">
+              <Bell size={16} className="text-brand-primary" />
               Reminders
             </h2>
             {reminders.length > 0 && (
-              <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+              <span className="rounded-full bg-[#FFF8E8] px-2 py-0.5 text-xs font-semibold text-[#C58A22]">
                 {reminders.length}
               </span>
             )}
@@ -121,23 +126,23 @@ export default function Dashboard({
               {reminders.map((apt) => (
                 <div
                   key={apt.id}
-                  className="border border-amber-100 bg-amber-50/50 rounded-lg p-3"
+                  className="rounded-2xl border border-brand-accent/65 bg-brand-surface/35 p-3"
                 >
-                  <p className="font-medium text-gray-900 text-sm truncate">{apt.patient_name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="truncate text-sm font-medium text-brand-ink">{apt.patient_name}</p>
+                  <p className="mt-0.5 text-xs text-brand-muted">
                     Unconfirmed · {formatTime(apt.start_time)}
                   </p>
                   <div className="flex gap-2 mt-2">
                     <a
                       href={`tel:${apt.patient_phone}`}
-                      className="flex items-center gap-1 text-xs text-brand-taupe hover:text-brand-brown font-medium"
+                      className="flex items-center gap-1 text-xs font-medium text-brand-primary hover:text-brand-primary-dark"
                     >
                       <Phone size={11} /> Call
                     </a>
-                    <span className="text-gray-300">·</span>
+                    <span className="text-brand-accent">·</span>
                     <Link
                       href={`/appointments/${apt.id}`}
-                      className="flex items-center gap-1 text-xs text-brand-taupe hover:text-brand-brown font-medium"
+                      className="flex items-center gap-1 text-xs font-medium text-brand-primary hover:text-brand-primary-dark"
                     >
                       <MessageCircle size={11} /> Open
                     </Link>
@@ -146,7 +151,7 @@ export default function Dashboard({
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-sm py-8 text-center">
+            <p className="py-8 text-center text-sm text-brand-muted">
               No reminders — all set
             </p>
           )}
@@ -173,23 +178,27 @@ function formatTime(iso) {
 
 function StatCard({ title, value, subtitle, accent }) {
   const accentMap = {
-    brown: 'text-brand-brown',
-    taupe: 'text-brand-taupe',
-    amber: 'text-amber-600',
-    gold:  'text-brand-gold',
+    brown: ['text-brand-primary', 'bg-brand-surface'],
+    taupe: ['text-brand-secondary', 'bg-[#EEF4FF]'],
+    amber: ['text-[#C58A22]', 'bg-[#FFF8E8]'],
+    gold:  ['text-brand-ink', 'bg-white'],
   }
+  const [valueClass, chipClass] = accentMap[accent] || accentMap.brown
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
-      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{title}</p>
-      <p className={`text-3xl font-bold mt-2 ${accentMap[accent] || 'text-brand-brown'}`}>{value}</p>
-      <p className="text-xs text-gray-400 mt-1">{subtitle}</p>
+    <div className="rounded-[28px] border border-brand-accent/75 bg-white p-5 shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)]">
+      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${chipClass} ${accent === 'gold' ? 'border border-brand-accent text-brand-primary' : ''}`}>
+        Today
+      </span>
+      <p className={`mt-4 text-3xl font-semibold tracking-tight ${valueClass}`}>{value}</p>
+      <p className="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-brand-muted">{title}</p>
+      <p className="mt-2 text-sm text-brand-muted">{subtitle}</p>
     </div>
   )
 }
 
 function StatusBadge({ status }) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[status] || 'bg-gray-100 text-gray-600'}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[status] || 'border border-brand-muted/15 bg-[#F3F6FB] text-brand-muted'}`}>
       {status}
     </span>
   )

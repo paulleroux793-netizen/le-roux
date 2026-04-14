@@ -370,8 +370,8 @@ Remove the System Status feature completely from the dashboard and side navigati
 
 Apply the new palette consistently across the app using the provided screenshots as the design-language reference for a clean, modern, trustworthy clinic dashboard.
 
-- [ ] Replace the current warm brown/taupe brand tokens with the new source-of-truth palette
-- [ ] Define and apply the palette consistently:
+- [x] Replace the current warm brown/taupe brand tokens with the new source-of-truth palette
+- [x] Define and apply the palette consistently:
   - Primary `#3164DE`
   - Secondary `#769BF5`
   - Accent light `#B1C5F6`
@@ -381,15 +381,15 @@ Apply the new palette consistently across the app using the provided screenshots
   - Muted text/borders `#8592AD`
   - Success `#19A14E`
   - Error/warning `#EF6161`
-- [ ] Restyle the sidebar, top navigation, cards, stats panels, forms, tables, modals, badges, and interactive controls to use the new palette consistently
-- [ ] Keep backgrounds light and airy, with white content surfaces and restrained use of saturated color
-- [ ] Use the primary blue for main CTAs, active navigation, highlights, and key interactive states
-- [ ] Use the softer blues for section backgrounds, subtle emphasis, selected states, and supportive accents
-- [ ] Keep headings and primary text high-contrast with `#393C4D`; use `#8592AD` for muted labels, borders, and helper copy
-- [ ] Restrict `#19A14E` and `#EF6161` to status communication only
-- [ ] Apply the new design direction to the calendar so it feels cohesive with the rest of the dashboard
-- [ ] Run a full consistency pass across the major pages and shared components
-- [ ] Create a conventional commit after the theme rollout is complete
+- [x] Restyle the sidebar, top navigation, cards, stats panels, forms, tables, modals, badges, and interactive controls to use the new palette consistently
+- [x] Keep backgrounds light and airy, with white content surfaces and restrained use of saturated color
+- [x] Use the primary blue for main CTAs, active navigation, highlights, and key interactive states
+- [x] Use the softer blues for section backgrounds, subtle emphasis, selected states, and supportive accents
+- [x] Keep headings and primary text high-contrast with `#393C4D`; use `#8592AD` for muted labels, borders, and helper copy
+- [x] Restrict `#19A14E` and `#EF6161` to status communication only
+- [x] Apply the new design direction to the calendar so it feels cohesive with the rest of the dashboard
+- [x] Run a full consistency pass across the major pages and shared components
+- [x] Create a conventional commit after the theme rollout is complete
 
 ## Phase 10: Import Historical WhatsApp Chats
 

@@ -121,7 +121,7 @@ export default function GlobalSearch() {
       <div className="relative">
         <Search
           size={15}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted"
         />
         <input
           type="text"
@@ -133,12 +133,12 @@ export default function GlobalSearch() {
           onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-9 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe transition-colors"
+          className="w-full rounded-2xl border border-brand-accent/80 bg-white/95 py-2.5 pl-10 pr-9 text-sm text-brand-ink placeholder:text-brand-muted focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45 transition-colors"
         />
         {loading && (
           <Loader2
             size={14}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin"
+            className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-brand-muted"
           />
         )}
       </div>
@@ -147,7 +147,7 @@ export default function GlobalSearch() {
         <div
           id="global-search-listbox"
           role="listbox"
-          className="absolute left-0 right-0 mt-2 bg-white rounded-xl border border-gray-200 shadow-lg max-h-[28rem] overflow-y-auto z-50"
+          className="absolute left-0 right-0 z-50 mt-2 max-h-[28rem] overflow-y-auto rounded-3xl border border-brand-accent/80 bg-white shadow-[0_30px_70px_-42px_rgba(57,60,77,0.45)]"
         >
           {!results ? (
             <EmptyState message="Type at least 2 characters to search…" />
@@ -166,8 +166,8 @@ export default function GlobalSearch() {
                   <Row active={isActive}>
                     <Avatar initials={initials(p.full_name)} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">{p.full_name}</p>
-                      <p className="text-xs text-gray-400 truncate">
+                      <p className="text-sm font-medium text-brand-ink truncate">{p.full_name}</p>
+                      <p className="truncate text-xs text-brand-muted">
                         {p.phone}{p.email ? ` · ${p.email}` : ''}
                       </p>
                     </div>
@@ -185,11 +185,11 @@ export default function GlobalSearch() {
                   <Row active={isActive}>
                     <IconBubble icon={Calendar} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="truncate text-sm font-medium text-brand-ink">
                         {a.patient_name}
-                        {a.reason ? <span className="text-gray-400 font-normal"> · {a.reason}</span> : null}
+                        {a.reason ? <span className="font-normal text-brand-muted"> · {a.reason}</span> : null}
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-brand-muted">
                         {new Date(a.start_time).toLocaleString('en-ZA', {
                           dateStyle: 'medium', timeStyle: 'short',
                         })}
@@ -210,11 +210,11 @@ export default function GlobalSearch() {
                   <Row active={isActive}>
                     <IconBubble icon={MessageSquare} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="truncate text-sm font-medium text-brand-ink">
                         {c.patient_name}
-                        <span className="text-gray-400 font-normal"> · {c.channel}</span>
+                        <span className="font-normal text-brand-muted"> · {c.channel}</span>
                       </p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-brand-muted">
                         {new Date(c.updated_at).toLocaleDateString('en-ZA')}
                       </p>
                     </div>
@@ -233,7 +233,7 @@ function ResultSection({ label, icon: Icon, items, flatStart, activeIdx, onSelec
   if (!items || items.length === 0) return null
   return (
     <div>
-      <div className="flex items-center gap-1.5 px-4 pt-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+      <div className="flex items-center gap-1.5 px-4 pb-1.5 pt-3 text-[10px] font-semibold uppercase tracking-wider text-brand-muted">
         <Icon size={11} />
         {label}
       </div>
@@ -261,7 +261,7 @@ function Row({ active, children }) {
   return (
     <div
       className={`flex items-center gap-3 px-4 py-2.5 ${
-        active ? 'bg-brand-cream/70' : 'hover:bg-gray-50'
+        active ? 'bg-brand-surface/65' : 'hover:bg-brand-surface/30'
       }`}
     >
       {children}
@@ -271,22 +271,22 @@ function Row({ active, children }) {
 
 function EmptyState({ message }) {
   return (
-    <div className="px-4 py-10 text-center text-sm text-gray-400">{message}</div>
+    <div className="px-4 py-10 text-center text-sm text-brand-muted">{message}</div>
   )
 }
 
 function Avatar({ initials }) {
   return (
-    <div className="w-8 h-8 rounded-full bg-brand-cream flex items-center justify-center flex-shrink-0">
-      <span className="text-brand-brown text-[10px] font-semibold">{initials}</span>
+    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-surface">
+      <span className="text-[10px] font-semibold text-brand-primary">{initials}</span>
     </div>
   )
 }
 
 function IconBubble({ icon: Icon }) {
   return (
-    <div className="w-8 h-8 rounded-full bg-brand-cream flex items-center justify-center flex-shrink-0">
-      <Icon size={14} className="text-brand-taupe" />
+    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-surface">
+      <Icon size={14} className="text-brand-primary" />
     </div>
   )
 }

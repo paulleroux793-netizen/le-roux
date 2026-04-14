@@ -97,20 +97,20 @@ export default function DataTable({
   const pageEnd   = Math.min(pageStart + pagination.pageSize - 1, totalRows)
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <div className="overflow-hidden rounded-[28px] border border-brand-accent/75 bg-white shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)]">
       {/* ── Header: search + filters + actions ────────────────── */}
-      <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
+      <div className="flex flex-wrap items-center gap-3 border-b border-brand-accent/70 bg-gradient-to-br from-brand-surface/35 via-white to-white p-4">
         <div className="relative flex-1 min-w-[220px] max-w-sm">
           <Search
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted"
           />
           <input
             type="text"
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
             placeholder={globalFilterPlaceholder}
-            className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm text-gray-800 bg-white focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe transition-colors"
+            className="w-full rounded-2xl border border-brand-accent/80 bg-white pl-9 pr-3 py-2.5 text-sm text-brand-ink transition-colors focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
           />
         </div>
         {filters && (
@@ -128,14 +128,14 @@ export default function DataTable({
         <table className="min-w-full">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id} className="bg-white border-b border-gray-100">
+              <tr key={headerGroup.id} className="border-b border-brand-accent/55 bg-white">
                 {headerGroup.headers.map((header) => {
                   const canSort = header.column.getCanSort()
                   const sort = header.column.getIsSorted()
                   return (
                     <th
                       key={header.id}
-                      className="px-5 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                      className="whitespace-nowrap px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-muted"
                       style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                     >
                       {header.isPlaceholder ? null : (
@@ -143,14 +143,14 @@ export default function DataTable({
                           type="button"
                           onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                           className={`inline-flex items-center gap-1 ${
-                            canSort ? 'hover:text-brand-brown cursor-pointer' : 'cursor-default'
+                            canSort ? 'cursor-pointer hover:text-brand-ink' : 'cursor-default'
                           }`}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
                           {canSort && (
                             sort === 'asc' ? <ArrowUp size={12} /> :
                             sort === 'desc' ? <ArrowDown size={12} /> :
-                            <ArrowUpDown size={12} className="text-gray-300" />
+                            <ArrowUpDown size={12} className="text-brand-accent" />
                           )}
                         </button>
                       )}
@@ -163,7 +163,7 @@ export default function DataTable({
           <tbody>
             {table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-5 py-16 text-center text-sm text-gray-400">
+                <td colSpan={columns.length} className="px-5 py-16 text-center text-sm text-brand-muted">
                   {data.length === 0 ? emptyMessage : 'No rows match the current filters'}
                 </td>
               </tr>
@@ -171,10 +171,10 @@ export default function DataTable({
               table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="border-b border-gray-50 hover:bg-brand-cream/40 transition-colors"
+                  className="border-b border-brand-accent/25 transition-colors hover:bg-brand-surface/28"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-5 py-4 text-sm text-gray-700 whitespace-nowrap">
+                    <td key={cell.id} className="whitespace-nowrap px-5 py-4 text-sm text-brand-ink">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -186,13 +186,13 @@ export default function DataTable({
       </div>
 
       {/* ── Footer: counts + pagination ───────────────────────── */}
-      <div className="flex items-center justify-between gap-4 p-4 border-t border-gray-100 text-xs text-gray-500">
+      <div className="flex items-center justify-between gap-4 border-t border-brand-accent/70 bg-brand-surface/18 p-4 text-xs text-brand-muted">
         <div>
           {totalRows > 0 ? (
             <>
-              Showing <span className="font-semibold text-gray-700">{pageStart}</span>–
-              <span className="font-semibold text-gray-700">{pageEnd}</span> of{' '}
-              <span className="font-semibold text-gray-700">{totalRows}</span>
+              Showing <span className="font-semibold text-brand-ink">{pageStart}</span>–
+              <span className="font-semibold text-brand-ink">{pageEnd}</span> of{' '}
+              <span className="font-semibold text-brand-ink">{totalRows}</span>
               {totalLabel && ` ${totalLabel}`}
             </>
           ) : (
@@ -233,7 +233,7 @@ function Pagination({ table }) {
       <button
         onClick={() => table.previousPage()}
         disabled={!table.getCanPreviousPage()}
-        className={`${btn} border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed`}
+        className={`${btn} border border-brand-accent bg-white text-brand-muted hover:bg-brand-surface/32 disabled:cursor-not-allowed disabled:opacity-40`}
         aria-label="Previous page"
       >
         <ChevronLeft size={14} />
@@ -241,15 +241,15 @@ function Pagination({ table }) {
 
       {withEllipsis.map((p, i) =>
         p === '…' ? (
-          <span key={`e-${i}`} className="px-1 text-gray-400">…</span>
+          <span key={`e-${i}`} className="px-1 text-brand-muted">…</span>
         ) : (
           <button
             key={p}
             onClick={() => table.setPageIndex(p - 1)}
             className={`${btn} ${
               p === currentPage
-                ? 'bg-brand-taupe text-white'
-                : 'border border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                ? 'bg-brand-primary text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.95)]'
+                : 'border border-brand-accent bg-white text-brand-muted hover:bg-brand-surface/32'
             }`}
           >
             {p}
@@ -260,7 +260,7 @@ function Pagination({ table }) {
       <button
         onClick={() => table.nextPage()}
         disabled={!table.getCanNextPage()}
-        className={`${btn} border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed`}
+        className={`${btn} border border-brand-accent bg-white text-brand-muted hover:bg-brand-surface/32 disabled:cursor-not-allowed disabled:opacity-40`}
         aria-label="Next page"
       >
         <ChevronRight size={14} />

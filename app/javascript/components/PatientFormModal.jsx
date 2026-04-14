@@ -173,7 +173,7 @@ export default function PatientFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="rounded-2xl px-4 py-2 text-sm font-medium text-brand-muted transition-colors hover:bg-brand-surface/45 hover:text-brand-ink"
           >
             Cancel
           </button>
@@ -181,7 +181,7 @@ export default function PatientFormModal({
             type="submit"
             form="patient-form"
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-semibold text-white bg-brand-taupe hover:bg-brand-brown disabled:opacity-50 rounded-lg transition-colors"
+            className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark disabled:opacity-50"
           >
             {isEdit ? 'Save changes' : 'Create patient'}
           </button>
@@ -213,7 +213,7 @@ export default function PatientFormModal({
               rows={2}
               placeholder="General notes about this patient…"
               {...register('notes')}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe resize-none"
+              className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             />
           </Field>
         </Section>
@@ -226,7 +226,7 @@ export default function PatientFormModal({
                 rows={2}
                 placeholder="e.g. Penicillin, latex"
                 {...register('mh_allergies')}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe resize-none"
+                className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
               />
             </Field>
             <Field label="Chronic conditions">
@@ -234,20 +234,20 @@ export default function PatientFormModal({
                 rows={2}
                 placeholder="e.g. Hypertension, diabetes"
                 {...register('mh_chronic_conditions')}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe resize-none"
+                className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
               />
             </Field>
             <Field label="Current medications">
               <textarea
                 rows={2}
                 {...register('mh_current_medications')}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe resize-none"
+                className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
               />
             </Field>
             <Field label="Blood type">
               <select
                 {...register('mh_blood_type')}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+                className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
               >
                 <option value="">Unknown</option>
                 {bloodTypes.map((bt) => (
@@ -273,12 +273,12 @@ export default function PatientFormModal({
           </div>
           <Field label="Dental notes">
             <textarea
-              rows={2}
-              placeholder="Prior procedures, sensitivities, anxiety triggers…"
-              {...register('mh_dental_notes')}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe resize-none"
-            />
-          </Field>
+            rows={2}
+            placeholder="Prior procedures, sensitivities, anxiety triggers…"
+            {...register('mh_dental_notes')}
+            className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
+          />
+        </Field>
         </Section>
       </form>
     </Modal>
@@ -288,9 +288,9 @@ export default function PatientFormModal({
 function Section({ title, subtitle, children }) {
   return (
     <div>
-      <div className="mb-3 pb-2 border-b border-gray-100">
-        <h3 className="text-sm font-semibold text-brand-brown">{title}</h3>
-        {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+      <div className="mb-3 border-b border-brand-accent/60 pb-2">
+        <h3 className="text-sm font-semibold text-brand-ink">{title}</h3>
+        {subtitle && <p className="mt-0.5 text-xs text-brand-muted">{subtitle}</p>}
       </div>
       <div className="space-y-4">{children}</div>
     </div>
@@ -300,11 +300,11 @@ function Section({ title, subtitle, children }) {
 function Field({ label, error, children }) {
   return (
     <label className="block">
-      <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
         {label}
       </span>
       {children}
-      {error && <span className="block text-xs text-red-600 mt-1">{error}</span>}
+      {error && <span className="mt-1 block text-xs text-brand-danger">{error}</span>}
     </label>
   )
 }
@@ -314,7 +314,7 @@ const Input = React.forwardRef(function Input(props, ref) {
     <input
       ref={ref}
       {...props}
-      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+      className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
     />
   )
 })

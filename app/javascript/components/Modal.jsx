@@ -56,22 +56,22 @@ export default function Modal({
     >
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-gray-900/40 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[#393C4D]/28 backdrop-blur-[4px]"
         onClick={onClose}
       />
 
       {/* Panel */}
       <div
-        className={`relative w-full ${sizeClass} bg-white rounded-2xl shadow-xl border border-gray-200 flex flex-col max-h-[90vh]`}
+        className={`relative flex max-h-[90vh] w-full ${sizeClass} flex-col rounded-[28px] border border-brand-accent/80 bg-white shadow-[0_38px_90px_-55px_rgba(57,60,77,0.5)]`}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-gray-100">
-          <h2 id="modal-title" className="text-lg font-semibold text-brand-brown">
+        <div className="flex items-start justify-between border-b border-brand-accent/70 bg-gradient-to-br from-brand-surface/45 via-white to-white p-5">
+          <h2 id="modal-title" className="text-lg font-semibold text-brand-ink">
             {title}
           </h2>
           <button
             onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            className="rounded-xl p-1 text-brand-muted transition-colors hover:bg-brand-surface/60 hover:text-brand-ink"
             aria-label="Close"
           >
             <X size={18} />
@@ -83,7 +83,7 @@ export default function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+          <div className="flex items-center justify-end gap-2 rounded-b-[28px] border-t border-brand-accent/70 bg-brand-surface/20 p-4">
             {footer}
           </div>
         )}

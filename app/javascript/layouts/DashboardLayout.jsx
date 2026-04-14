@@ -26,29 +26,29 @@ export default function DashboardLayout({ children }) {
       : url.startsWith(href)
 
   return (
-    <div className="min-h-screen bg-brand-cream">
+    <div className="min-h-screen bg-transparent text-brand-ink">
 
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
-      <aside className="fixed inset-y-0 left-0 w-64 bg-brand-brown flex flex-col z-30">
+      <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-brand-accent/70 bg-white/95 shadow-[0_24px_65px_-52px_rgba(57,60,77,0.35)] backdrop-blur">
 
         {/* Practice identity */}
-        <div className="px-5 py-5 border-b border-white/10">
+        <div className="border-b border-brand-accent/70 px-5 py-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-brand-gold flex items-center justify-center flex-shrink-0">
-              <span className="text-brand-brown font-bold text-sm select-none">DL</span>
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-primary shadow-[0_18px_35px_-22px_rgba(49,100,222,0.9)]">
+              <span className="select-none text-sm font-bold text-white">DL</span>
             </div>
             <div className="min-w-0">
-              <h1 className="text-white font-semibold text-sm leading-tight truncate">
+              <h1 className="truncate text-sm font-semibold leading-tight text-brand-ink">
                 Dr Chalita le Roux
               </h1>
-              <p className="text-brand-gold text-xs mt-0.5 tracking-wide">AI Receptionist</p>
+              <p className="mt-0.5 text-xs tracking-wide text-brand-muted">AI Receptionist</p>
             </div>
           </div>
         </div>
 
         {/* Main navigation */}
-        <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
-          <p className="text-white/30 text-xs font-semibold uppercase tracking-widest px-3 mb-3 select-none">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
+          <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-brand-muted select-none">
             Menu
           </p>
           {NAV_ITEMS.map(({ name, href, icon: Icon }) => {
@@ -58,19 +58,19 @@ export default function DashboardLayout({ children }) {
                 key={name}
                 href={href}
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                  'flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-all',
                   active
-                    ? 'bg-white/10 text-white'
-                    : 'text-white/55 hover:bg-white/5 hover:text-white/90'
+                    ? 'bg-brand-primary text-white shadow-[0_22px_45px_-30px_rgba(49,100,222,0.95)]'
+                    : 'text-brand-muted hover:bg-brand-surface/45 hover:text-brand-ink'
                 )}
               >
                 <Icon
                   size={16}
-                  className={cn('flex-shrink-0', active ? 'text-brand-gold' : 'text-white/40')}
+                  className={cn('flex-shrink-0', active ? 'text-white' : 'text-brand-muted')}
                 />
                 <span className="truncate">{name}</span>
                 {active && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-gold flex-shrink-0" />
+                  <span className="ml-auto h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white" />
                 )}
               </Link>
             )
@@ -78,38 +78,40 @@ export default function DashboardLayout({ children }) {
         </nav>
 
         {/* Bottom — Settings / Support */}
-        <div className="px-3 pb-4 border-t border-white/10 pt-3 space-y-0.5">
+        <div className="space-y-1 border-t border-brand-accent/70 px-3 pb-4 pt-3">
           <Link
             href="/settings"
             className={cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+              'flex items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition-all',
               isActive('/settings')
-                ? 'bg-white/10 text-white'
-                : 'text-white/55 hover:bg-white/5 hover:text-white/90'
+                ? 'bg-brand-primary text-white shadow-[0_22px_45px_-30px_rgba(49,100,222,0.95)]'
+                : 'text-brand-muted hover:bg-brand-surface/45 hover:text-brand-ink'
             )}
           >
             <Settings
               size={16}
               className={cn(
                 'flex-shrink-0',
-                isActive('/settings') ? 'text-brand-gold' : 'text-white/40'
+                isActive('/settings') ? 'text-white' : 'text-brand-muted'
               )}
             />
             Settings
             {isActive('/settings') && (
-              <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-gold flex-shrink-0" />
+              <span className="ml-auto h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white" />
             )}
           </Link>
 
-          <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white/55 hover:bg-white/5 hover:text-white/90 transition-all">
-            <HelpCircle size={16} className="flex-shrink-0 text-white/40" />
-            Support
+          <button className="w-full rounded-2xl px-3.5 py-3 text-left text-sm font-medium text-brand-muted transition-all hover:bg-brand-surface/45 hover:text-brand-ink">
+            <span className="flex items-center gap-3">
+              <HelpCircle size={16} className="flex-shrink-0 text-brand-muted" />
+              Support
+            </span>
           </button>
         </div>
       </aside>
 
       {/* ── Top navbar ──────────────────────────────────────────────── */}
-      <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-gray-100 flex items-center px-6 gap-4 z-20">
+      <header className="fixed left-64 right-0 top-0 z-20 flex h-16 items-center gap-4 border-b border-brand-accent/70 bg-white/88 px-6 backdrop-blur">
 
         {/* Left spacer — keeps the search visually centered */}
         <div className="flex-1" />
@@ -121,22 +123,22 @@ export default function DashboardLayout({ children }) {
         <div className="flex-1 flex items-center justify-end gap-2">
           <NotificationBell />
 
-          <div className="w-px h-6 bg-gray-200 mx-1" />
+          <div className="mx-1 h-6 w-px bg-brand-accent" />
 
-          <button className="flex items-center gap-2 pl-2 pr-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors group">
-            <div className="w-8 h-8 rounded-full bg-brand-brown flex items-center justify-center flex-shrink-0">
+          <button className="group flex items-center gap-2 rounded-2xl border border-transparent py-1.5 pl-2 pr-2 transition-colors hover:border-brand-accent hover:bg-brand-surface/35">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary">
               <span className="text-white text-xs font-semibold select-none">DL</span>
             </div>
-            <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 hidden sm:block">
+            <span className="hidden text-sm font-medium text-brand-ink sm:block">
               Dr le Roux
             </span>
-            <ChevronDown size={14} className="text-gray-400 group-hover:text-gray-600" />
+            <ChevronDown size={14} className="text-brand-muted group-hover:text-brand-ink" />
           </button>
         </div>
       </header>
 
       {/* ── Page content ────────────────────────────────────────────── */}
-      <main className="ml-64 pt-16 min-h-screen">
+      <main className="ml-64 min-h-screen pt-16">
         <div className="p-8">
           {children}
         </div>

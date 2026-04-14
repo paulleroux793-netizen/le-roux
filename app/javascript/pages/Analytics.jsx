@@ -5,13 +5,16 @@ export default function Analytics({ cancellation_stats, booking_stats, channel_s
   return (
     <DashboardLayout>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-brand-brown">Analytics</h1>
-        <p className="text-gray-500 mt-1 text-sm">Cancellation reasons, booking stats, and channel performance</p>
+        <span className="inline-flex items-center rounded-full border border-brand-accent bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
+          Practice analytics
+        </span>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-ink">Analytics</h1>
+        <p className="mt-2 text-sm leading-6 text-brand-muted">Cancellation reasons, booking stats, and channel performance</p>
       </div>
 
       {/* Booking Stats */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-5">
-        <h2 className="text-base font-semibold text-brand-brown mb-5">Booking Stats — Last 30 Days</h2>
+      <div className="mb-5 rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+        <h2 className="mb-5 text-base font-semibold text-brand-ink">Booking Stats — Last 30 Days</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <StatBlock label="Total Bookings"   value={booking_stats?.total_bookings_30d ?? 0} />
           <StatBlock label="Completed"        value={booking_stats?.completed_30d ?? 0}      color="emerald" />
@@ -21,31 +24,31 @@ export default function Analytics({ cancellation_stats, booking_stats, channel_s
       </div>
 
       {/* Channel Stats */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 mb-5">
-        <h2 className="text-base font-semibold text-brand-brown mb-5">Channel Performance</h2>
+      <div className="mb-5 rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+        <h2 className="mb-5 text-base font-semibold text-brand-ink">Channel Performance</h2>
         <div className="grid grid-cols-2 gap-5">
-          <div className="text-center p-6 bg-emerald-50 rounded-xl border border-emerald-100">
-            <p className="text-3xl font-bold text-emerald-600">{channel_stats?.whatsapp ?? 0}</p>
-            <p className="text-sm font-medium text-gray-700 mt-1">WhatsApp Conversations</p>
-            <p className="text-xs text-gray-400 mt-0.5">{channel_stats?.whatsapp_pct ?? 0}% of total</p>
+          <div className="rounded-[24px] border border-brand-success/15 bg-[#EAF8F0] p-6 text-center">
+            <p className="text-3xl font-bold text-brand-success">{channel_stats?.whatsapp ?? 0}</p>
+            <p className="mt-1 text-sm font-medium text-brand-ink">WhatsApp Conversations</p>
+            <p className="mt-0.5 text-xs text-brand-muted">{channel_stats?.whatsapp_pct ?? 0}% of total</p>
           </div>
-          <div className="text-center p-6 bg-blue-50 rounded-xl border border-blue-100">
-            <p className="text-3xl font-bold text-blue-600">{channel_stats?.voice ?? 0}</p>
-            <p className="text-sm font-medium text-gray-700 mt-1">Voice Conversations</p>
-            <p className="text-xs text-gray-400 mt-0.5">{channel_stats?.voice_pct ?? 0}% of total</p>
+          <div className="rounded-[24px] border border-brand-accent bg-[#EEF4FF] p-6 text-center">
+            <p className="text-3xl font-bold text-brand-primary">{channel_stats?.voice ?? 0}</p>
+            <p className="mt-1 text-sm font-medium text-brand-ink">Voice Conversations</p>
+            <p className="mt-0.5 text-xs text-brand-muted">{channel_stats?.voice_pct ?? 0}% of total</p>
           </div>
         </div>
       </div>
 
       {/* Cancellation Reasons */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h2 className="text-base font-semibold text-brand-brown mb-2">Cancellation Reasons</h2>
+      <div className="rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+        <h2 className="mb-2 text-base font-semibold text-brand-ink">Cancellation Reasons</h2>
         <div className="flex items-center gap-4 mb-5">
-          <p className="text-sm text-gray-500">
-            Total cancelled: <span className="font-semibold text-red-500">{cancellation_stats?.total_cancelled ?? 0}</span>
+          <p className="text-sm text-brand-muted">
+            Total cancelled: <span className="font-semibold text-brand-danger">{cancellation_stats?.total_cancelled ?? 0}</span>
           </p>
-          <p className="text-sm text-gray-500">
-            Rate: <span className="font-semibold text-red-500">{cancellation_stats?.cancellation_rate ?? 0}%</span>
+          <p className="text-sm text-brand-muted">
+            Rate: <span className="font-semibold text-brand-danger">{cancellation_stats?.cancellation_rate ?? 0}%</span>
           </p>
         </div>
         <div className="space-y-3">
@@ -55,12 +58,12 @@ export default function Analytics({ cancellation_stats, booking_stats, channel_s
             return (
               <div key={item.category}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-medium text-gray-700 capitalize">{item.category}</span>
-                  <span className="text-sm text-gray-500">{item.count}</span>
+                  <span className="text-sm font-medium capitalize text-brand-ink">{item.category}</span>
+                  <span className="text-sm text-brand-muted">{item.count}</span>
                 </div>
-                <div className="w-full bg-gray-100 rounded-full h-2">
+                <div className="h-2 w-full rounded-full bg-brand-surface/55">
                   <div
-                    className="bg-brand-taupe h-2 rounded-full transition-all"
+                    className="h-2 rounded-full bg-brand-primary transition-all"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
@@ -75,15 +78,15 @@ export default function Analytics({ cancellation_stats, booking_stats, channel_s
 
 function StatBlock({ label, value, color = 'brown' }) {
   const colorMap = {
-    brown:   'text-brand-brown',
-    taupe:   'text-brand-taupe',
-    emerald: 'text-emerald-600',
-    red:     'text-red-500',
+    brown:   'text-brand-primary',
+    taupe:   'text-brand-secondary',
+    emerald: 'text-brand-success',
+    red:     'text-brand-danger',
   }
   return (
     <div className="text-center">
       <p className={`text-3xl font-bold ${colorMap[color]}`}>{value}</p>
-      <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{label}</p>
+      <p className="mt-1 text-xs uppercase tracking-wide text-brand-muted">{label}</p>
     </div>
   )
 }

@@ -125,7 +125,7 @@ export default function AppointmentFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+            className="rounded-2xl px-4 py-2 text-sm font-medium text-brand-muted transition-colors hover:bg-brand-surface/45 hover:text-brand-ink"
           >
             Cancel
           </button>
@@ -133,7 +133,7 @@ export default function AppointmentFormModal({
             type="submit"
             form="appointment-form"
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-semibold text-white bg-brand-taupe hover:bg-brand-brown disabled:opacity-50 rounded-lg transition-colors"
+            className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark disabled:opacity-50"
           >
             {isEdit ? 'Save changes' : 'Book appointment'}
           </button>
@@ -146,7 +146,7 @@ export default function AppointmentFormModal({
           <Field label="Patient" error={errors.patient_id?.message}>
             <select
               {...register('patient_id')}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+              className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             >
               <option value="">Select a patient…</option>
               {patients.map((p) => (
@@ -163,14 +163,14 @@ export default function AppointmentFormModal({
             <input
               type="datetime-local"
               {...register('start_time')}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+              className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             />
           </Field>
           <Field label="End time" error={errors.end_time?.message}>
             <input
               type="datetime-local"
               {...register('end_time')}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+              className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             />
           </Field>
         </div>
@@ -180,7 +180,7 @@ export default function AppointmentFormModal({
             type="text"
             placeholder="e.g. Root canal, cleaning, consultation"
             {...register('reason')}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+            className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
           />
         </Field>
 
@@ -189,7 +189,7 @@ export default function AppointmentFormModal({
             rows={3}
             placeholder="Any additional context for the reception…"
             {...register('notes')}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe resize-none"
+            className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
           />
         </Field>
       </form>
@@ -200,11 +200,11 @@ export default function AppointmentFormModal({
 function Field({ label, error, children }) {
   return (
     <label className="block">
-      <span className="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">
+      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">
         {label}
       </span>
       {children}
-      {error && <span className="block text-xs text-red-600 mt-1">{error}</span>}
+      {error && <span className="mt-1 block text-xs text-brand-danger">{error}</span>}
     </label>
   )
 }
