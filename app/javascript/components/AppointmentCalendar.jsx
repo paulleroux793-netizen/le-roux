@@ -6,61 +6,77 @@ import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { toast } from 'sonner'
 
-// ── Brand palette for event blocks ──────────────────────────────────
-// Keyed by Appointment.status enum values from the Rails side. Kept
-// small and muted so the calendar still reads as "premium" rather than
-// a rainbow of competing colours. Status meanings are the same as
-// STATUS_STYLES in Appointments.jsx; we use slightly different shades
-// here because event blocks sit on a white grid and need more contrast.
-const STATUS_COLORS = {
-  scheduled:   { bg: '#FEF3C7', border: '#F59E0B', text: '#92400E' }, // amber
-  confirmed:   { bg: '#D1FAE5', border: '#10B981', text: '#065F46' }, // emerald
-  completed:   { bg: '#DBEAFE', border: '#3B82F6', text: '#1E40AF' }, // blue
-  cancelled:   { bg: '#FEE2E2', border: '#EF4444', text: '#991B1B' }, // red
-  no_show:     { bg: '#F3F4F6', border: '#9CA3AF', text: '#4B5563' }, // gray
-  rescheduled: { bg: '#EDE9FE', border: '#8B5CF6', text: '#5B21B6' }, // purple
+// ── Status → pastel card theme ──────────────────────────────────────
+// Each event block is rendered as a white-ish card with a subtle tint,
+// a coloured left accent bar, and dark text — mirroring the premium
+// dashboard reference screenshots. Keeping a single source of truth
+// here means the 6 statuses stay consistent across the whole calendar.
+const STATUS_THEMES = {
+  scheduled:   { tint: '#FFFBEB', accent: '#D97706', chip: 'bg-amber-100 text-amber-700' },
+  confirmed:   { tint: '#ECFDF5', accent: '#059669', chip: 'bg-emerald-100 text-emerald-700' },
+  completed:   { tint: '#EFF6FF', accent: '#2563EB', chip: 'bg-blue-100 text-blue-700' },
+  cancelled:   { tint: '#FEF2F2', accent: '#DC2626', chip: 'bg-red-100 text-red-700' },
+  no_show:     { tint: '#F9FAFB', accent: '#6B7280', chip: 'bg-gray-100 text-gray-600' },
+  rescheduled: { tint: '#F5F3FF', accent: '#7C3AED', chip: 'bg-violet-100 text-violet-700' },
+}
+
+// Initials for the avatar circle — "Jerome Bellingham" → "JB".
+const initials = (name = '') =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() || '')
+    .join('') || '·'
+
+// Time range like "09.00 AM - 11.00 AM" (matches screenshot ref #3).
+const formatRange = (start, end) => {
+  const fmt = (d) =>
+    d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', hour12: true })
+      .replace(':', '.')
+  return `${fmt(start)} - ${fmt(end)}`
 }
 
 export default function AppointmentCalendar({ appointments = [], onEventClick }) {
   const calendarRef = useRef(null)
 
-  // Convert Rails appointment props → FullCalendar event objects.
-  // Memoised so FullCalendar doesn't re-render on every parent render.
+  // Rails prop shape → FullCalendar event object. Memoised so FC only
+  // re-diffs on actual data change, not every parent render.
   const events = useMemo(
     () =>
       appointments.map((apt) => {
-        const colors = STATUS_COLORS[apt.status] || STATUS_COLORS.scheduled
+        const theme = STATUS_THEMES[apt.status] || STATUS_THEMES.scheduled
         return {
           id: String(apt.id),
           title: apt.patient_name,
           start: apt.start_time,
           end: apt.end_time,
-          backgroundColor: colors.bg,
-          borderColor: colors.border,
-          textColor: colors.text,
+          // We handle colours in eventContent + CSS vars; FC's default
+          // background is overridden to plain white so the card tint
+          // we render inside is the only visible fill.
+          backgroundColor: '#FFFFFF',
+          borderColor: theme.accent,
           extendedProps: {
             reason: apt.reason,
             status: apt.status,
             phone: apt.patient_phone,
+            tint: theme.tint,
+            accent: theme.accent,
           },
         }
       }),
     [appointments]
   )
 
-  // Drag-to-reschedule — fires after a user drops an event on a new slot.
-  // We PATCH /appointments/:id with the new window; on server error we
-  // revert the drop so the calendar stays in sync with the DB.
+  // Drag-to-reschedule — PATCHes the server; reverts the UI drop on error.
   const handleEventDrop = (info) => {
-    const { id } = info.event
     const payload = {
       appointment: {
         start_time: info.event.start.toISOString(),
         end_time:   info.event.end ? info.event.end.toISOString() : null,
       },
     }
-
-    router.patch(`/appointments/${id}`, payload, {
+    router.patch(`/appointments/${info.event.id}`, payload, {
       preserveScroll: true,
       onSuccess: () => toast.success('Appointment rescheduled'),
       onError: () => {
@@ -70,9 +86,6 @@ export default function AppointmentCalendar({ appointments = [], onEventClick })
     })
   }
 
-  // Clicking an event bubbles up to the parent so the host page can
-  // decide what to open (detail modal in sub-area #2, or navigation
-  // fallback for now).
   const handleEventClick = (info) => {
     info.jsEvent.preventDefault()
     if (onEventClick) {
@@ -82,8 +95,42 @@ export default function AppointmentCalendar({ appointments = [], onEventClick })
     }
   }
 
+  // Custom card renderer — this is what gives us the screenshot look.
+  // FullCalendar still positions the outer wrapper on the time grid;
+  // we render the card inside with inline styles that pull from the
+  // status theme. Absolute height tracks whatever slot the event spans.
+  const renderEventContent = (arg) => {
+    const { tint, accent, reason } = arg.event.extendedProps
+    const patient = arg.event.title
+    const start = arg.event.start
+    const end = arg.event.end || arg.event.start
+    return (
+      <div
+        className="h-full w-full rounded-md overflow-hidden flex flex-col p-2 text-[11px] leading-tight"
+        style={{
+          backgroundColor: tint,
+          borderLeft: `3px solid ${accent}`,
+        }}
+      >
+        <div className="flex items-center gap-1.5 mb-1">
+          <span
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0"
+            style={{ backgroundColor: accent }}
+          >
+            {initials(patient)}
+          </span>
+          <span className="font-semibold text-gray-900 truncate">{patient}</span>
+        </div>
+        {reason && (
+          <p className="text-gray-600 truncate mb-auto">{reason}</p>
+        )}
+        <p className="text-[10px] text-gray-500 mt-1 truncate">{formatRange(start, end)}</p>
+      </div>
+    )
+  }
+
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="appointment-calendar bg-white rounded-xl border border-gray-200 p-5">
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -95,9 +142,9 @@ export default function AppointmentCalendar({ appointments = [], onEventClick })
         }}
         events={events}
         editable
-        droppable={false}
         eventDrop={handleEventDrop}
         eventClick={handleEventClick}
+        eventContent={renderEventContent}
         slotMinTime="07:00:00"
         slotMaxTime="19:00:00"
         allDaySlot={false}
@@ -108,6 +155,7 @@ export default function AppointmentCalendar({ appointments = [], onEventClick })
         weekends
         firstDay={1}
         eventTimeFormat={{ hour: '2-digit', minute: '2-digit', meridiem: false }}
+        dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
       />
     </div>
   )

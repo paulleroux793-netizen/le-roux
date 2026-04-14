@@ -1,10 +1,22 @@
 class AppointmentsController < ApplicationController
+  # Number of days of appointments to pre-load for the interactive calendar
+  # view. Covers ~2 weeks so FullCalendar navigation feels instant without
+  # triggering a refetch.
+  CALENDAR_WINDOW_DAYS = 14
+
   def index
     appointments = Appointment.includes(:patient).order(start_time: :desc)
     appointments = apply_filters(appointments)
 
+    today = Date.current
+    calendar_appointments = Appointment
+      .includes(:patient)
+      .where(start_time: (today - 3.days).beginning_of_day..(today + CALENDAR_WINDOW_DAYS.days).end_of_day)
+      .order(:start_time)
+
     render inertia: "Appointments", props: {
       appointments: appointments.limit(50).map { |a| appointment_props(a) },
+      calendar_appointments: calendar_appointments.map { |a| appointment_props(a) },
       filters: filter_params.to_h,
       stats: {
         total: appointments.count,
