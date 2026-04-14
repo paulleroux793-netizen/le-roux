@@ -24,12 +24,12 @@ import CancelAppointmentModal from '../components/CancelAppointmentModal'
 // flows stay consistent.
 
 const OUTCOME_CHIPS = {
-  confirmed:   { label: 'Confirmed',   class: 'bg-[#EAF8F0] text-brand-success' },
-  rescheduled: { label: 'Rescheduled', class: 'bg-[#EEF4FF] text-brand-primary' },
-  cancelled:   { label: 'Cancelled',   class: 'bg-[#FFF1F1] text-brand-danger' },
-  no_answer:   { label: 'No answer',   class: 'bg-[#FFF8E8] text-[#C58A22]' },
-  voicemail:   { label: 'Voicemail',   class: 'bg-[#FFF8E8] text-[#C58A22]' },
-  unclear:     { label: 'Unclear',     class: 'bg-[#F3F6FB] text-brand-muted' },
+  confirmed:   { label: 'Confirmed',   class: 'bg-brand-success/10 text-brand-success' },
+  rescheduled: { label: 'Rescheduled', class: 'bg-brand-primary/10 text-brand-primary' },
+  cancelled:   { label: 'Cancelled',   class: 'bg-brand-danger/10 text-brand-danger' },
+  no_answer:   { label: 'No answer',   class: 'bg-brand-warning/10 text-brand-warning' },
+  voicemail:   { label: 'Voicemail',   class: 'bg-brand-warning/10 text-brand-warning' },
+  unclear:     { label: 'Unclear',     class: 'bg-brand-surface text-brand-muted' },
 }
 
 const WINDOWS = [
@@ -122,7 +122,7 @@ export default function Reminders({ reminders = [], stats }) {
       <div className="overflow-hidden rounded-[28px] border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         {filtered.length === 0 ? (
           <div className="px-6 py-16 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#EAF8F0]">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success/10">
               <CheckCircle size={20} className="text-brand-success" />
             </div>
             <p className="text-sm text-brand-muted">No pending reminders — all caught up.</p>
@@ -157,7 +157,7 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
 
   return (
     <li className={`flex items-center gap-4 px-5 py-4 transition-colors hover:bg-brand-surface/25 ${
-      isVeryUrgent ? 'bg-[#FFF1F1]/80' : isUrgent ? 'bg-[#FFF8E8]/65' : ''
+      isVeryUrgent ? 'bg-brand-danger/10' : isUrgent ? 'bg-brand-warning/10' : ''
     }`}>
       {/* Avatar */}
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
@@ -171,7 +171,7 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
         <div className="flex items-center gap-2">
           <p className="truncate text-sm font-medium text-brand-ink">{reminder.patient_name}</p>
           {reminder.last_attempt?.flagged && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF1F1] px-1.5 py-0.5 text-[10px] font-semibold text-brand-danger">
+            <span className="inline-flex items-center gap-1 rounded-full bg-brand-danger/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand-danger">
               <Flag size={9} /> Flagged
             </span>
           )}
@@ -188,7 +188,7 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
       <div className="hidden md:flex flex-col items-end gap-1 flex-shrink-0 min-w-[140px]">
         {reminder.hours_until != null && (
           <span className={`text-xs font-semibold ${
-            isVeryUrgent ? 'text-brand-danger' : isUrgent ? 'text-[#C58A22]' : 'text-brand-muted'
+            isVeryUrgent ? 'text-brand-danger' : isUrgent ? 'text-brand-warning' : 'text-brand-muted'
           }`}>
             {reminder.hours_until < 1
               ? `${Math.round(reminder.hours_until * 60)}m away`
@@ -245,7 +245,7 @@ function LastAttempt({ attempt }) {
         <span className={`ml-1 px-1.5 py-0.5 rounded-full ${chip.class}`}>{chip.label}</span>
       )}
       {!attempt.outcome && (
-        <span className="ml-1 rounded-full bg-[#F3F6FB] px-1.5 py-0.5 text-brand-muted">Awaiting reply</span>
+        <span className="ml-1 rounded-full bg-brand-surface px-1.5 py-0.5 text-brand-muted">Awaiting reply</span>
       )}
     </span>
   )

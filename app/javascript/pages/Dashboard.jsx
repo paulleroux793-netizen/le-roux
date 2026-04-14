@@ -4,12 +4,12 @@ import { Clock, Bell, Phone, MessageCircle } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 
 const STATUS_STYLES = {
-  scheduled:   'border border-brand-accent bg-brand-surface/65 text-brand-primary',
-  confirmed:   'border border-brand-success/15 bg-[#EAF8F0] text-brand-success',
-  completed:   'border border-brand-secondary/15 bg-[#EEF4FF] text-brand-primary',
-  cancelled:   'border border-brand-danger/15 bg-[#FFF1F1] text-brand-danger',
-  no_show:     'border border-brand-muted/15 bg-[#F3F6FB] text-brand-muted',
-  rescheduled: 'border border-brand-accent/30 bg-white text-brand-secondary',
+  scheduled:   'border border-brand-primary/15 bg-brand-primary/10 text-brand-primary',
+  confirmed:   'border border-brand-success/15 bg-brand-success/10 text-brand-success',
+  completed:   'border border-brand-primary-dark/15 bg-brand-primary-dark/10 text-brand-primary-dark',
+  cancelled:   'border border-brand-danger/15 bg-brand-danger/10 text-brand-danger',
+  no_show:     'border border-brand-muted/15 bg-brand-muted/10 text-brand-muted',
+  rescheduled: 'border border-brand-warning/15 bg-brand-warning/10 text-brand-warning',
 }
 
 export default function Dashboard({
@@ -20,7 +20,7 @@ export default function Dashboard({
   return (
     <DashboardLayout>
       <div className="mb-8">
-        <span className="inline-flex items-center rounded-full border border-brand-accent bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
+        <span className="inline-flex items-center rounded-full border border-brand-border bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
           Clinic overview
         </span>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-ink">Dashboard</h1>
@@ -35,31 +35,31 @@ export default function Dashboard({
           title="Today's Appointments"
           value={stats?.todays_appointments ?? 0}
           subtitle={`${stats?.confirmed_today ?? 0} confirmed · ${stats?.pending_confirmations ?? 0} pending`}
-          accent="brown"
+          accent="primary"
         />
         <StatCard
           title="WhatsApp Messages"
           value={stats?.whatsapp_messages ?? 0}
           subtitle="Last 7 days"
-          accent="taupe"
+          accent="primary"
         />
         <StatCard
           title="Flagged Patients"
           value={stats?.flagged_patients ?? 0}
           subtitle="Need follow-up"
-          accent="amber"
+          accent="warning"
         />
         <StatCard
           title="Confirmed Today"
           value={stats?.confirmed_today ?? 0}
           subtitle="Morning confirmations"
-          accent="gold"
+          accent="success"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Today's appointments — spans 2 cols */}
-        <div className="rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)] lg:col-span-2">
+        <div className="rounded-xl border border-brand-border bg-white p-6 shadow-sm lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="flex items-center gap-2 text-base font-semibold text-brand-ink">
               <Clock size={16} className="text-brand-primary" />
@@ -73,14 +73,14 @@ export default function Dashboard({
             </Link>
           </div>
           {todays_appointments.length > 0 ? (
-            <div className="divide-y divide-brand-accent/40">
+            <div className="divide-y divide-brand-border">
               {todays_appointments.map((apt) => (
                 <Link
                   key={apt.id}
                   href={`/appointments/${apt.id}`}
-                  className="-mx-2 flex items-center gap-3 rounded-2xl px-2 py-3 transition-colors first:pt-0 last:pb-0 hover:bg-brand-surface/35"
+                  className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-3 transition-colors first:pt-0 last:pb-0 hover:bg-brand-surface"
                 >
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-brand-primary/10">
                     <span className="text-xs font-semibold text-brand-primary">
                       {initials(apt.patient_name)}
                     </span>
@@ -109,14 +109,14 @@ export default function Dashboard({
         </div>
 
         {/* Reminders */}
-        <div className="rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)]">
+        <div className="rounded-xl border border-brand-border bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="flex items-center gap-2 text-base font-semibold text-brand-ink">
               <Bell size={16} className="text-brand-primary" />
               Reminders
             </h2>
             {reminders.length > 0 && (
-              <span className="rounded-full bg-[#FFF8E8] px-2 py-0.5 text-xs font-semibold text-[#C58A22]">
+              <span className="rounded-full bg-brand-warning/10 px-2 py-0.5 text-xs font-semibold text-brand-warning">
                 {reminders.length}
               </span>
             )}
@@ -126,7 +126,7 @@ export default function Dashboard({
               {reminders.map((apt) => (
                 <div
                   key={apt.id}
-                  className="rounded-2xl border border-brand-accent/65 bg-brand-surface/35 p-3"
+                  className="rounded-lg border border-brand-border bg-brand-surface p-3"
                 >
                   <p className="truncate text-sm font-medium text-brand-ink">{apt.patient_name}</p>
                   <p className="mt-0.5 text-xs text-brand-muted">
@@ -139,7 +139,7 @@ export default function Dashboard({
                     >
                       <Phone size={11} /> Call
                     </a>
-                    <span className="text-brand-accent">·</span>
+                    <span className="text-brand-border">·</span>
                     <Link
                       href={`/appointments/${apt.id}`}
                       className="flex items-center gap-1 text-xs font-medium text-brand-primary hover:text-brand-primary-dark"
@@ -178,15 +178,14 @@ function formatTime(iso) {
 
 function StatCard({ title, value, subtitle, accent }) {
   const accentMap = {
-    brown: ['text-brand-primary', 'bg-brand-surface'],
-    taupe: ['text-brand-secondary', 'bg-[#EEF4FF]'],
-    amber: ['text-[#C58A22]', 'bg-[#FFF8E8]'],
-    gold:  ['text-brand-ink', 'bg-white'],
+    primary: ['text-brand-primary', 'bg-brand-primary/10 text-brand-primary'],
+    success: ['text-brand-success', 'bg-brand-success/10 text-brand-success'],
+    warning: ['text-brand-warning', 'bg-brand-warning/10 text-brand-warning'],
   }
-  const [valueClass, chipClass] = accentMap[accent] || accentMap.brown
+  const [valueClass, chipClass] = accentMap[accent] || accentMap.primary
   return (
-    <div className="rounded-[28px] border border-brand-accent/75 bg-white p-5 shadow-[0_28px_70px_-52px_rgba(57,60,77,0.35)]">
-      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${chipClass} ${accent === 'gold' ? 'border border-brand-accent text-brand-primary' : ''}`}>
+    <div className="rounded-xl border border-brand-border bg-white p-5 shadow-sm">
+      <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] ${chipClass}`}>
         Today
       </span>
       <p className={`mt-4 text-3xl font-semibold tracking-tight ${valueClass}`}>{value}</p>
@@ -198,7 +197,7 @@ function StatCard({ title, value, subtitle, accent }) {
 
 function StatusBadge({ status }) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[status] || 'border border-brand-muted/15 bg-[#F3F6FB] text-brand-muted'}`}>
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[status] || 'border border-brand-muted/15 bg-brand-surface text-brand-muted'}`}>
       {status}
     </span>
   )

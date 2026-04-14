@@ -150,7 +150,7 @@ export default function Patients({ patients = [], stats }) {
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-primary-dark"
         >
           <Plus size={15} /> New Patient
         </button>
@@ -170,14 +170,14 @@ export default function Patients({ patients = [], stats }) {
           value={stats?.active ?? 0}
           icon={UserCheck}
           color="text-emerald-600"
-          tone="bg-[#EAF8F0]"
+          tone="bg-brand-success/10"
         />
         <StatCard
           label="New This Month"
           value={stats?.new_this_month ?? 0}
           icon={UserPlus}
           color="text-brand-secondary"
-          tone="bg-[#EEF4FF]"
+          tone="bg-brand-primary/10"
         />
       </div>
 
@@ -234,7 +234,7 @@ export default function Patients({ patients = [], stats }) {
 
 function StatCard({ label, value, icon: Icon, color, tone = 'bg-brand-surface' }) {
   return (
-    <div className="flex items-center gap-4 rounded-[28px] border border-brand-accent/75 bg-white p-4 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+    <div className="flex items-center gap-4 rounded-xl border border-brand-border bg-white p-4 shadow-sm">
       <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl ${tone}`}>
         <Icon size={18} className={color} />
       </div>
@@ -248,8 +248,8 @@ function StatCard({ label, value, icon: Icon, color, tone = 'bg-brand-surface' }
 
 function StatusBadge({ status }) {
   const styles = status === 'active'
-    ? 'border border-brand-success/15 bg-[#EAF8F0] text-brand-success'
-    : 'border border-brand-muted/15 bg-[#F3F6FB] text-brand-muted'
+    ? 'border border-brand-success/15 bg-brand-success/10 text-brand-success'
+    : 'border border-brand-muted/15 bg-brand-surface text-brand-muted'
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${styles}`}>
       {status}

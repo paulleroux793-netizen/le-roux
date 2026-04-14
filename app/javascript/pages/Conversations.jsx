@@ -180,7 +180,7 @@ function ConversationRow({ conv }) {
     >
       {/* Channel icon */}
       <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-        conv.channel === 'whatsapp' ? 'bg-[#EAF8F0] text-brand-success' : 'bg-[#EEF4FF] text-brand-primary'
+        conv.channel === 'whatsapp' ? 'bg-brand-success/10 text-brand-success' : 'bg-brand-primary/10 text-brand-primary'
       }`}>
         <MessageSquare size={16} />
       </div>
@@ -279,7 +279,7 @@ function ImportModal({ open, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#393C4D]/28 p-4 backdrop-blur-[4px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/30 p-4 backdrop-blur-[4px]">
       <div className="w-full max-w-md rounded-[28px] border border-brand-accent/80 bg-white shadow-[0_38px_90px_-55px_rgba(57,60,77,0.5)]">
         <div className="flex items-center justify-between border-b border-brand-accent/70 bg-gradient-to-br from-brand-surface/45 via-white to-white px-5 py-4">
           <h2 className="text-sm font-semibold text-brand-ink">Import historical chats</h2>

@@ -27,12 +27,12 @@ export default function Analytics({ cancellation_stats, booking_stats, channel_s
       <div className="mb-5 rounded-[28px] border border-brand-accent/75 bg-white p-6 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
         <h2 className="mb-5 text-base font-semibold text-brand-ink">Channel Performance</h2>
         <div className="grid grid-cols-2 gap-5">
-          <div className="rounded-[24px] border border-brand-success/15 bg-[#EAF8F0] p-6 text-center">
+          <div className="rounded-xl border border-brand-success/15 bg-brand-success/10 p-6 text-center">
             <p className="text-3xl font-bold text-brand-success">{channel_stats?.whatsapp ?? 0}</p>
             <p className="mt-1 text-sm font-medium text-brand-ink">WhatsApp Conversations</p>
             <p className="mt-0.5 text-xs text-brand-muted">{channel_stats?.whatsapp_pct ?? 0}% of total</p>
           </div>
-          <div className="rounded-[24px] border border-brand-accent bg-[#EEF4FF] p-6 text-center">
+          <div className="rounded-xl border border-brand-primary/15 bg-brand-primary/10 p-6 text-center">
             <p className="text-3xl font-bold text-brand-primary">{channel_stats?.voice ?? 0}</p>
             <p className="mt-1 text-sm font-medium text-brand-ink">Voice Conversations</p>
             <p className="mt-0.5 text-xs text-brand-muted">{channel_stats?.voice_pct ?? 0}% of total</p>

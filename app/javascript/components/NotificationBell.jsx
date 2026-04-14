@@ -30,10 +30,10 @@ const ICONS = {
 }
 
 const LEVEL_STYLES = {
-  info:    'bg-[#EEF4FF] text-brand-primary',
-  success: 'bg-[#EAF8F0] text-brand-success',
-  warning: 'bg-[#FFF8E8] text-[#C58A22]',
-  danger:  'bg-[#FFF1F1] text-brand-danger',
+  info:    'bg-brand-primary/10 text-brand-primary',
+  success: 'bg-brand-success/10 text-brand-success',
+  warning: 'bg-brand-warning/10 text-brand-warning',
+  danger:  'bg-brand-danger/10 text-brand-danger',
 }
 
 export default function NotificationBell() {
@@ -157,7 +157,7 @@ export default function NotificationBell() {
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-brand-ink">Notifications</h3>
               {unreadCount > 0 && (
-                <span className="rounded-full bg-[#FFF1F1] px-1.5 py-0.5 text-[10px] font-semibold text-brand-danger">
+                <span className="rounded-full bg-brand-danger/10 px-1.5 py-0.5 text-[10px] font-semibold text-brand-danger">
                   {unreadCount} new
                 </span>
               )}
