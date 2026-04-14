@@ -4,9 +4,13 @@ class AppointmentsController < ApplicationController
   # triggering a refetch.
   CALENDAR_WINDOW_DAYS = 14
 
+  # Maximum rows the client-side DataTable will paginate through.
+  # For a single dental practice this is effectively "all appointments
+  # you'd want to scroll" without needing server-side pagination.
+  LIST_ROW_LIMIT = 500
+
   def index
-    appointments = Appointment.includes(:patient).order(start_time: :desc)
-    appointments = apply_filters(appointments)
+    appointments = Appointment.includes(:patient).order(start_time: :desc).limit(LIST_ROW_LIMIT)
 
     today = Date.current
     calendar_appointments = Appointment
@@ -14,8 +18,10 @@ class AppointmentsController < ApplicationController
       .where(start_time: (today - 3.days).beginning_of_day..(today + CALENDAR_WINDOW_DAYS.days).end_of_day)
       .order(:start_time)
 
+    stats_scope = Appointment.all
+
     render inertia: "Appointments", props: {
-      appointments: appointments.limit(50).map { |a| appointment_props(a) },
+      appointments: appointments.map { |a| appointment_props(a) },
       calendar_appointments: calendar_appointments.map { |a| appointment_props(a) },
       # Lightweight patient list for the Create modal picker. Phase 9.6
       # sub-area #5 will replace this with a proper SearchController,
@@ -24,13 +30,12 @@ class AppointmentsController < ApplicationController
       patients: Patient.order(:first_name, :last_name).limit(500).map { |p|
         { id: p.id, name: p.full_name, phone: p.phone }
       },
-      filters: filter_params.to_h,
       stats: {
-        total: appointments.count,
-        scheduled: appointments.where(status: :scheduled).count,
-        confirmed: appointments.where(status: :confirmed).count,
-        cancelled: appointments.where(status: :cancelled).count,
-        completed: appointments.where(status: :completed).count
+        total: stats_scope.count,
+        scheduled: stats_scope.where(status: :scheduled).count,
+        confirmed: stats_scope.where(status: :confirmed).count,
+        cancelled: stats_scope.where(status: :cancelled).count,
+        completed: stats_scope.where(status: :completed).count
       }
     }
   end
@@ -209,22 +214,6 @@ class AppointmentsController < ApplicationController
     )
   rescue StandardError => e
     Rails.logger.error("[AppointmentsController#update] Google sync failed: #{e.message}")
-  end
-
-  def apply_filters(scope)
-    scope = scope.where(status: filter_params[:status]) if filter_params[:status].present?
-    scope = scope.for_date(Date.parse(filter_params[:date])) if filter_params[:date].present?
-    if filter_params[:search].present?
-      scope = scope.joins(:patient).where(
-        "patients.first_name ILIKE :q OR patients.last_name ILIKE :q OR patients.phone ILIKE :q",
-        q: "%#{filter_params[:search]}%"
-      )
-    end
-    scope
-  end
-
-  def filter_params
-    params.permit(:status, :date, :search)
   end
 
   def appointment_props(appointment)

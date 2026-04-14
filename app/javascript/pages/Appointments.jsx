@@ -1,11 +1,13 @@
-import React, { useState } from 'react'
-import { Link, router } from '@inertiajs/react'
-import { CalendarDays, List, Plus } from 'lucide-react'
+import React, { useState, useMemo } from 'react'
+import { router } from '@inertiajs/react'
+import { CalendarDays, List, Plus, CheckCircle, Eye, Pencil, X as XIcon } from 'lucide-react'
+import { toast } from 'sonner'
 import DashboardLayout from '../layouts/DashboardLayout'
 import AppointmentCalendar from '../components/AppointmentCalendar'
 import AppointmentDetailModal from '../components/AppointmentDetailModal'
 import AppointmentFormModal from '../components/AppointmentFormModal'
 import CancelAppointmentModal from '../components/CancelAppointmentModal'
+import DataTable from '../components/DataTable'
 
 const STATUS_STYLES = {
   scheduled:   'bg-amber-100 text-amber-800',
@@ -16,45 +18,148 @@ const STATUS_STYLES = {
   rescheduled: 'bg-purple-100 text-purple-800',
 }
 
-const INPUT_CLASS =
-  'border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-800 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe transition-colors'
+// Single source of truth for statuses — reused in the table header
+// filter dropdown and the status badge renderer below.
+const STATUS_OPTIONS = [
+  { value: 'scheduled',   label: 'Scheduled' },
+  { value: 'confirmed',   label: 'Confirmed' },
+  { value: 'completed',   label: 'Completed' },
+  { value: 'cancelled',   label: 'Cancelled' },
+  { value: 'no_show',     label: 'No show' },
+  { value: 'rescheduled', label: 'Rescheduled' },
+]
 
 export default function Appointments({
-  appointments,
+  appointments = [],
   calendar_appointments = [],
   patients = [],
-  filters,
   stats,
 }) {
-  // Local UI state — which view the user is looking at. Defaults to
-  // the calendar (Schedule) per the premium-dashboard reference.
   const [view, setView] = useState('schedule')
-
-  // Modal state machine — at most one modal open at a time, so a
-  // single enum variable + a selected-appointment reference is
-  // enough. Transitions (e.g. Detail → Edit) just change the mode
-  // while keeping `selected` pointing at the same appointment.
-  const [modalMode, setModalMode] = useState(null) // 'detail' | 'create' | 'edit' | 'cancel' | null
+  const [modalMode, setModalMode] = useState(null)
   const [selected, setSelected] = useState(null)
 
   const openDetail = (apt) => { setSelected(apt); setModalMode('detail') }
   const openCreate = () => { setSelected(null); setModalMode('create') }
-  const openEdit   = () => setModalMode('edit')
-  const openCancel = () => setModalMode('cancel')
+  const openEdit   = (apt) => { if (apt) setSelected(apt); setModalMode('edit') }
+  const openCancel = (apt) => { if (apt) setSelected(apt); setModalMode('cancel') }
   const closeModal = () => { setModalMode(null); setSelected(null) }
 
-  // FullCalendar hands us an EventApi instance; we translate it back
-  // to the shape the modals expect (same keys the Rails serializer
-  // returns for `calendar_appointments`).
   const handleEventClick = (event) => {
     const id = Number(event.id)
     const source = calendar_appointments.find((a) => a.id === id)
     if (source) openDetail(source)
   }
 
-  const handleFilter = (key, value) => {
-    router.get('/appointments', { ...filters, [key]: value || undefined }, { preserveState: true })
+  // One-click confirm — used from the list row Confirm button.
+  const confirmAppointment = (apt) => {
+    router.patch(`/appointments/${apt.id}/confirm`, {}, {
+      preserveScroll: true,
+      onSuccess: () => toast.success(`${apt.patient_name} confirmed`),
+      onError:   () => toast.error('Could not confirm'),
+    })
   }
+
+  // ── Column definitions for the List view ────────────────────
+  // Memoised so @tanstack/react-table doesn't re-instantiate them
+  // on every render (which would reset column widths + sort state).
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'patient_name',
+      header: 'Patient',
+      cell: ({ row }) => (
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-brand-cream flex items-center justify-center flex-shrink-0">
+            <span className="text-brand-brown text-xs font-semibold">
+              {initials(row.original.patient_name)}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-gray-900">{row.original.patient_name}</p>
+            <p className="text-xs text-gray-400">{row.original.patient_phone}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'start_time',
+      header: 'Date & Time',
+      // Sort chronologically, not string-wise. Custom sortingFn
+      // because the accessor returns an ISO string.
+      sortingFn: (a, b) =>
+        new Date(a.original.start_time) - new Date(b.original.start_time),
+      cell: ({ row }) => (
+        <div>
+          <p className="text-sm text-gray-800">
+            {new Date(row.original.start_time).toLocaleDateString('en-ZA', {
+              weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+            })}
+          </p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {fmtTime(row.original.start_time)} — {fmtTime(row.original.end_time)}
+          </p>
+        </div>
+      ),
+      // Custom filter: row.start_time === selected ISO date
+      filterFn: (row, columnId, value) => {
+        if (!value) return true
+        const d = new Date(row.original.start_time)
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        return iso === value
+      },
+    },
+    {
+      accessorKey: 'reason',
+      header: 'Reason',
+      cell: ({ getValue }) => (
+        <span className="text-sm text-gray-600">{getValue() || '—'}</span>
+      ),
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ getValue }) => <StatusBadge status={getValue()} />,
+      // Exact match filter so the dropdown "Scheduled" only matches scheduled rows.
+      filterFn: 'equals',
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      enableSorting: false,
+      enableGlobalFilter: false,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <IconBtn
+            title="View"
+            onClick={() => openDetail(row.original)}
+            icon={Eye}
+          />
+          <IconBtn
+            title="Edit"
+            onClick={() => openEdit(row.original)}
+            icon={Pencil}
+          />
+          {row.original.status !== 'confirmed' &&
+           row.original.status !== 'cancelled' && (
+            <IconBtn
+              title="Confirm"
+              onClick={() => confirmAppointment(row.original)}
+              icon={CheckCircle}
+              colorClass="text-emerald-600 hover:bg-emerald-50"
+            />
+          )}
+          {row.original.status !== 'cancelled' && (
+            <IconBtn
+              title="Cancel"
+              onClick={() => openCancel(row.original)}
+              icon={XIcon}
+              colorClass="text-red-600 hover:bg-red-50"
+            />
+          )}
+        </div>
+      ),
+    },
+  ], [])
 
   return (
     <DashboardLayout>
@@ -65,20 +170,9 @@ export default function Appointments({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* View toggle */}
           <div className="inline-flex items-center bg-gray-100 rounded-lg p-1">
-            <ViewTab
-              active={view === 'schedule'}
-              onClick={() => setView('schedule')}
-              icon={CalendarDays}
-              label="Schedule"
-            />
-            <ViewTab
-              active={view === 'list'}
-              onClick={() => setView('list')}
-              icon={List}
-              label="List"
-            />
+            <ViewTab active={view === 'schedule'} onClick={() => setView('schedule')} icon={CalendarDays} label="Schedule" />
+            <ViewTab active={view === 'list'}     onClick={() => setView('list')}     icon={List}         label="List" />
           </div>
 
           <button
@@ -111,88 +205,47 @@ export default function Appointments({
           onEventClick={handleEventClick}
         />
       ) : (
-        <>
-          {/* Filters */}
-          <div className="bg-white rounded-xl border border-gray-200 p-4 mb-5 flex gap-3">
-            <input
-              type="text"
-              placeholder="Search patient name or phone…"
-              defaultValue={filters?.search || ''}
-              onKeyDown={(e) => e.key === 'Enter' && handleFilter('search', e.target.value)}
-              className={`flex-1 ${INPUT_CLASS}`}
-            />
-            <select
-              value={filters?.status || ''}
-              onChange={(e) => handleFilter('status', e.target.value)}
-              className={INPUT_CLASS}
-            >
-              <option value="">All Statuses</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="no_show">No Show</option>
-              <option value="rescheduled">Rescheduled</option>
-            </select>
-            <input
-              type="date"
-              value={filters?.date || ''}
-              onChange={(e) => handleFilter('date', e.target.value)}
-              className={INPUT_CLASS}
-            />
-          </div>
-
-          {/* Appointments Table */}
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Patient</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date & Time</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Reason</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {appointments?.length > 0 ? appointments.map((apt) => (
-                  <tr key={apt.id} className="hover:bg-brand-cream transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-medium text-gray-900">{apt.patient_name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{apt.patient_phone}</p>
-                    </td>
-                    <td className="px-6 py-4">
-                      <p className="text-sm text-gray-800">
-                        {new Date(apt.start_time).toLocaleDateString('en-ZA', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {new Date(apt.start_time).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })} — {new Date(apt.end_time).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{apt.reason || '—'}</td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={apt.status} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`/appointments/${apt.id}`}
-                        className="text-brand-taupe hover:text-brand-brown text-sm font-medium transition-colors"
-                      >
-                        View →
-                      </Link>
-                    </td>
-                  </tr>
-                )) : (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-gray-400 text-sm">
-                      No appointments found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </>
+        <DataTable
+          columns={columns}
+          data={appointments}
+          globalFilterPlaceholder="Search patient, phone, reason…"
+          initialSort={[{ id: 'start_time', desc: true }]}
+          pageSize={10}
+          totalLabel="appointments"
+          emptyMessage="No appointments found"
+          filters={({ setColumnFilter, getColumnFilter }) => (
+            <>
+              <select
+                value={getColumnFilter('status')}
+                onChange={(e) => setColumnFilter('status', e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+              >
+                <option value="">All statuses</option>
+                {STATUS_OPTIONS.map((s) => (
+                  <option key={s.value} value={s.value}>{s.label}</option>
+                ))}
+              </select>
+              <input
+                type="date"
+                value={getColumnFilter('start_time')}
+                onChange={(e) => setColumnFilter('start_time', e.target.value)}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe"
+              />
+              {(getColumnFilter('status') || getColumnFilter('start_time')) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setColumnFilter('status', '')
+                    setColumnFilter('start_time', '')
+                  }}
+                  className="text-xs text-gray-500 hover:text-brand-brown px-2"
+                >
+                  Clear
+                </button>
+              )}
+            </>
+          )}
+        />
       )}
 
       {/* ── Modals ─────────────────────────────────────────────── */}
@@ -200,8 +253,8 @@ export default function Appointments({
         appointment={selected}
         open={modalMode === 'detail'}
         onClose={closeModal}
-        onEdit={openEdit}
-        onCancel={openCancel}
+        onEdit={() => openEdit(selected)}
+        onCancel={() => openCancel(selected)}
       />
       <AppointmentFormModal
         mode="create"
@@ -240,10 +293,39 @@ function ViewTab({ active, onClick, icon: Icon, label }) {
   )
 }
 
+function IconBtn({ title, onClick, icon: Icon, colorClass = 'text-gray-500 hover:bg-gray-100' }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={`p-1.5 rounded-md transition-colors ${colorClass}`}
+    >
+      <Icon size={15} />
+    </button>
+  )
+}
+
 function StatusBadge({ status }) {
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_STYLES[status] || 'bg-gray-100 text-gray-600'}`}>
-      {status}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_STYLES[status] || 'bg-gray-100 text-gray-600'}`}>
+      {String(status).replace('_', ' ')}
     </span>
   )
+}
+
+function initials(name = '') {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() || '')
+      .join('') || '·'
+  )
+}
+
+function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
 }
