@@ -2,7 +2,7 @@ import React from 'react'
 import { Link, usePage } from '@inertiajs/react'
 import {
   LayoutDashboard, Calendar, Users, MessageSquare, BarChart2,
-  Settings, ChevronDown, HelpCircle,
+  BellRing, Settings, ChevronDown, HelpCircle,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -11,6 +11,7 @@ import NotificationBell from '../components/NotificationBell'
 const NAV_ITEMS = [
   { name: 'Dashboard',     href: '/dashboard',     icon: LayoutDashboard },
   { name: 'Appointments',  href: '/appointments',  icon: Calendar },
+  { name: 'Reminders',     href: '/reminders',     icon: BellRing },
   { name: 'Patients',      href: '/patients',      icon: Users },
   { name: 'Conversations', href: '/conversations', icon: MessageSquare },
   { name: 'Analytics',     href: '/analytics',     icon: BarChart2 },

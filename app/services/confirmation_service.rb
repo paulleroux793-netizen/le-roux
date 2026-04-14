@@ -9,6 +9,50 @@ class ConfirmationService
     )
   end
 
+  # Phase 9.6 sub-area #7 — Public manual-send API used by the
+  # Pre-Appointment Reminders UI.
+  #
+  # Creates a ConfirmationLog row and dispatches a single reminder
+  # via the chosen channel. Separate from `run_daily_confirmations`
+  # so the UI can send a one-off reminder without scheduling the
+  # whole morning batch.
+  #
+  # Returns the created ConfirmationLog (already persisted).
+  # Raises an error on dispatch failure so the controller can flash
+  # a meaningful message to the receptionist.
+  def self.send_reminder(appointment, method:)
+    method = method.to_s
+    raise ArgumentError, "unknown reminder method: #{method}" unless %w[voice whatsapp].include?(method)
+
+    log = appointment.confirmation_logs.create!(
+      method:   method,
+      outcome:  nil,
+      attempts: 1,
+      flagged:  false
+    )
+
+    case method
+    when "whatsapp"
+      WhatsappTemplateService.new.send_reminder_24h(appointment.patient, appointment)
+    when "voice"
+      # Voice path still goes through the full service instance
+      # because it needs the Twilio client.
+      # place_confirmation_call is private so we reach in via `send`;
+      # keeping it private preserves the existing morning-batch
+      # encapsulation while still letting the class-level API reuse it.
+      new.send(:place_confirmation_call, appointment) ||
+        raise("Failed to place Twilio call")
+    end
+
+    log
+  rescue StandardError => e
+    Rails.logger.error("[ConfirmationService.send_reminder] #{appointment.id}: #{e.message}")
+    # Re-raise a wrapped error so callers can surface to the UI.
+    raise SendError, e.message
+  end
+
+  class SendError < StandardError; end
+
   # Entry point called by MorningConfirmationJob each morning.
   # Processes all of today's unconfirmed (scheduled) appointments.
   def run_daily_confirmations

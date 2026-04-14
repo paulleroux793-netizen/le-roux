@@ -32,6 +32,12 @@ Rails.application.routes.draw do
   resources :conversations, only: [:index, :show]
   get "search", to: "search#index"
 
+  # Pre-appointment reminders dashboard (Phase 9.6 sub-area #7)
+  get  "reminders", to: "reminders#index"
+  post "reminders/:appointment_id/send",
+       to: "reminders#send_reminder",
+       as: :send_reminder
+
   resources :notifications, only: [:index] do
     member do
       patch :mark_read
