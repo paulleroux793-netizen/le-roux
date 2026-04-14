@@ -9,60 +9,54 @@ import { toast } from 'sonner'
 
 const DEFAULT_CALENDAR_VIEW = 'timeGridWeek'
 
+// ── Status themes ────────────────────────────────────────────────
+// Phase 9.14 — every colour resolves to a brand token so the
+// calendar re-themes when tokens change. Pattern per status:
+//   dot / avatar → solid brand-<role>
+//   card         → brand-<role>/10 fill + brand-<role>/20 border
+//   chip         → brand-<role>/10 fill + brand-<role> text
 const STATUS_THEMES = {
   scheduled: {
     label: 'Scheduled',
-    dot: 'bg-[#3164DE]',
-    card: 'border border-[#3164DE]/15 bg-[#D6E0F8]/70 shadow-[0_22px_40px_-36px_rgba(49,100,222,0.95)]',
-    avatar: 'bg-[#3164DE]',
-    chip: 'border border-[#3164DE]/10 bg-white/85 text-[#3164DE]',
-    reason: 'text-[#27457C]',
-    meta: 'text-[#5C6E93]',
+    dot: 'bg-brand-primary',
+    card: 'border border-brand-primary/20 bg-brand-primary/10',
+    avatar: 'bg-brand-primary',
+    chip: 'border border-brand-primary/10 bg-white/85 text-brand-primary',
   },
   confirmed: {
     label: 'Confirmed',
-    dot: 'bg-[#19A14E]',
-    card: 'border border-[#19A14E]/15 bg-[#EAF8F0] shadow-[0_22px_40px_-36px_rgba(25,161,78,0.85)]',
-    avatar: 'bg-[#19A14E]',
-    chip: 'border border-[#19A14E]/10 bg-white/85 text-[#15823F]',
-    reason: 'text-[#1D5D39]',
-    meta: 'text-[#5E8570]',
+    dot: 'bg-brand-success',
+    card: 'border border-brand-success/20 bg-brand-success/10',
+    avatar: 'bg-brand-success',
+    chip: 'border border-brand-success/10 bg-white/85 text-brand-success',
   },
   completed: {
     label: 'Completed',
-    dot: 'bg-[#769BF5]',
-    card: 'border border-[#769BF5]/15 bg-[#EEF4FF] shadow-[0_22px_40px_-36px_rgba(118,155,245,0.9)]',
-    avatar: 'bg-[#769BF5]',
-    chip: 'border border-[#769BF5]/10 bg-white/85 text-[#4A71D2]',
-    reason: 'text-[#3556A9]',
-    meta: 'text-[#6A7FAF]',
+    dot: 'bg-brand-primary-dark',
+    card: 'border border-brand-primary-dark/20 bg-brand-primary-dark/10',
+    avatar: 'bg-brand-primary-dark',
+    chip: 'border border-brand-primary-dark/10 bg-white/85 text-brand-primary-dark',
   },
   cancelled: {
     label: 'Cancelled',
-    dot: 'bg-[#EF6161]',
-    card: 'border border-[#EF6161]/15 bg-[#FFF1F1] shadow-[0_22px_40px_-36px_rgba(239,97,97,0.9)]',
-    avatar: 'bg-[#EF6161]',
-    chip: 'border border-[#EF6161]/10 bg-white/85 text-[#C14A4A]',
-    reason: 'text-[#A84545]',
-    meta: 'text-[#9F7272]',
+    dot: 'bg-brand-danger',
+    card: 'border border-brand-danger/20 bg-brand-danger/10',
+    avatar: 'bg-brand-danger',
+    chip: 'border border-brand-danger/10 bg-white/85 text-brand-danger',
   },
   no_show: {
     label: 'No show',
-    dot: 'bg-[#8592AD]',
-    card: 'border border-[#8592AD]/15 bg-[#F3F6FB] shadow-[0_22px_40px_-36px_rgba(133,146,173,0.9)]',
-    avatar: 'bg-[#8592AD]',
-    chip: 'border border-[#8592AD]/10 bg-white/85 text-[#6D7991]',
-    reason: 'text-[#5A647A]',
-    meta: 'text-[#8592AD]',
+    dot: 'bg-brand-muted',
+    card: 'border border-brand-muted/20 bg-brand-muted/10',
+    avatar: 'bg-brand-muted',
+    chip: 'border border-brand-muted/10 bg-white/85 text-brand-muted',
   },
   rescheduled: {
     label: 'Rescheduled',
-    dot: 'bg-[#8A7BFF]',
-    card: 'border border-[#8A7BFF]/15 bg-[#F2EEFF] shadow-[0_22px_40px_-36px_rgba(138,123,255,0.9)]',
-    avatar: 'bg-[#8A7BFF]',
-    chip: 'border border-[#8A7BFF]/10 bg-white/85 text-[#6C5FE4]',
-    reason: 'text-[#5C4FD2]',
-    meta: 'text-[#8A82BA]',
+    dot: 'bg-brand-warning',
+    card: 'border border-brand-warning/20 bg-brand-warning/10',
+    avatar: 'bg-brand-warning',
+    chip: 'border border-brand-warning/10 bg-white/85 text-brand-warning',
   },
 }
 
@@ -233,7 +227,7 @@ export default function AppointmentCalendar({
               {initials(patient)}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold tracking-tight text-[#393C4D]">
+              <p className="truncate text-[13px] font-semibold tracking-tight text-brand-ink">
                 {patient}
               </p>
               <p className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${theme.chip}`}>
@@ -241,23 +235,23 @@ export default function AppointmentCalendar({
               </p>
             </div>
           </div>
-          <div className="rounded-full border border-white/70 bg-white/80 px-2 py-1 text-[10px] font-semibold text-[#393C4D] shadow-sm">
+          <div className="rounded-full border border-white/70 bg-white/80 px-2 py-1 text-[10px] font-semibold text-brand-ink shadow-sm">
             {formatRange(start, end)}
           </div>
         </div>
 
         <div className="mt-3 space-y-1.5">
-          <p className={`truncate text-[12px] font-semibold ${theme.reason}`}>
+          <p className="truncate text-[12px] font-semibold text-brand-ink">
             {reason || 'General appointment'}
           </p>
           {phone && (
-            <p className={`truncate text-[11px] ${theme.meta}`}>
+            <p className="truncate text-[11px] text-brand-muted">
               {phone}
             </p>
           )}
         </div>
 
-        <div className="mt-3 flex items-center gap-1.5 text-[10px] font-medium text-[#8592AD]">
+        <div className="mt-3 flex items-center gap-1.5 text-[10px] font-medium text-brand-muted">
           <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${theme.dot}`} />
           <span className="sr-only">{theme.label}</span>
           <Clock3 size={11} />
@@ -268,19 +262,19 @@ export default function AppointmentCalendar({
   }
 
   return (
-    <div className="appointment-calendar overflow-hidden rounded-[30px] border border-[#D6E0F8] bg-white shadow-[0_32px_90px_-58px_rgba(57,60,77,0.45)]">
-      <div className="border-b border-[#D6E0F8] bg-gradient-to-br from-[#D6E0F8]/80 via-white to-white px-6 py-6">
+    <div className="appointment-calendar overflow-hidden rounded-3xl border border-brand-border bg-white shadow-sm">
+      <div className="border-b border-brand-border bg-gradient-to-br from-brand-surface via-white to-white px-6 py-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#B1C5F6] bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#3164DE]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
               <Sparkles size={12} />
               Booking desk
             </div>
             <div>
-              <h2 className="text-[1.9rem] font-semibold tracking-tight text-[#393C4D]">
+              <h2 className="text-[1.9rem] font-semibold tracking-tight text-brand-ink">
                 Clinic booking calendar
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#8592AD]">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-brand-muted">
                 Review live bookings, drag appointments to new times, and keep reception aligned with the diary at a glance.
               </p>
             </div>
@@ -290,21 +284,21 @@ export default function AppointmentCalendar({
             <div className="relative w-full max-w-md">
               <Search
                 size={16}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8592AD]"
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted"
               />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search patient, phone, reason…"
-                className="w-full rounded-2xl border border-[#B1C5F6] bg-white px-11 py-3 text-sm text-[#393C4D] placeholder:text-[#8592AD] focus:border-[#3164DE] focus:outline-none focus:ring-4 focus:ring-[#B1C5F6]/45"
+                className="w-full rounded-2xl border border-brand-border bg-white px-11 py-3 text-sm text-brand-ink placeholder:text-brand-muted focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary/20"
               />
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch('')}
                   aria-label="Clear search"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-xs font-medium text-[#8592AD] transition hover:bg-[#D6E0F8] hover:text-[#393C4D]"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-xs font-medium text-brand-muted transition hover:bg-brand-surface hover:text-brand-ink"
                 >
                   Clear
                 </button>
@@ -323,16 +317,16 @@ export default function AppointmentCalendar({
         </div>
       </div>
 
-      <div className="border-b border-[#D6E0F8] bg-white px-6 py-4">
+      <div className="border-b border-brand-border bg-white px-6 py-4">
         <div className="flex flex-wrap gap-2.5">
           {statusSummary.map((item) => (
             <div
               key={item.status}
-              className="inline-flex items-center gap-2 rounded-full border border-[#D6E0F8] bg-[#F8FAFF] px-3 py-1.5 text-xs font-medium text-[#5E6B86]"
+              className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-surface px-3 py-1.5 text-xs font-medium text-brand-muted"
             >
               <span className={`h-2.5 w-2.5 rounded-full ${item.dot}`} />
               <span>{item.label}</span>
-              <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#393C4D]">
+              <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold text-brand-ink">
                 {item.count}
               </span>
             </div>
@@ -342,7 +336,7 @@ export default function AppointmentCalendar({
 
       <div className="px-4 pb-5 pt-5 md:px-6">
         {search && filtered.length === 0 && (
-          <div className="mb-4 rounded-2xl border border-dashed border-[#B1C5F6] bg-[#F8FAFF] px-4 py-3 text-sm text-[#5E6B86]">
+          <div className="mb-4 rounded-2xl border border-dashed border-brand-border bg-brand-surface px-4 py-3 text-sm text-brand-muted">
             No appointments in this calendar window match your current search.
           </div>
         )}
@@ -384,8 +378,8 @@ export default function AppointmentCalendar({
 
 function MetaChip({ children, icon: Icon }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-[#D6E0F8] bg-white px-3 py-1.5 text-xs font-medium text-[#5E6B86] shadow-sm">
-      {Icon ? <Icon size={13} className="text-[#3164DE]" /> : null}
+    <span className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-3 py-1.5 text-xs font-medium text-brand-muted shadow-sm">
+      {Icon ? <Icon size={13} className="text-brand-primary" /> : null}
       {children}
     </span>
   )
