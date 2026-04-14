@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Link, usePage } from '@inertiajs/react'
 import {
   LayoutDashboard, Calendar, Users, MessageSquare, BarChart2,
-  Settings, Bell, Search, ChevronDown, HelpCircle,
+  Settings, Bell, ChevronDown, HelpCircle,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
+import GlobalSearch from '../components/GlobalSearch'
 
 const NAV_ITEMS = [
   { name: 'Dashboard',     href: '/dashboard',     icon: LayoutDashboard },
@@ -16,7 +17,6 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout({ children }) {
   const { url } = usePage()
-  const [searchQuery, setSearchQuery] = useState('')
 
   const isActive = (href) =>
     href === '/dashboard'
@@ -119,19 +119,8 @@ export default function DashboardLayout({ children }) {
         {/* Left spacer — keeps the search visually centered */}
         <div className="flex-1" />
 
-        {/* Search — centered, wider */}
-        <div className="w-full max-w-xl">
-          <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search patients, appointments…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-taupe/25 focus:border-brand-taupe transition-colors"
-            />
-          </div>
-        </div>
+        {/* Search — centered, wider, functional */}
+        <GlobalSearch />
 
         {/* Right side — bell + doctor */}
         <div className="flex-1 flex items-center justify-end gap-2">

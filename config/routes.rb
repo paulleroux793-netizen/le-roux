@@ -30,6 +30,7 @@ Rails.application.routes.draw do
   end
   resources :patients, only: [:index, :show, :create, :update]
   resources :conversations, only: [:index, :show]
+  get "search", to: "search#index"
   get "analytics", to: "analytics#index"
   get "settings", to: "settings#index"
 end
