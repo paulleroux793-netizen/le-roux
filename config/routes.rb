@@ -29,7 +29,11 @@ Rails.application.routes.draw do
     end
   end
   resources :patients, only: [:index, :show, :create, :update]
-  resources :conversations, only: [:index, :show]
+  resources :conversations, only: [:index, :show] do
+    collection do
+      post :import
+    end
+  end
   get "search", to: "search#index"
 
   # Pre-appointment reminders dashboard (Phase 9.6 sub-area #7)

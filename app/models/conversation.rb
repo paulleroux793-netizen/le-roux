@@ -1,12 +1,18 @@
 class Conversation < ApplicationRecord
+  SOURCES = %w[live import].freeze
+
   belongs_to :patient
 
   validates :channel, presence: true, inclusion: { in: %w[whatsapp voice] }
   validates :status, presence: true
+  validates :source, presence: true, inclusion: { in: SOURCES }
+  validates :external_id, uniqueness: true, allow_nil: true
 
   scope :active, -> { where(status: "active") }
   scope :by_channel, ->(channel) { where(channel: channel) }
   scope :recent, -> { order(updated_at: :desc) }
+  scope :live,     -> { where(source: "live") }
+  scope :imported, -> { where(source: "import") }
 
   def add_message(role:, content:, timestamp: Time.current)
     add_messages([{ role: role, content: content, timestamp: timestamp }])
