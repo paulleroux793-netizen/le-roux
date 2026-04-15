@@ -93,38 +93,62 @@ class WhatsappService
   end
 
   # --- Booking Flow ---
+  #
+  # IMPORTANT — the AI generates `result[:response]` *before* this
+  # handler runs, so the bot will happily compose "Perfect! I have
+  # you booked..." text even when no Appointment row gets persisted
+  # (slot mismatch, Google API error, missing credentials, etc).
+  # We mutate `result[:response]` in place when the booking didn't
+  # actually land so the controller's TwiML reply matches reality.
+  # The hash is shared by reference with WhatsappController, which
+  # reads `result[:response]` *after* this handler returns.
+
+  BOOKING_FAILED_FALLBACK =
+    "Sorry — I couldn't lock that slot in. It may have just been " \
+    "taken, or our calendar isn't reachable right now. Could you " \
+    "try a different time, or call the practice directly?".freeze
 
   def handle_booking(result, patient, conversation)
     entities = result[:entities] || {}
     date = entities[:date]
     time = entities[:time]
 
-    # If we have both date and time, try to book
-    if date.present? && time.present?
-      attempt_booking(patient, date, time, entities[:treatment])
+    # No concrete date/time yet — the AI is still gathering preferences
+    # over multiple turns. Nothing to verify; let the AI text stand.
+    return unless date.present? && time.present?
+
+    appointment = attempt_booking(patient, date, time, entities[:treatment])
+
+    if appointment.nil?
+      # Booking was attempted (date+time present) but didn't persist.
+      # Replace the AI's optimistic confirmation with an honest reply.
+      result[:response] = BOOKING_FAILED_FALLBACK
     end
-    # Otherwise, the AI response already asks for preferences
   end
 
+  # Returns the persisted Appointment on success, or nil on any
+  # failure (slot not available, Google API error, missing creds).
+  # Never raises — the caller relies on the nil sentinel.
   def attempt_booking(patient, date, time, treatment)
     calendar = GoogleCalendarService.new
     start_time = Time.zone.parse("#{date} #{time}")
     reason = treatment&.capitalize || "Consultation"
 
-    # Check availability
     slots = calendar.available_slots(Date.parse(date))
     matching_slot = slots.find { |s| s[:start_time] == start_time }
 
-    if matching_slot
-      appointment = calendar.book_appointment(
-        patient: patient,
-        start_time: start_time,
-        reason: reason
-      )
-      send_confirmation_template(patient, appointment)
-    end
-  rescue GoogleCalendarService::Error => e
-    Rails.logger.error("[WhatsApp] Booking failed: #{e.message}")
+    return nil unless matching_slot
+
+    appointment = calendar.book_appointment(
+      patient: patient,
+      start_time: start_time,
+      reason: reason
+    )
+    send_confirmation_template(patient, appointment)
+    appointment
+  rescue StandardError => e
+    Rails.logger.error("[WhatsApp] Booking failed: #{e.class}: #{e.message}")
+    nil
   end
 
   # --- Reschedule Flow ---

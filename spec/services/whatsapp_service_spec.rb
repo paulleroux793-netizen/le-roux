@@ -46,7 +46,9 @@ RSpec.describe WhatsappService do
         allow(ai_service).to receive(:process_message).and_return({
           response: "Sure, let me check availability!",
           intent: "book",
-          entities: { date: "2026-04-20", time: "10:00" }
+          # No date/time yet — the AI is still gathering preferences,
+          # so attempt_booking is intentionally not invoked here.
+          entities: {}
         })
 
         result = service.handle_incoming(
@@ -56,6 +58,32 @@ RSpec.describe WhatsappService do
 
         expect(result[:response]).to include("availability")
         expect(patient.conversations.count).to eq(1) # reused, not new
+      end
+    end
+
+    context "when the AI claims a booking but the slot can't be persisted" do
+      let!(:patient) { create(:patient, phone: "+27699999999") }
+
+      it "rewrites the optimistic AI reply with an honest fallback" do
+        # AI returns its usual "Perfect! I have you booked..." text
+        # AND a concrete date/time, which is the exact pathology the
+        # user reported: bot confirms, calendar stays empty.
+        allow(ai_service).to receive(:process_message).and_return({
+          response: "Perfect! I have you booked for Thursday at 9am.",
+          intent: "book",
+          entities: { date: "2026-04-16", time: "09:00", treatment: "consultation" }
+        })
+
+        # Simulate the real-world failure mode: GoogleCalendarService
+        # blows up because credentials aren't reachable. attempt_booking
+        # must swallow it and return nil, and handle_booking must rewrite
+        # the response so the controller's TwiML reply doesn't lie.
+        allow(GoogleCalendarService).to receive(:new).and_raise(StandardError, "no creds")
+
+        result = service.handle_incoming(from: "+27699999999", message: "Book me Thursday 9am")
+
+        expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK)
+        expect(Appointment.where(patient: patient).count).to eq(0)
       end
     end
 
