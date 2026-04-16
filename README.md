@@ -170,8 +170,7 @@ bundle exec rspec
 
 The seed file creates the doctor's working hours:
 - **Monday–Friday**: 08:00–17:00, lunch break 12:00–13:00
-- **Saturday**: 08:00–12:00, no break
-- **Sunday**: Closed
+- **Saturday & Sunday**: Closed
 
 These schedules are required for WhatsApp booking to work — `attempt_booking` checks `DoctorSchedule` before creating an appointment.
 
@@ -223,7 +222,7 @@ Bot:     "Perfect! I have you booked for Friday, Apr 17 at 11:00 AM.
 
 The bot checks:
 1. Is the slot in the future?
-2. Is the practice open? (Mon-Fri 8-5, Sat 8-12, closed Sun + lunch 12-1)
+2. Is the practice open? (Mon-Fri 8-5, closed Sat & Sun, lunch 12-1)
 3. Is the slot available? (no overlapping appointments)
 
 If any check fails, the bot says: *"Sorry — I couldn't lock that slot in. Could you try a different time, or call the practice directly?"*
@@ -515,7 +514,7 @@ npx vite build
 | **Availability** | Never expose full calendar. Ask patient preference first, then match against schedule. |
 | **Tone** | Warm, friendly, slightly energetic, reassuring. Education-based approach: educate → reassure → book. |
 | **Cancellations** | Always try to reschedule first. If declined, capture the reason (cost/fear/timing/transport/other). |
-| **Working hours** | Mon–Fri 08:00–17:00, Sat 08:00–12:00, Sun closed. Lunch break 12:00–13:00 (Mon–Fri). |
+| **Working hours** | Mon–Fri 08:00–17:00. Closed on weekends (Sat & Sun). Lunch break 12:00–13:00 (Mon–Fri). |
 | **Slot duration** | 30 minutes per appointment. |
 | **Conversion focus** | Every interaction should naturally guide toward booking a consultation. |
 

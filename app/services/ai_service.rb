@@ -78,7 +78,8 @@ class AiService
 
     # Classify intent WITH conversation history for better multi-turn understanding
     classification = classify_intent(message, conversation_history: history)
-    context = { intent: classification[:intent], entities: classification[:entities] }
+    language = conversation&.language || "en"
+    context = { intent: classification[:intent], entities: classification[:entities], language: language }
 
     response_text = generate_response(
       message: message,
@@ -145,6 +146,7 @@ class AiService
       - "Monday" / "next Monday" → the next Monday on or after tomorrow
       - "Friday at 11am" → next Friday in ISO format, time "11:00"
       - "the 20th" → the next 20th of a month from today
+      IMPORTANT: The practice is CLOSED on Saturday and Sunday. If the patient requests a weekend date, still extract it but note the practice is only open Monday–Friday.
       Never return null for date if the patient named any day or relative phrase.
 
       Respond ONLY with valid JSON:
@@ -165,9 +167,33 @@ class AiService
     PROMPT
   end
 
+  # Curated Afrikaans examples from the language dataset for style reference.
+  # Source: config/ai/afrikaans_language_dataset.json (health, family, work topics).
+  # These teach the model natural Afrikaans phrasing — NOT business logic.
+  AFRIKAANS_STYLE_EXAMPLES = [
+    { af: "Dit is belangrik om gereeld 'n dokter te besoek.", en: "It is important to visit a doctor regularly." },
+    { af: "Let op na simptome om vroegtydig behandeling te kry.", en: "Pay attention to symptoms to get early treatment." },
+    { af: "Goeie higiëne help om siektes te voorkom.", en: "Good hygiene helps prevent diseases." },
+    { af: "Gesondheid is ons grootste bate.", en: "Health is our greatest asset." },
+    { af: "Voldoende slaap is belangrik vir goeie gesondheid.", en: "Adequate sleep is important for good health." },
+    { af: "'n Daaglikse roetine kan jou gesondheid verbeter.", en: "A daily routine can improve your health." },
+    { af: "Ek het aansoek gedoen vir 'n nuwe werk.", en: "I applied for a new job." },
+    { af: "Ons beplan 'n wonderlike vakansie vir die somer.", en: "We are planning a wonderful vacation for the summer." }
+  ].freeze
+
   def build_system_prompt(patient: nil, context: {})
+    language = context[:language] || "en"
+
     prompt = <<~PROMPT
       You are the AI receptionist for Dr Chalita le Roux's dental practice. Your name is the Dr le Roux AI Assistant.
+
+      ## Language Rules (CRITICAL)
+      The patient's detected language is: #{language == "af" ? "Afrikaans" : "English"}.
+      - You MUST respond in #{language == "af" ? "Afrikaans" : "English"}.
+      - Do NOT mix English and Afrikaans in the same response.
+      - If the patient switches language, follow the new language.
+      - If the patient's language is unclear, ask briefly: "Would you prefer English or Afrikaans?" / "Verkies jy Engels of Afrikaans?"
+      #{language == "af" ? afrikaans_style_guide : ""}
 
       ## Your Personality
       - Warm, friendly, slightly energetic, and reassuring
@@ -178,22 +204,25 @@ class AiService
       ## Pricing Rules (STRICT)
       - Consultation: R850 (includes x-rays) — always quote this
       - Cleaning: R1,300 — only quote when asked
-      - Everything else: "That would need a consultation first so the doctor can assess and give you an accurate quote."
+      - Everything else: #{language == "af" ? '"Dit sal eers \'n konsultasie benodig sodat die dokter kan assesseer en \'n akkurate kwotasie kan gee."' : '"That would need a consultation first so the doctor can assess and give you an accurate quote."'}
       - NEVER guess prices for treatments not listed above
 
       ## FAQ Knowledge
       #{FAQ.map { |k, v| "- #{k}: #{v}" }.join("\n")}
 
       ## Booking Rules
+      - We are ONLY open Monday to Friday 8am–5pm. We are CLOSED on Saturday and Sunday. NEVER mention or offer weekend appointments.
       - Never expose the full calendar — ask the patient for their preferred day and time first
       - Then match against availability
       - Suggest 2-3 alternative times if their preference isn't available
       - Default appointment duration is 30 minutes
+      - If a patient asks for a weekend appointment, politely explain we are closed on weekends and offer the next available weekday instead
 
       ## Objection Handling
       - Price concerns: Emphasize the value (x-rays included, thorough assessment). Mention medical aid acceptance.
       - Dental fear: Acknowledge the fear, reassure about modern techniques, mention the doctor's gentle approach
       - Timing: Offer flexible scheduling within Monday–Friday 8am–5pm
+      - IMPORTANT: We are CLOSED on weekends (Saturday and Sunday). NEVER offer or suggest Saturday or Sunday appointments. Only offer Monday to Friday.
       - Always try to keep the conversation moving toward a booking
 
       ## Cancellation Rules
@@ -221,6 +250,21 @@ class AiService
     end
 
     prompt
+  end
+
+  # Returns Afrikaans style guidance block for the system prompt.
+  # Uses curated examples from the Afrikaans dataset as phrasing reference.
+  def afrikaans_style_guide
+    examples = AFRIKAANS_STYLE_EXAMPLES.map { |e| "  - \"#{e[:af]}\" (#{e[:en]})" }.join("\n")
+    <<~GUIDE
+
+      ## Afrikaans Style Reference
+      Use natural, warm conversational Afrikaans. Avoid awkward literal translations from English.
+      Here are examples of natural Afrikaans phrasing for reference:
+      #{examples}
+      Keep the same warm, professional tone in Afrikaans as in English.
+      Use simple, clear Afrikaans that is WhatsApp-friendly.
+    GUIDE
   end
 
   def build_messages(history, current_message)

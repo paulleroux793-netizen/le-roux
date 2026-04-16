@@ -57,6 +57,9 @@ class PagesController < ApplicationController
         .limit(8)
         .to_a
 
+      # Lightweight patient list for the appointment create modal on the dashboard.
+      all_patients = Patient.order(:first_name, :last_name).limit(500).select(:id, :first_name, :last_name, :phone).to_a
+
       {
         stats: {
           todays_appointments: todays_appointments.size,
@@ -73,7 +76,8 @@ class PagesController < ApplicationController
         upcoming_appointments: upcoming_appointments.map { |a| appointment_props(a) },
         weekly_chart: weekly_chart,
         recent_patients: recent_patients.map { |p| patient_dashboard_props(p) },
-        reminders: reminders.map { |a| appointment_props(a) }
+        reminders: reminders.map { |a| appointment_props(a) },
+        patients: all_patients.map { |p| { id: p.id, name: p.full_name, phone: p.phone } }
       }
     end
 

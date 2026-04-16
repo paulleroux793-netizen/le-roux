@@ -12,6 +12,9 @@ class WhatsappService
     patient = find_or_create_patient(from)
     conversation = find_or_create_conversation(patient)
 
+    # Detect and persist language from the first message
+    detect_and_persist_language(conversation, message)
+
     fast_path_result = build_local_result(message: message, conversation: conversation)
 
     if fast_path_result
@@ -103,10 +106,14 @@ class WhatsappService
   # The hash is shared by reference with WhatsappController, which
   # reads `result[:response]` *after* this handler returns.
 
-  BOOKING_FAILED_FALLBACK =
-    "Sorry — I couldn't lock that slot in. It may have just been " \
-    "taken, or our calendar isn't reachable right now. Could you " \
-    "try a different time, or call the practice directly?".freeze
+  BOOKING_FAILED_FALLBACK = {
+    "en" => "Sorry — I couldn't lock that slot in. It may have just been " \
+            "taken, or our calendar isn't reachable right now. Could you " \
+            "try a different time, or call the practice directly?",
+    "af" => "Jammer — ek kon nie daardie tyd vasmaak nie. Dit is dalk pas " \
+            "geneem, of ons kalender is nie nou bereikbaar nie. Kan jy " \
+            "'n ander tyd probeer, of bel die praktyk direk?"
+  }.freeze
 
   PRACTICE_DIRECTIONS = <<~DIRS.strip
     Directions from Hendrik Potgieter Rd:
@@ -124,6 +131,7 @@ class WhatsappService
   # bot lies to the patient. Kept deliberately broad; false positives
   # here just mean we replace a vague AI message with a clearer one.
   BOOKING_CLAIM_PHRASES = [
+    # English
     "i have you booked",
     "you're booked",
     "youre booked",
@@ -138,7 +146,16 @@ class WhatsappService
     "ive scheduled",
     "all set for",
     "see you on",
-    "see you at"
+    "see you at",
+    # Afrikaans
+    "jy is bespreek",
+    "afspraak is bevestig",
+    "afspraak is bespreek",
+    "ek het jou bespreek",
+    "ek het jou ingeskryf",
+    "sien jou op",
+    "sien jou om",
+    "alles is reg vir"
   ].freeze
 
   def handle_booking(result, patient, conversation)
@@ -174,7 +191,8 @@ class WhatsappService
         "[WhatsApp] AI claimed a booking but no Appointment was persisted; " \
         "rewriting response. date=#{date.inspect} time=#{time.inspect}"
       )
-      result[:response] = BOOKING_FAILED_FALLBACK
+      lang = conversation&.language || "en"
+      result[:response] = BOOKING_FAILED_FALLBACK[lang] || BOOKING_FAILED_FALLBACK["en"]
     end
   end
 
@@ -607,6 +625,67 @@ class WhatsappService
       { role: "user", content: user_message },
       { role: "assistant", content: assistant_message }
     ])
+  end
+
+  # --- Language Detection ---
+
+  # Common Afrikaans words and patterns for fast detection.
+  # We check against these before falling back to a default of English.
+  AFRIKAANS_MARKERS = %w[
+    hallo goeie môre middag ek is wil graag asseblief dankie
+    dokter afspraak bespreek kan help my naam tyd dag
+    wanneer hoeveel kos dit maak besig oggend more vandag
+    vanaand maandag dinsdag woensdag donderdag vrydag
+    januarie februarie maart april mei junie julie augustus
+    september oktober november desember
+    ja nee seker reg goed
+  ].freeze
+
+  # Detect language from the message text and persist on the conversation.
+  # Only runs detection if the conversation doesn't already have a language set,
+  # OR if the user clearly switches language mid-conversation.
+  def detect_and_persist_language(conversation, message)
+    detected = detect_language(message)
+
+    if conversation.language.blank?
+      # First message — set the language
+      conversation.update_column(:language, detected)
+      Rails.logger.info("[WhatsApp] Language detected: #{detected} (first message)")
+    elsif detected != conversation.language && strong_language_signal?(message, detected)
+      # User switched language clearly
+      conversation.update_column(:language, detected)
+      Rails.logger.info("[WhatsApp] Language switched to: #{detected}")
+    end
+  end
+
+  # Simple heuristic language detection: count Afrikaans marker words.
+  # Returns "af" or "en".
+  def detect_language(message)
+    words = message.downcase.gsub(/[^\w\s']/, "").split
+    af_count = words.count { |w| AFRIKAANS_MARKERS.include?(w) }
+
+    # If ≥2 Afrikaans markers or ≥30% of words are Afrikaans markers, classify as Afrikaans
+    if af_count >= 2 || (words.length > 0 && af_count.to_f / words.length >= 0.3)
+      "af"
+    else
+      "en"
+    end
+  end
+
+  # Returns true if the message has a strong enough signal to justify switching
+  # the conversation language (avoids flipping on borrowed words).
+  def strong_language_signal?(message, detected_lang)
+    words = message.downcase.gsub(/[^\w\s']/, "").split
+    return false if words.length < 2
+
+    if detected_lang == "af"
+      af_count = words.count { |w| AFRIKAANS_MARKERS.include?(w) }
+      af_count >= 3
+    else
+      # Switching to English: no Afrikaans markers at all
+      af_count = words.count { |w| AFRIKAANS_MARKERS.include?(w) }
+      af_count == 0 && words.length >= 3
+    end
   end
 
   def ai_service

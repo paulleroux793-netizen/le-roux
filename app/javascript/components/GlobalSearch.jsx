@@ -133,7 +133,7 @@ export default function GlobalSearch() {
           onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          className="w-full rounded-2xl border border-brand-accent/80 bg-white/95 py-2.5 pl-10 pr-9 text-sm text-brand-ink placeholder:text-brand-muted focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45 transition-colors"
+          className="w-full rounded-2xl border border-brand-border bg-brand-surface/60 py-2.5 pl-10 pr-9 text-sm text-brand-ink placeholder:text-brand-muted/70 focus:border-brand-primary focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-primary/15 transition-colors"
         />
         {loading && (
           <Loader2

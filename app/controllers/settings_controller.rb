@@ -14,8 +14,7 @@ class SettingsController < ApplicationController
             active: s.active
           }
         },
-        pricing: AiService::PRICING,
-        faq: AiService::FAQ
+        pricing: AiService::PRICING
       }
     end
 

@@ -8,8 +8,9 @@ import AppointmentDetailModal from '../components/AppointmentDetailModal'
 import AppointmentFormModal from '../components/AppointmentFormModal'
 import CancelAppointmentModal from '../components/CancelAppointmentModal'
 import DataTable from '../components/DataTable'
+import { useLanguage } from '../lib/LanguageContext'
 
-// Token-driven status pills — shared palette with AppointmentCalendar.
+// Token-driven status pills
 const STATUS_STYLES = {
   scheduled:   'border border-brand-primary/15 bg-brand-primary/10 text-brand-primary',
   confirmed:   'border border-brand-success/15 bg-brand-success/10 text-brand-success',
@@ -19,16 +20,14 @@ const STATUS_STYLES = {
   rescheduled: 'border border-brand-warning/15 bg-brand-warning/10 text-brand-warning',
 }
 
-// Single source of truth for statuses — reused in the table header
-// filter dropdown and the status badge renderer below.
-const STATUS_OPTIONS = [
-  { value: 'scheduled',   label: 'Scheduled' },
-  { value: 'confirmed',   label: 'Confirmed' },
-  { value: 'completed',   label: 'Completed' },
-  { value: 'cancelled',   label: 'Cancelled' },
-  { value: 'no_show',     label: 'No show' },
-  { value: 'rescheduled', label: 'Rescheduled' },
-]
+const STATUS_KEYS = {
+  scheduled: 'status_scheduled',
+  confirmed: 'status_confirmed',
+  completed: 'status_completed',
+  cancelled: 'status_cancelled',
+  no_show: 'status_no_show',
+  rescheduled: 'status_rescheduled',
+}
 
 export default function Appointments({
   appointments = [],
@@ -37,6 +36,9 @@ export default function Appointments({
   patients = [],
   stats,
 }) {
+  const { t, language } = useLanguage()
+  const dateFmt = language === 'af' ? 'af-ZA' : 'en-ZA'
+
   const [view, setView] = useState('schedule')
   const [modalMode, setModalMode] = useState(null)
   const [selected, setSelected] = useState(null)
@@ -47,8 +49,15 @@ export default function Appointments({
   const openCancel = (apt) => { if (apt) setSelected(apt); setModalMode('cancel') }
   const closeModal = () => { setModalMode(null); setSelected(null) }
 
-  // Poll every 15s so WhatsApp bookings and status changes appear
-  // on the calendar and list without a manual page refresh.
+  const STATUS_OPTIONS = [
+    { value: 'scheduled',   label: t('status_scheduled') },
+    { value: 'confirmed',   label: t('status_confirmed') },
+    { value: 'completed',   label: t('status_completed') },
+    { value: 'cancelled',   label: t('status_cancelled') },
+    { value: 'no_show',     label: t('status_no_show') },
+    { value: 'rescheduled', label: t('status_rescheduled') },
+  ]
+
   useEffect(() => {
     const timer = setInterval(() => {
       router.reload({
@@ -66,22 +75,18 @@ export default function Appointments({
     if (source) openDetail(source)
   }
 
-  // One-click confirm — used from the list row Confirm button.
   const confirmAppointment = (apt) => {
     router.patch(`/appointments/${apt.id}/confirm`, {}, {
       preserveScroll: true,
-      onSuccess: () => toast.success(`${apt.patient_name} confirmed`),
-      onError:   () => toast.error('Could not confirm'),
+      onSuccess: () => toast.success(`${apt.patient_name} ${t('rem_confirmed_success')}`),
+      onError:   () => toast.error(t('rem_confirm_error')),
     })
   }
 
-  // ── Column definitions for the List view ────────────────────
-  // Memoised so @tanstack/react-table doesn't re-instantiate them
-  // on every render (which would reset column widths + sort state).
   const columns = useMemo(() => [
     {
       accessorKey: 'patient_name',
-      header: 'Patient',
+      header: t('apt_col_patient'),
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary/10">
@@ -98,24 +103,21 @@ export default function Appointments({
     },
     {
       accessorKey: 'start_time',
-      header: 'Date & Time',
-      // Sort chronologically, not string-wise. Custom sortingFn
-      // because the accessor returns an ISO string.
+      header: t('apt_col_datetime'),
       sortingFn: (a, b) =>
         new Date(a.original.start_time) - new Date(b.original.start_time),
       cell: ({ row }) => (
         <div>
           <p className="text-sm text-gray-800">
-            {new Date(row.original.start_time).toLocaleDateString('en-ZA', {
+            {new Date(row.original.start_time).toLocaleDateString(dateFmt, {
               weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
             })}
           </p>
           <p className="mt-0.5 text-xs text-brand-muted">
-            {fmtTime(row.original.start_time)} — {fmtTime(row.original.end_time)}
+            {fmtTime(row.original.start_time, dateFmt)} — {fmtTime(row.original.end_time, dateFmt)}
           </p>
         </div>
       ),
-      // Custom filter: row.start_time === selected ISO date
       filterFn: (row, columnId, value) => {
         if (!value) return true
         const d = new Date(row.original.start_time)
@@ -125,39 +127,38 @@ export default function Appointments({
     },
     {
       accessorKey: 'reason',
-      header: 'Reason',
+      header: t('apt_col_reason'),
       cell: ({ getValue }) => (
         <span className="text-sm text-gray-600">{getValue() || '—'}</span>
       ),
     },
     {
       accessorKey: 'status',
-      header: 'Status',
-      cell: ({ getValue }) => <StatusBadge status={getValue()} />,
-      // Exact match filter so the dropdown "Scheduled" only matches scheduled rows.
+      header: t('apt_col_status'),
+      cell: ({ getValue }) => <StatusBadge status={getValue()} t={t} />,
       filterFn: 'equals',
     },
     {
       id: 'actions',
-      header: 'Actions',
+      header: t('apt_col_actions'),
       enableSorting: false,
       enableGlobalFilter: false,
       cell: ({ row }) => (
         <div className="flex items-center gap-1">
           <IconBtn
-            title="View"
+            title={t('view')}
             onClick={() => openDetail(row.original)}
             icon={Eye}
           />
           <IconBtn
-            title="Edit"
+            title={t('reschedule_action')}
             onClick={() => openEdit(row.original)}
             icon={Pencil}
           />
           {row.original.status !== 'confirmed' &&
            row.original.status !== 'cancelled' && (
             <IconBtn
-              title="Confirm"
+              title={t('rem_confirm')}
               onClick={() => confirmAppointment(row.original)}
               icon={CheckCircle}
               colorClass="text-brand-success hover:bg-brand-success/10"
@@ -165,7 +166,7 @@ export default function Appointments({
           )}
           {row.original.status !== 'cancelled' && (
             <IconBtn
-              title="Cancel"
+              title={t('cancel_action')}
               onClick={() => openCancel(row.original)}
               icon={XIcon}
               colorClass="text-brand-danger hover:bg-brand-danger/10"
@@ -174,32 +175,32 @@ export default function Appointments({
         </div>
       ),
     },
-  ], [])
+  ], [t, dateFmt])
 
   return (
     <DashboardLayout>
       <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <span className="inline-flex items-center rounded-full border border-brand-border bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-primary">
-            Schedule view
+            {t('apt_badge')}
           </span>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-ink">Appointments</h1>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-ink">{t('apt_title')}</h1>
           <p className="mt-2 text-sm leading-6 text-brand-muted">
-            {stats?.total ?? 0} appointments tracked across the live clinic diary.
+            {stats?.total ?? 0} {t('apt_subtitle_suffix')}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="inline-flex items-center rounded-xl border border-brand-border bg-brand-surface p-1">
-            <ViewTab active={view === 'schedule'} onClick={() => setView('schedule')} icon={CalendarDays} label="Schedule" />
-            <ViewTab active={view === 'list'}     onClick={() => setView('list')}     icon={List}         label="List" />
+            <ViewTab active={view === 'schedule'} onClick={() => setView('schedule')} icon={CalendarDays} label={t('apt_schedule')} />
+            <ViewTab active={view === 'list'}     onClick={() => setView('list')}     icon={List}         label={t('apt_list')} />
           </div>
 
           <button
             onClick={openCreate}
             className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark"
           >
-            <Plus size={15} /> New Appointment
+            <Plus size={15} /> {t('apt_new')}
           </button>
         </div>
       </div>
@@ -207,17 +208,17 @@ export default function Appointments({
       {/* Stats Row */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ['Scheduled',  stats?.scheduled,  'bg-brand-primary/10',      'text-brand-primary'],
-          ['Confirmed',  stats?.confirmed,  'bg-brand-success/10',      'text-brand-success'],
-          ['Completed',  stats?.completed,  'bg-brand-primary-dark/10', 'text-brand-primary-dark'],
-          ['Cancelled',  stats?.cancelled,  'bg-brand-danger/10',       'text-brand-danger'],
+          [t('status_scheduled'), stats?.scheduled, 'bg-brand-primary/10',      'text-brand-primary'],
+          [t('status_confirmed'), stats?.confirmed, 'bg-brand-success/10',      'text-brand-success'],
+          [t('status_completed'), stats?.completed, 'bg-brand-primary-dark/10', 'text-brand-primary-dark'],
+          [t('status_cancelled'), stats?.cancelled, 'bg-brand-danger/10',       'text-brand-danger'],
         ].map(([label, count, tint, color]) => (
           <div key={label} className="rounded-xl border border-brand-border bg-white p-5 shadow-sm">
             <div className={`mb-4 inline-flex rounded-lg px-3 py-2 text-xs font-semibold ${tint} ${color}`}>
               {label}
             </div>
             <p className={`text-3xl font-semibold tracking-tight ${color}`}>{count ?? 0}</p>
-            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-brand-muted">Live count</p>
+            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-brand-muted">{t('apt_live_count')}</p>
           </div>
         ))}
       </div>
@@ -232,11 +233,11 @@ export default function Appointments({
         <DataTable
           columns={columns}
           data={appointments}
-          globalFilterPlaceholder="Search patient, phone, reason…"
+          globalFilterPlaceholder={t('apt_search')}
           initialSort={[{ id: 'start_time', desc: true }]}
           pageSize={10}
-          totalLabel="appointments"
-          emptyMessage="No appointments found"
+          totalLabel={t('apt_total_label')}
+          emptyMessage={t('apt_empty')}
           filters={({ setColumnFilter, getColumnFilter }) => (
             <>
               <select
@@ -244,7 +245,7 @@ export default function Appointments({
                 onChange={(e) => setColumnFilter('status', e.target.value)}
                 className="rounded-lg border border-brand-border bg-white px-3 py-2 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary/20"
               >
-                <option value="">All statuses</option>
+                <option value="">{t('apt_all_statuses')}</option>
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s.value} value={s.value}>{s.label}</option>
                 ))}
@@ -264,7 +265,7 @@ export default function Appointments({
                   }}
                   className="px-2 text-xs text-brand-muted hover:text-brand-ink"
                 >
-                  Clear
+                  {t('apt_clear')}
                 </button>
               )}
             </>
@@ -272,7 +273,7 @@ export default function Appointments({
         />
       )}
 
-      {/* ── Modals ─────────────────────────────────────────────── */}
+      {/* Modals */}
       <AppointmentDetailModal
         appointment={selected}
         open={modalMode === 'detail'}
@@ -331,10 +332,11 @@ function IconBtn({ title, onClick, icon: Icon, colorClass = 'text-brand-muted ho
   )
 }
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, t }) {
+  const key = STATUS_KEYS[status]
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${STATUS_STYLES[status] || 'border border-brand-muted/15 bg-brand-surface text-brand-muted'}`}>
-      {String(status).replace('_', ' ')}
+      {key ? t(key) : String(status).replace('_', ' ')}
     </span>
   )
 }
@@ -350,6 +352,6 @@ function initials(name = '') {
   )
 }
 
-function fmtTime(iso) {
-  return new Date(iso).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
+function fmtTime(iso, locale = 'en-ZA') {
+  return new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
 }

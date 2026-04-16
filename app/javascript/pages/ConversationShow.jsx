@@ -5,18 +5,19 @@ import { ArrowLeft, Send, Phone, MessageCircle } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 
 // ── Conversation detail + reply composer ───────────────────────────
-// Phase 10.1 — the receptionist now reads the full transcript here
-// and can type a WhatsApp reply directly into the thread. Send
-// posts to POST /conversations/:id/reply which pushes the text out
-// via Twilio (free-form, subject to the 24h customer-service
-// window) and appends it to the JSONB messages array as an
-// "assistant" entry — same shape the webhook produces — so the
-// transcript stays consistent.
+// Phase 10.1 — the receptionist reads the full transcript here and
+// can type a WhatsApp reply directly into the thread. Send posts to
+// POST /conversations/:id/reply which pushes the text out via
+// Twilio (free-form, subject to the 24h customer-service window)
+// and appends it to the JSONB messages array as an "assistant"
+// entry — same shape the webhook produces — so the transcript
+// stays consistent.
 //
-// Layout mirrors the screenshots the operator provided: a card
-// scroller for the exchange, bubbles alternating left (patient,
-// role=user) and right (clinic/AI, role=assistant), sticky
-// composer pinned at the bottom of the card.
+// Palette: white surfaces, light-blue (sky) accents for clinic
+// bubbles / active states / focus rings, neutral greys for
+// borders and secondary text. No custom brand tokens — every
+// class is a stock Tailwind hue so the page renders identically
+// regardless of theme config.
 
 export default function ConversationShow({ conversation }) {
   const conv = conversation
@@ -62,24 +63,24 @@ export default function ConversationShow({ conversation }) {
       <div className="mb-5">
         <Link
           href="/conversations"
-          className="inline-flex items-center gap-1.5 text-sm text-brand-primary transition-colors hover:text-brand-primary-dark"
+          className="inline-flex items-center gap-1.5 text-sm text-sky-600 hover:text-sky-700 transition-colors"
         >
           <ArrowLeft size={14} /> Back to Conversations
         </Link>
       </div>
 
       {/* Header card */}
-      <div className="mb-4 rounded-[28px] border border-brand-accent/75 bg-white p-5 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
-              <span className="text-sm font-semibold text-brand-primary">
+            <div className="w-11 h-11 rounded-full bg-sky-50 flex items-center justify-center flex-shrink-0 border border-sky-100">
+              <span className="text-sky-700 text-sm font-semibold">
                 {initials(conv.patient_name)}
               </span>
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold text-brand-ink">{conv.patient_name}</h1>
-              <p className="mt-0.5 flex items-center gap-1.5 text-xs text-brand-muted">
+              <h1 className="text-lg font-bold text-gray-900 truncate">{conv.patient_name}</h1>
+              <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
                 <Phone size={11} />
                 {conv.patient_phone}
               </p>
@@ -88,38 +89,41 @@ export default function ConversationShow({ conversation }) {
           <div className="flex items-center gap-2 flex-shrink-0">
             <Chip
               label={conv.channel}
-              tone={conv.channel === 'whatsapp' ? 'emerald' : 'blue'}
+              tone={conv.channel === 'whatsapp' ? 'sky' : 'blue'}
             />
             <Chip
               label={conv.status}
-              tone={conv.status === 'active' ? 'emerald' : 'gray'}
+              tone={conv.status === 'active' ? 'sky' : 'gray'}
             />
-            {conv.source === 'import' && <Chip label="Imported" tone="purple" />}
+            {conv.source === 'import' && <Chip label="Imported" tone="slate" />}
           </div>
         </div>
         {conv.topic && (
-          <p className="mt-3 text-xs text-brand-muted">
-            Topic: <span className="font-medium text-brand-primary">{conv.topic}</span>
+          <p className="text-xs text-gray-500 mt-3">
+            Topic: <span className="font-medium text-sky-700">{conv.topic}</span>
           </p>
         )}
       </div>
 
       {/* Chat card */}
-      <div className="flex flex-col rounded-[28px] border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]" style={{ height: 'calc(100vh - 260px)' }}>
+      <div
+        className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col"
+        style={{ height: 'calc(100vh - 260px)' }}
+      >
         {/* Messages scroller */}
         <div
           ref={scrollRef}
-          className="flex-1 space-y-3 overflow-y-auto bg-brand-surface/20 px-5 py-5"
+          className="flex-1 overflow-y-auto px-5 py-5 space-y-3 bg-gray-50"
         >
           {conv.messages?.length > 0 ? (
             conv.messages.map((msg, i) => <Bubble key={i} msg={msg} />)
           ) : (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
-                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-surface">
-                  <MessageCircle size={18} className="text-brand-primary" />
+                <div className="w-12 h-12 mx-auto rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center mb-3">
+                  <MessageCircle size={18} className="text-sky-600" />
                 </div>
-                <p className="text-sm text-brand-muted">No messages yet</p>
+                <p className="text-sm text-gray-400">No messages yet</p>
               </div>
             </div>
           )}
@@ -128,10 +132,10 @@ export default function ConversationShow({ conversation }) {
         {/* Composer */}
         <form
           onSubmit={handleSend}
-          className="rounded-b-[28px] border-t border-brand-accent/70 bg-white px-4 py-3"
+          className="border-t border-gray-200 px-4 py-3 bg-white rounded-b-xl"
         >
           {!canReply && (
-            <p className="mb-2 text-[11px] text-[#C58A22]">
+            <p className="text-[11px] text-amber-600 mb-2">
               Replies are only supported on WhatsApp conversations.
             </p>
           )}
@@ -143,12 +147,12 @@ export default function ConversationShow({ conversation }) {
               disabled={!canReply || sending}
               placeholder={canReply ? 'Type your message…  (Enter to send, Shift+Enter for new line)' : 'Cannot reply to this conversation'}
               rows={1}
-              className="max-h-40 flex-1 resize-none rounded-2xl border border-brand-accent/80 bg-white px-4 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex-1 resize-none max-h-40 text-sm bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:border-sky-400 disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               type="submit"
               disabled={!canReply || sending || !body.trim()}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-primary text-white transition-colors hover:bg-brand-primary-dark disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center hover:bg-sky-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0 shadow-sm"
               aria-label="Send reply"
             >
               <Send size={16} />
@@ -167,13 +171,13 @@ function Bubble({ msg }) {
       <div
         className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm ${
           isClinic
-            ? 'rounded-tr-sm bg-brand-primary text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)]'
-            : 'rounded-tl-sm border border-brand-accent/65 bg-white text-brand-ink'
+            ? 'bg-sky-600 text-white rounded-tr-sm'
+            : 'bg-white border border-gray-200 text-gray-800 rounded-tl-sm'
         }`}
       >
         <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
         {msg.timestamp && (
-          <p className={`mt-1 text-[10px] ${isClinic ? 'text-white/70' : 'text-brand-muted'}`}>
+          <p className={`text-[10px] mt-1 ${isClinic ? 'text-white/70' : 'text-gray-400'}`}>
             {formatTime(msg.timestamp)}
           </p>
         )}
@@ -184,10 +188,10 @@ function Bubble({ msg }) {
 
 function Chip({ label, tone }) {
   const tones = {
-    emerald: 'bg-[#EAF8F0] text-brand-success',
-    blue:    'bg-[#EEF4FF] text-brand-primary',
-    gray:    'bg-[#F3F6FB] text-brand-muted',
-    purple:  'bg-brand-surface text-brand-primary',
+    sky:   'bg-sky-50 text-sky-700 border border-sky-100',
+    blue:  'bg-blue-50 text-blue-700 border border-blue-100',
+    gray:  'bg-gray-100 text-gray-600 border border-gray-200',
+    slate: 'bg-slate-100 text-slate-600 border border-slate-200',
   }
   return (
     <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full capitalize ${tones[tone] || tones.gray}`}>

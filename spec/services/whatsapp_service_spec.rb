@@ -119,7 +119,7 @@ RSpec.describe WhatsappService do
 
           result = service.handle_incoming(from: "+27699999998", message: "Book me Thursday 9am")
 
-          expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK)
+          expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK["en"])
           expect(Appointment.where(patient: patient).count).to eq(0)
         end
       end
@@ -141,7 +141,7 @@ RSpec.describe WhatsappService do
 
           result = service.handle_incoming(from: "+27699999997", message: "Book me Sunday 10am")
 
-          expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK)
+          expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK["en"])
           expect(Appointment.where(patient: patient).count).to eq(0)
         end
       end
@@ -163,7 +163,7 @@ RSpec.describe WhatsappService do
 
         result = service.handle_incoming(from: "+27688888888", message: "Book me Friday 11am")
 
-        expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK)
+        expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK["en"])
         expect(Appointment.where(patient: patient).count).to eq(0)
       end
 

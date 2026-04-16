@@ -1,5 +1,6 @@
 class Conversation < ApplicationRecord
-  SOURCES = %w[live import].freeze
+  SOURCES   = %w[live import].freeze
+  LANGUAGES = %w[en af].freeze
 
   belongs_to :patient
 
@@ -7,6 +8,7 @@ class Conversation < ApplicationRecord
   validates :status, presence: true
   validates :source, presence: true, inclusion: { in: SOURCES }
   validates :external_id, uniqueness: true, allow_nil: true
+  validates :language, inclusion: { in: LANGUAGES }, allow_nil: true
 
   scope :active, -> { where(status: "active") }
   scope :by_channel, ->(channel) { where(channel: channel) }

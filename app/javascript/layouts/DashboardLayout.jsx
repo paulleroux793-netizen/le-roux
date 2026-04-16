@@ -7,18 +7,20 @@ import {
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
 import NotificationBell from '../components/NotificationBell'
+import { useLanguage } from '../lib/LanguageContext'
 
 const NAV_ITEMS = [
-  { name: 'Dashboard',     href: '/dashboard',     icon: LayoutDashboard },
-  { name: 'Appointments',  href: '/appointments',  icon: Calendar },
-  { name: 'Reminders',     href: '/reminders',     icon: BellRing },
-  { name: 'Patients',      href: '/patients',      icon: Users },
-  { name: 'Conversations', href: '/conversations', icon: MessageSquare },
-  { name: 'Analytics',     href: '/analytics',     icon: BarChart2 },
+  { key: 'nav_dashboard',     href: '/dashboard',     icon: LayoutDashboard },
+  { key: 'nav_appointments',  href: '/appointments',  icon: Calendar },
+  { key: 'nav_reminders',     href: '/reminders',     icon: BellRing },
+  { key: 'nav_patients',      href: '/patients',      icon: Users },
+  { key: 'nav_conversations', href: '/conversations', icon: MessageSquare },
+  { key: 'nav_analytics',     href: '/analytics',     icon: BarChart2 },
 ]
 
 export default function DashboardLayout({ children }) {
   const { url } = usePage()
+  const { t } = useLanguage()
 
   const isActive = (href) =>
     href === '/dashboard'
@@ -41,7 +43,7 @@ export default function DashboardLayout({ children }) {
               <h1 className="truncate text-sm font-semibold leading-tight text-brand-ink">
                 Dr Chalita le Roux
               </h1>
-              <p className="mt-0.5 text-xs tracking-wide text-brand-muted">AI Receptionist</p>
+              <p className="mt-0.5 text-xs tracking-wide text-brand-muted">{t('nav_subtitle')}</p>
             </div>
           </div>
         </div>
@@ -49,13 +51,13 @@ export default function DashboardLayout({ children }) {
         {/* Main navigation */}
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-5">
           <p className="mb-3 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-brand-muted select-none">
-            Menu
+            {t('nav_menu')}
           </p>
-          {NAV_ITEMS.map(({ name, href, icon: Icon }) => {
+          {NAV_ITEMS.map(({ key, href, icon: Icon }) => {
             const active = isActive(href)
             return (
               <Link
-                key={name}
+                key={key}
                 href={href}
                 className={cn(
                   'flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all',
@@ -68,7 +70,7 @@ export default function DashboardLayout({ children }) {
                   size={16}
                   className={cn('flex-shrink-0', active ? 'text-white' : 'text-brand-muted')}
                 />
-                <span className="truncate">{name}</span>
+                <span className="truncate">{t(key)}</span>
                 {active && (
                   <span className="ml-auto h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white" />
                 )}
@@ -95,7 +97,7 @@ export default function DashboardLayout({ children }) {
                 isActive('/settings') ? 'text-white' : 'text-brand-muted'
               )}
             />
-            Settings
+            {t('nav_settings')}
             {isActive('/settings') && (
               <span className="ml-auto h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white" />
             )}
@@ -104,7 +106,7 @@ export default function DashboardLayout({ children }) {
           <button className="w-full rounded-xl px-3.5 py-3 text-left text-sm font-medium text-brand-muted transition-all hover:bg-brand-surface hover:text-brand-ink">
             <span className="flex items-center gap-3">
               <HelpCircle size={16} className="flex-shrink-0 text-brand-muted" />
-              Support
+              {t('nav_support')}
             </span>
           </button>
         </div>

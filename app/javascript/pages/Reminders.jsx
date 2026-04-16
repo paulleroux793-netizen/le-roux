@@ -7,38 +7,52 @@ import {
 } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import CancelAppointmentModal from '../components/CancelAppointmentModal'
+import { useLanguage } from '../lib/LanguageContext'
 
 // ── Pre-Appointment Reminders page ──────────────────────────────────
-// Redesigned to match a clean table layout with status chips.
-// Shows ALL upcoming appointments with their reminder/confirmation
-// status so the receptionist sees the full picture at a glance.
 
-const STATUS_CHIPS = {
-  Pending:     { label: 'Pending',     bg: 'bg-amber-50',    text: 'text-amber-700',   border: 'border-amber-200' },
-  Sent:        { label: 'Sent',        bg: 'bg-blue-50',     text: 'text-blue-700',    border: 'border-blue-200' },
-  Confirmed:   { label: 'Confirmed',   bg: 'bg-emerald-50',  text: 'text-emerald-700', border: 'border-emerald-200' },
-  Cancelled:   { label: 'Cancelled',   bg: 'bg-red-50',      text: 'text-red-700',     border: 'border-red-200' },
-  'No Answer': { label: 'No Answer',   bg: 'bg-orange-50',   text: 'text-orange-700',  border: 'border-orange-200' },
-  Completed:   { label: 'Completed',   bg: 'bg-brand-surface', text: 'text-brand-muted', border: 'border-brand-border' },
-  'No Show':   { label: 'No Show',     bg: 'bg-gray-50',     text: 'text-gray-600',    border: 'border-gray-200' },
-  Rescheduled: { label: 'Rescheduled', bg: 'bg-purple-50',   text: 'text-purple-700',  border: 'border-purple-200' },
+const STATUS_CHIP_KEYS = {
+  Pending:     'chip_pending',
+  Sent:        'chip_sent',
+  Confirmed:   'chip_confirmed',
+  Cancelled:   'chip_cancelled',
+  'No Answer': 'chip_no_answer',
+  Completed:   'chip_completed',
+  'No Show':   'chip_no_show',
+  Rescheduled: 'chip_rescheduled',
 }
 
-const WINDOWS = [
-  { key: 'today',    label: 'Today' },
-  { key: 'tomorrow', label: 'Tomorrow' },
-  { key: 'week',     label: 'This Week' },
-]
+const STATUS_CHIP_STYLES = {
+  Pending:     { bg: 'bg-amber-50',    text: 'text-amber-700',   border: 'border-amber-200' },
+  Sent:        { bg: 'bg-blue-50',     text: 'text-blue-700',    border: 'border-blue-200' },
+  Confirmed:   { bg: 'bg-emerald-50',  text: 'text-emerald-700', border: 'border-emerald-200' },
+  Cancelled:   { bg: 'bg-red-50',      text: 'text-red-700',     border: 'border-red-200' },
+  'No Answer': { bg: 'bg-orange-50',   text: 'text-orange-700',  border: 'border-orange-200' },
+  Completed:   { bg: 'bg-brand-surface', text: 'text-brand-muted', border: 'border-brand-border' },
+  'No Show':   { bg: 'bg-gray-50',     text: 'text-gray-600',    border: 'border-gray-200' },
+  Rescheduled: { bg: 'bg-purple-50',   text: 'text-purple-700',  border: 'border-purple-200' },
+}
+
+const WINDOW_KEYS = ['today', 'tomorrow', 'week']
 
 const PAGE_SIZE = 10
 
 export default function Reminders({ reminders = [], stats }) {
+  const { t, language } = useLanguage()
+  const dateFmt = language === 'af' ? 'af-ZA' : 'en-ZA'
+
   const [windowKey, setWindowKey] = useState('week')
   const [cancelTarget, setCancelTarget] = useState(null)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [sortField, setSortField] = useState('start_time')
   const [sortDir, setSortDir] = useState('asc')
+
+  const windowLabels = {
+    today: t('rem_today'),
+    tomorrow: t('rem_tomorrow'),
+    week: t('rem_this_week'),
+  }
 
   // Poll for fresh reminder data every 15 seconds
   useEffect(() => {
@@ -109,17 +123,17 @@ export default function Reminders({ reminders = [], stats }) {
     router.post(`/reminders/${reminder.id}/send`, { method: channel }, {
       preserveScroll: true,
       onSuccess: () => toast.success(
-        `${channel === 'whatsapp' ? 'WhatsApp' : 'Voice'} reminder sent to ${reminder.patient_name}`
+        `${channel === 'whatsapp' ? 'WhatsApp' : t('rem_call')} ${t('rem_sent_success')} ${reminder.patient_name}`
       ),
-      onError: () => toast.error('Could not send reminder'),
+      onError: () => toast.error(t('rem_send_error')),
     })
   }
 
   const confirmAppointment = (reminder) => {
     router.patch(`/appointments/${reminder.id}/confirm`, {}, {
       preserveScroll: true,
-      onSuccess: () => toast.success(`${reminder.patient_name} confirmed`),
-      onError:   () => toast.error('Could not confirm'),
+      onSuccess: () => toast.success(`${reminder.patient_name} ${t('rem_confirmed_success')}`),
+      onError:   () => toast.error(t('rem_confirm_error')),
     })
   }
 
@@ -129,40 +143,40 @@ export default function Reminders({ reminders = [], stats }) {
       <div className="mb-8">
         <div className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
           <Sparkles size={12} />
-          Follow-up queue
+          {t('rem_badge')}
         </div>
         <h1 className="mt-3 flex items-center gap-2 text-[1.9rem] font-semibold tracking-tight text-brand-ink">
           <BellRing size={22} className="text-brand-primary" />
-          Pre-Appointment Reminders
+          {t('rem_title')}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-brand-muted">
-          Track all upcoming appointments and their confirmation status. Send reminders, confirm, or cancel directly from this page.
+          {t('rem_subtitle')}
         </p>
       </div>
 
       {/* Stat cards */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total upcoming" value={stats?.total ?? 0} color="text-brand-primary" />
-        <StatCard label="Pending"        value={stats?.pending ?? 0} color="text-amber-600" />
-        <StatCard label="Confirmed"      value={stats?.confirmed ?? 0} color="text-emerald-600" />
-        <StatCard label="Today"          value={stats?.today ?? 0} color="text-brand-ink" />
+        <StatCard label={t('rem_total_upcoming')} value={stats?.total ?? 0} color="text-brand-primary" />
+        <StatCard label={t('rem_pending')}        value={stats?.pending ?? 0} color="text-amber-600" />
+        <StatCard label={t('rem_confirmed')}      value={stats?.confirmed ?? 0} color="text-emerald-600" />
+        <StatCard label={t('rem_today')}          value={stats?.today ?? 0} color="text-brand-ink" />
       </div>
 
       {/* Controls row */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {/* Window tabs */}
         <div className="inline-flex items-center rounded-xl border border-brand-border bg-white p-1">
-          {WINDOWS.map((w) => (
+          {WINDOW_KEYS.map((key) => (
             <button
-              key={w.key}
-              onClick={() => { setWindowKey(w.key); setPage(1) }}
+              key={key}
+              onClick={() => { setWindowKey(key); setPage(1) }}
               className={`rounded-lg px-4 py-2 text-xs font-semibold transition-colors ${
-                windowKey === w.key
+                windowKey === key
                   ? 'bg-brand-primary text-white shadow-sm'
                   : 'text-brand-muted hover:bg-brand-surface hover:text-brand-ink'
               }`}
             >
-              {w.label}
+              {windowLabels[key]}
             </button>
           ))}
         </div>
@@ -174,7 +188,7 @@ export default function Reminders({ reminders = [], stats }) {
             type="text"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-            placeholder="Search patient, phone, status…"
+            placeholder={t('rem_search')}
             className="w-full rounded-xl border border-brand-border bg-white px-9 py-2.5 text-sm text-brand-ink placeholder:text-brand-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
           />
         </div>
@@ -187,8 +201,8 @@ export default function Reminders({ reminders = [], stats }) {
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success/10">
               <CheckCircle size={20} className="text-brand-success" />
             </div>
-            <p className="text-sm font-medium text-brand-ink">All caught up</p>
-            <p className="mt-1 text-xs text-brand-muted">No appointments match your current filter.</p>
+            <p className="text-sm font-medium text-brand-ink">{t('rem_all_caught_up')}</p>
+            <p className="mt-1 text-xs text-brand-muted">{t('rem_no_match')}</p>
           </div>
         ) : (
           <>
@@ -196,12 +210,12 @@ export default function Reminders({ reminders = [], stats }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-brand-border bg-brand-surface/50">
-                    <SortHeader label="Patient" field="patient_name" current={sortField} dir={sortDir} onSort={toggleSort} />
-                    <SortHeader label="Appointment" field="start_time" current={sortField} dir={sortDir} onSort={toggleSort} />
-                    <SortHeader label="Reason" field="reason" current={sortField} dir={sortDir} onSort={toggleSort} />
-                    <SortHeader label="Status" field="reminder_status" current={sortField} dir={sortDir} onSort={toggleSort} />
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">Phone</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-brand-muted">Actions</th>
+                    <SortHeader label={t('rem_th_patient')} field="patient_name" current={sortField} dir={sortDir} onSort={toggleSort} />
+                    <SortHeader label={t('rem_th_appointment')} field="start_time" current={sortField} dir={sortDir} onSort={toggleSort} />
+                    <SortHeader label={t('rem_th_reason')} field="reason" current={sortField} dir={sortDir} onSort={toggleSort} />
+                    <SortHeader label={t('rem_th_status')} field="reminder_status" current={sortField} dir={sortDir} onSort={toggleSort} />
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">{t('rem_th_phone')}</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-brand-muted">{t('rem_th_actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border/50">
@@ -209,6 +223,8 @@ export default function Reminders({ reminders = [], stats }) {
                     <ReminderRow
                       key={r.id}
                       reminder={r}
+                      t={t}
+                      dateFmt={dateFmt}
                       onSend={sendReminder}
                       onConfirm={confirmAppointment}
                       onCancel={() => setCancelTarget(r)}
@@ -221,9 +237,9 @@ export default function Reminders({ reminders = [], stats }) {
             {/* Pagination */}
             <div className="flex items-center justify-between border-t border-brand-border px-4 py-3">
               <p className="text-xs text-brand-muted">
-                Showing <span className="font-semibold text-brand-ink">{(page - 1) * PAGE_SIZE + 1}</span> to{' '}
-                <span className="font-semibold text-brand-ink">{Math.min(page * PAGE_SIZE, sorted.length)}</span> of{' '}
-                <span className="font-semibold text-brand-ink">{sorted.length}</span> results
+                {t('rem_showing')} <span className="font-semibold text-brand-ink">{(page - 1) * PAGE_SIZE + 1}</span> {t('rem_to')}{' '}
+                <span className="font-semibold text-brand-ink">{Math.min(page * PAGE_SIZE, sorted.length)}</span> {t('rem_of')}{' '}
+                <span className="font-semibold text-brand-ink">{sorted.length}</span> {t('rem_results')}
               </p>
               <div className="flex items-center gap-1">
                 <button
@@ -271,8 +287,9 @@ export default function Reminders({ reminders = [], stats }) {
 }
 
 // ── Table row ──────────────────────────────────────────────────────
-function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
-  const chip = STATUS_CHIPS[reminder.reminder_status] || STATUS_CHIPS.Pending
+function ReminderRow({ reminder, t, dateFmt, onSend, onConfirm, onCancel }) {
+  const chipStyle = STATUS_CHIP_STYLES[reminder.reminder_status] || STATUS_CHIP_STYLES.Pending
+  const chipKey = STATUS_CHIP_KEYS[reminder.reminder_status] || 'chip_pending'
 
   return (
     <tr className="transition-colors hover:bg-brand-surface/30">
@@ -292,8 +309,8 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
                 reminder.hours_until < 24 ? 'text-amber-500' : 'text-brand-muted'
               }`}>
                 {reminder.hours_until < 1
-                  ? `${Math.round(reminder.hours_until * 60)}m away`
-                  : `${reminder.hours_until.toFixed(1)}h away`}
+                  ? `${Math.round(reminder.hours_until * 60)}${t('rem_m_away')}`
+                  : `${reminder.hours_until.toFixed(1)}${t('rem_h_away')}`}
               </p>
             )}
           </div>
@@ -302,21 +319,21 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
 
       {/* Appointment time */}
       <td className="whitespace-nowrap px-4 py-3.5">
-        <p className="text-sm text-brand-ink">{formatDate(reminder.start_time)}</p>
-        <p className="text-xs text-brand-muted">{formatTime(reminder.start_time)} – {formatTime(reminder.end_time)}</p>
+        <p className="text-sm text-brand-ink">{formatDate(reminder.start_time, dateFmt)}</p>
+        <p className="text-xs text-brand-muted">{formatTime(reminder.start_time, dateFmt)} – {formatTime(reminder.end_time, dateFmt)}</p>
       </td>
 
       {/* Reason */}
       <td className="px-4 py-3.5">
         <p className="max-w-[180px] truncate text-sm text-brand-ink">
-          {reminder.reason || 'General appointment'}
+          {reminder.reason || t('rem_general_appointment')}
         </p>
       </td>
 
       {/* Status chip */}
       <td className="px-4 py-3.5">
-        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${chip.bg} ${chip.text} ${chip.border}`}>
-          {chip.label}
+        <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${chipStyle.bg} ${chipStyle.text} ${chipStyle.border}`}>
+          {t(chipKey)}
         </span>
       </td>
 
@@ -329,20 +346,20 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
       <td className="whitespace-nowrap px-4 py-3.5 text-right">
         <div className="flex items-center justify-end gap-1">
           <ActionBtn
-            title="Send WhatsApp"
+            title={t('rem_send_whatsapp')}
             icon={MessageCircle}
             onClick={() => onSend(reminder, 'whatsapp')}
             colorClass="text-emerald-600 hover:bg-emerald-50"
           />
           <ActionBtn
-            title="Call"
+            title={t('rem_call')}
             icon={Phone}
             onClick={() => onSend(reminder, 'voice')}
             colorClass="text-blue-600 hover:bg-blue-50"
           />
           {reminder.reminder_status === 'Pending' || reminder.reminder_status === 'Sent' ? (
             <ActionBtn
-              title="Confirm"
+              title={t('rem_confirm')}
               icon={CheckCircle}
               onClick={() => onConfirm(reminder)}
               colorClass="text-brand-primary hover:bg-brand-primary/10"
@@ -350,7 +367,7 @@ function ReminderRow({ reminder, onSend, onConfirm, onCancel }) {
           ) : null}
           {reminder.reminder_status !== 'Cancelled' && (
             <ActionBtn
-              title="Cancel"
+              title={t('rem_cancel')}
               icon={XIcon}
               onClick={() => onCancel(reminder)}
               colorClass="text-red-500 hover:bg-red-50"
@@ -409,14 +426,14 @@ function initials(name = '') {
     .map(w => w[0]?.toUpperCase() || '').join('') || '·'
 }
 
-function formatDate(iso) {
-  return new Date(iso).toLocaleDateString('en-ZA', {
+function formatDate(iso, locale = 'en-ZA') {
+  return new Date(iso).toLocaleDateString(locale, {
     weekday: 'short', month: 'short', day: 'numeric',
   })
 }
 
-function formatTime(iso) {
-  return new Date(iso).toLocaleTimeString('en-ZA', {
+function formatTime(iso, locale = 'en-ZA') {
+  return new Date(iso).toLocaleTimeString(locale, {
     hour: '2-digit', minute: '2-digit',
   })
 }

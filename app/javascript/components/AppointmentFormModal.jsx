@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import Modal from './Modal'
+import { useLanguage } from '../lib/LanguageContext'
 
 // ── Appointment form modal (Create & Edit) ──────────────────────────
 // A single component handles both Create and Edit because the form
@@ -16,22 +17,27 @@ import Modal from './Modal'
 // Validation is zod + react-hook-form. Times are entered as HTML5
 // datetime-local inputs for zero-dependency input UX; zod parses the
 // string into a date and enforces end > start.
-const schema = z
-  .object({
-    patient_id: z.union([z.string(), z.number()]).refine((v) => !!v, 'Patient is required'),
-    start_time: z.string().min(1, 'Start time is required'),
-    end_time: z.string().min(1, 'End time is required'),
-    reason: z.string().optional(),
-    notes: z.string().optional(),
-  })
-  .refine((v) => new Date(v.end_time) > new Date(v.start_time), {
-    path: ['end_time'],
-    message: 'End time must be after start time',
-  })
+
+// Build the schema dynamically so validation messages use the current language.
+// The schema itself is static (field names don't change), but we wrap it
+// in a function so `t()` is called at resolve-time, not import-time.
+function buildSchema(t) {
+  return z
+    .object({
+      patient_id: z.union([z.string(), z.number()]).refine((v) => !!v, t('validation_patient_required')),
+      start_time: z.string().min(1, t('validation_start_required')),
+      end_time: z.string().min(1, t('validation_end_required')),
+      reason: z.string().optional(),
+      notes: z.string().optional(),
+    })
+    .refine((v) => new Date(v.end_time) > new Date(v.start_time), {
+      path: ['end_time'],
+      message: t('validation_end_after_start'),
+    })
+}
 
 // Convert an ISO string from the server to the value format an HTML
 // datetime-local input expects: "YYYY-MM-DDTHH:mm" in *local* time.
-// (The input has no timezone offset so we slice off seconds & tz.)
 const toLocalInput = (iso) => {
   if (!iso) return ''
   const d = new Date(iso)
@@ -46,6 +52,7 @@ export default function AppointmentFormModal({
   appointment,           // required for mode=edit
   patients = [],         // required for mode=create
 }) {
+  const { t } = useLanguage()
   const isEdit = mode === 'edit'
 
   const {
@@ -54,7 +61,7 @@ export default function AppointmentFormModal({
     reset,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(buildSchema(t)),
     defaultValues: {
       patient_id: '',
       start_time: '',
@@ -98,11 +105,11 @@ export default function AppointmentFormModal({
       preserveState: true,
       onSuccess: (page) => {
         const notice = page?.props?.flash?.notice
-        toast.success(notice || (isEdit ? 'Appointment updated' : 'Appointment booked'))
+        toast.success(notice || (isEdit ? t('modal_success_update') : t('modal_success_create')))
         onClose?.()
       },
       onError: (errs) => {
-        const msg = Object.values(errs || {})[0] || 'Something went wrong'
+        const msg = Object.values(errs || {})[0] || t('modal_error_generic')
         toast.error(msg)
       },
     }
@@ -118,7 +125,7 @@ export default function AppointmentFormModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit Appointment' : 'New Appointment'}
+      title={isEdit ? t('modal_edit_appointment') : t('modal_new_appointment')}
       size="lg"
       footer={
         <>
@@ -127,7 +134,7 @@ export default function AppointmentFormModal({
             onClick={onClose}
             className="rounded-2xl px-4 py-2 text-sm font-medium text-brand-muted transition-colors hover:bg-brand-surface/45 hover:text-brand-ink"
           >
-            Cancel
+            {t('modal_cancel_btn')}
           </button>
           <button
             type="submit"
@@ -135,7 +142,7 @@ export default function AppointmentFormModal({
             disabled={isSubmitting}
             className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark disabled:opacity-50"
           >
-            {isEdit ? 'Save changes' : 'Book appointment'}
+            {isEdit ? t('modal_save_btn') : t('modal_book_btn')}
           </button>
         </>
       }
@@ -143,12 +150,12 @@ export default function AppointmentFormModal({
       <form id="appointment-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Patient — only shown in create mode */}
         {!isEdit && (
-          <Field label="Patient" error={errors.patient_id?.message}>
+          <Field label={t('modal_patient_label')} error={errors.patient_id?.message}>
             <select
               {...register('patient_id')}
               className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             >
-              <option value="">Select a patient…</option>
+              <option value="">{t('modal_select_patient')}</option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} — {p.phone}
@@ -159,14 +166,14 @@ export default function AppointmentFormModal({
         )}
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Start time" error={errors.start_time?.message}>
+          <Field label={t('modal_start_time')} error={errors.start_time?.message}>
             <input
               type="datetime-local"
               {...register('start_time')}
               className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             />
           </Field>
-          <Field label="End time" error={errors.end_time?.message}>
+          <Field label={t('modal_end_time')} error={errors.end_time?.message}>
             <input
               type="datetime-local"
               {...register('end_time')}
@@ -175,19 +182,19 @@ export default function AppointmentFormModal({
           </Field>
         </div>
 
-        <Field label="Reason">
+        <Field label={t('modal_reason')}>
           <input
             type="text"
-            placeholder="e.g. Root canal, cleaning, consultation"
+            placeholder={t('modal_reason_placeholder')}
             {...register('reason')}
             className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
           />
         </Field>
 
-        <Field label="Notes">
+        <Field label={t('modal_notes')}>
           <textarea
             rows={3}
-            placeholder="Any additional context for the reception…"
+            placeholder={t('modal_notes_placeholder')}
             {...register('notes')}
             className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
           />
