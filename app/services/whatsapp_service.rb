@@ -171,28 +171,91 @@ class WhatsappService
   end
 
   # Returns the persisted Appointment on success, or nil on any
-  # failure (slot not available, Google API error, missing creds).
-  # Never raises — the caller relies on the nil sentinel.
+  # failure. Never raises — the caller relies on the nil sentinel.
+  #
+  # The local Appointment table is the source of truth — the in-app
+  # FullCalendar reads from it directly. Google Calendar is a
+  # best-effort secondary sync; if creds aren't set or the API
+  # errors, we still persist locally so the booking shows up in
+  # the in-app calendar. The previous implementation made Google
+  # the gatekeeper, so any creds/API issue silently swallowed the
+  # booking with no row written and no error surfaced.
   def attempt_booking(patient, date, time, treatment)
-    calendar = GoogleCalendarService.new
     start_time = Time.zone.parse("#{date} #{time}")
+    end_time = start_time + GoogleCalendarService::SLOT_DURATION
     reason = treatment&.capitalize || "Consultation"
 
-    slots = calendar.available_slots(Date.parse(date))
-    matching_slot = slots.find { |s| s[:start_time] == start_time }
+    unless start_time > Time.current
+      Rails.logger.info("[WhatsApp] Booking rejected: slot is in the past (#{start_time})")
+      return nil
+    end
 
-    return nil unless matching_slot
+    unless slot_within_working_hours?(start_time, end_time)
+      Rails.logger.info("[WhatsApp] Booking rejected: outside working hours (#{start_time})")
+      return nil
+    end
 
-    appointment = calendar.book_appointment(
-      patient: patient,
+    if slot_conflicts_locally?(start_time, end_time)
+      Rails.logger.info("[WhatsApp] Booking rejected: conflicts with existing appointment (#{start_time})")
+      return nil
+    end
+
+    appointment = patient.appointments.create!(
       start_time: start_time,
-      reason: reason
+      end_time: end_time,
+      reason: reason,
+      status: :scheduled
     )
+
+    sync_to_google_calendar(appointment, patient, reason)
     send_confirmation_template(patient, appointment)
     appointment
   rescue StandardError => e
     Rails.logger.error("[WhatsApp] Booking failed: #{e.class}: #{e.message}")
     nil
+  end
+
+  # Working-hours check against DoctorSchedule. Rejects bookings
+  # outside the doctor's hours, on closed days, or that overlap
+  # the lunch break.
+  def slot_within_working_hours?(start_time, end_time)
+    schedule = DoctorSchedule.for_day(start_time.wday)
+    return false unless schedule
+
+    schedule.working?(start_time) && schedule.working?(end_time - 1.minute)
+  end
+
+  # Local conflict check — any existing non-cancelled appointment
+  # whose time range overlaps the requested slot.
+  def slot_conflicts_locally?(start_time, end_time)
+    Appointment
+      .where.not(status: :cancelled)
+      .where("start_time < ? AND end_time > ?", end_time, start_time)
+      .exists?
+  end
+
+  # Best-effort Google Calendar sync. Failure here does NOT roll
+  # back the local Appointment — the patient is still booked in
+  # the in-app calendar. If creds are missing or the API errors,
+  # we log and move on. A future job can backfill google_event_id
+  # for unsynced appointments.
+  def sync_to_google_calendar(appointment, patient, reason)
+    calendar = GoogleCalendarService.new
+    synced = calendar.book_appointment(
+      patient: patient,
+      start_time: appointment.start_time,
+      end_time: appointment.end_time,
+      reason: reason
+    )
+    # `book_appointment` creates its own Appointment row — we don't
+    # want a duplicate. Move its google_event_id onto our row and
+    # delete the duplicate.
+    if synced && synced.id != appointment.id
+      appointment.update_column(:google_event_id, synced.google_event_id)
+      synced.destroy
+    end
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] Google Calendar sync skipped: #{e.class}: #{e.message}")
   end
 
   # --- Reschedule Flow ---

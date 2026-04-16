@@ -1,6 +1,8 @@
 require "rails_helper"
 
 RSpec.describe WhatsappService do
+  include ActiveSupport::Testing::TimeHelpers
+
   let(:service) { described_class.new }
   let(:ai_service) { double("AiService") }
 
@@ -61,29 +63,87 @@ RSpec.describe WhatsappService do
       end
     end
 
-    context "when the AI claims a booking but the slot can't be persisted" do
+    context "when booking with valid date/time and available slot" do
       let!(:patient) { create(:patient, phone: "+27699999999") }
 
-      it "rewrites the optimistic AI reply with an honest fallback" do
-        # AI returns its usual "Perfect! I have you booked..." text
-        # AND a concrete date/time, which is the exact pathology the
-        # user reported: bot confirms, calendar stays empty.
-        allow(ai_service).to receive(:process_message).and_return({
-          response: "Perfect! I have you booked for Thursday at 9am.",
-          intent: "book",
-          entities: { date: "2026-04-16", time: "09:00", treatment: "consultation" }
-        })
+      it "creates a local Appointment and the booking shows on calendar" do
+        # Thursday 2026-04-16, wday=4 — need a DoctorSchedule for Thursday
+        create(:doctor_schedule, day_of_week: 4)
 
-        # Simulate the real-world failure mode: GoogleCalendarService
-        # blows up because credentials aren't reachable. attempt_booking
-        # must swallow it and return nil, and handle_booking must rewrite
-        # the response so the controller's TwiML reply doesn't lie.
+        # Stub Google Calendar so it doesn't fail the test
         allow(GoogleCalendarService).to receive(:new).and_raise(StandardError, "no creds")
 
-        result = service.handle_incoming(from: "+27699999999", message: "Book me Thursday 9am")
+        # Freeze time to Wed 2026-04-15 so Thursday is in the future
+        travel_to Time.zone.parse("2026-04-15 10:00") do
+          allow(ai_service).to receive(:process_message).and_return({
+            response: "Perfect! I have you booked for Thursday at 9am.",
+            intent: "book",
+            entities: { date: "2026-04-16", time: "09:00", treatment: "consultation" }
+          })
 
-        expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK)
-        expect(Appointment.where(patient: patient).count).to eq(0)
+          result = service.handle_incoming(from: "+27699999999", message: "Book me Thursday 9am")
+
+          # The booking succeeded locally, so the AI's response stands
+          expect(result[:response]).to include("booked")
+
+          appointment = Appointment.find_by(patient: patient)
+          expect(appointment).to be_present
+          expect(appointment.start_time).to eq(Time.zone.parse("2026-04-16 09:00"))
+          expect(appointment.end_time).to eq(Time.zone.parse("2026-04-16 09:30"))
+          expect(appointment.reason).to eq("Consultation")
+          expect(appointment.status).to eq("scheduled")
+        end
+      end
+    end
+
+    context "when the slot conflicts with an existing appointment" do
+      let!(:patient) { create(:patient, phone: "+27699999998") }
+
+      it "rewrites the response with the booking-failed fallback" do
+        create(:doctor_schedule, day_of_week: 4)
+
+        travel_to Time.zone.parse("2026-04-15 10:00") do
+          # An existing appointment occupies 09:00–09:30 on Thursday
+          create(:appointment,
+            patient: create(:patient, phone: "+27600000001"),
+            start_time: Time.zone.parse("2026-04-16 09:00"),
+            end_time: Time.zone.parse("2026-04-16 09:30"),
+            status: :scheduled
+          )
+
+          allow(ai_service).to receive(:process_message).and_return({
+            response: "Perfect! I have you booked for Thursday at 9am.",
+            intent: "book",
+            entities: { date: "2026-04-16", time: "09:00", treatment: "consultation" }
+          })
+
+          result = service.handle_incoming(from: "+27699999998", message: "Book me Thursday 9am")
+
+          expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK)
+          expect(Appointment.where(patient: patient).count).to eq(0)
+        end
+      end
+    end
+
+    context "when booking outside working hours" do
+      let!(:patient) { create(:patient, phone: "+27699999997") }
+
+      it "rewrites the response with the booking-failed fallback" do
+        # Sunday is closed (no active schedule)
+        create(:doctor_schedule, :closed, day_of_week: 0)
+
+        travel_to Time.zone.parse("2026-04-15 10:00") do
+          allow(ai_service).to receive(:process_message).and_return({
+            response: "Perfect! I have you booked for Sunday at 10am.",
+            intent: "book",
+            entities: { date: "2026-04-19", time: "10:00", treatment: "consultation" }
+          })
+
+          result = service.handle_incoming(from: "+27699999997", message: "Book me Sunday 10am")
+
+          expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK)
+          expect(Appointment.where(patient: patient).count).to eq(0)
+        end
       end
     end
 

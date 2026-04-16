@@ -31,7 +31,7 @@ class AiService
     response = create_message(
       model: "claude-sonnet-4-20250514",
       max_tokens: 256,
-      system: intent_classification_prompt,
+      system: intent_classification_prompt(today: Date.current),
       messages: messages
     )
 
@@ -122,7 +122,8 @@ class AiService
     RETRYABLE_STATUS_CODES.include?(error.response_status || error.response&.dig(:status))
   end
 
-  def intent_classification_prompt
+  def intent_classification_prompt(today: Date.current)
+    today_name = today.strftime("%A")
     <<~PROMPT
       You are an intent classifier for a dental receptionist AI. Classify the patient's message into exactly one intent and extract any entities.
 
@@ -136,10 +137,20 @@ class AiService
       - urgent: dental emergency or urgent pain
       - other: anything else
 
-      Respond ONLY with valid JSON:
-      {"intent": "book", "entities": {"date": "2026-04-15", "time": "10:00", "name": "John", "treatment": "cleaning"}}
+      ## Date resolution (CRITICAL)
+      Today is #{today.iso8601} (#{today_name}). You MUST resolve relative
+      date phrases against today and return ISO YYYY-MM-DD format:
+      - "today" → #{today.iso8601}
+      - "tomorrow" → #{(today + 1).iso8601}
+      - "Monday" / "next Monday" → the next Monday on or after tomorrow
+      - "Friday at 11am" → next Friday in ISO format, time "11:00"
+      - "the 20th" → the next 20th of a month from today
+      Never return null for date if the patient named any day or relative phrase.
 
-      Use null for entities you cannot extract. Dates should be ISO format. Times should be HH:MM format.
+      Respond ONLY with valid JSON:
+      {"intent": "book", "entities": {"date": "2026-04-17", "time": "11:00", "name": "John", "treatment": "cleaning"}}
+
+      Use null only for entities the patient genuinely did not mention. Dates ISO YYYY-MM-DD, times HH:MM 24-hour.
     PROMPT
   end
 
