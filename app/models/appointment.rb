@@ -17,7 +17,6 @@ class Appointment < ApplicationRecord
   validates :google_event_id, uniqueness: true, allow_nil: true
   validate :end_time_after_start_time
   validate :no_overlapping_appointments, on: :create
-  validate :within_working_hours, on: :create
 
   scope :upcoming, -> { where("start_time > ?", Time.current).where.not(status: :cancelled).order(:start_time) }
   scope :for_date, ->(date) { where(start_time: date.all_day) }
@@ -75,17 +74,15 @@ class Appointment < ApplicationRecord
     errors.add(:base, "This time slot conflicts with an existing appointment") if conflict
   end
 
-  def within_working_hours
-    return if start_time.blank? || end_time.blank?
+  # After-hours bookings are allowed per practice policy. The WhatsApp
+  # service informs the patient when a booking falls outside regular
+  # hours, but no longer blocks creation.
+  def after_hours?
+    return false if start_time.blank? || end_time.blank?
 
     schedule = DoctorSchedule.for_day(start_time.wday)
-    # Only enforce if a schedule record exists for this day.
-    # If no schedule is configured, allow the appointment (the WhatsApp
-    # service has its own working-hours check as a first line of defence).
-    return if schedule.nil?
+    return false if schedule.nil?
 
-    unless schedule.working?(start_time) && schedule.working?(end_time - 1.minute)
-      errors.add(:base, "This time is outside working hours")
-    end
+    !(schedule.working?(start_time) && schedule.working?(end_time - 1.minute))
   end
 end

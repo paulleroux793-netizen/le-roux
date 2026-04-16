@@ -23,7 +23,7 @@ class AppointmentsController < ApplicationController
       appointments = Appointment.includes(:patient).order(start_time: :desc).limit(LIST_ROW_LIMIT).to_a
       calendar_appointments = Appointment
         .includes(:patient)
-        .where(start_time: range_start...range_end)
+        .where(start_time: range_start..range_end)
         .order(:start_time)
         .to_a
 

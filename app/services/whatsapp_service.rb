@@ -227,9 +227,9 @@ class WhatsappService
       return nil
     end
 
-    unless slot_within_working_hours?(start_time, end_time)
-      Rails.logger.info("[WhatsApp] Booking rejected: outside working hours (#{start_time})")
-      return nil
+    after_hours = !slot_within_working_hours?(start_time, end_time)
+    if after_hours
+      Rails.logger.info("[WhatsApp] Booking is after hours — allowing with notice (#{start_time})")
     end
 
     if slot_conflicts_locally?(start_time, end_time)
@@ -255,7 +255,7 @@ class WhatsappService
     )
 
     sync_to_google_calendar(appointment, patient, reason)
-    send_confirmation_template(patient, appointment)
+    send_confirmation_template(patient, appointment, after_hours: after_hours)
     send_confirmation_email(appointment)
     send_confirmation_sms(appointment)
     appointment
@@ -391,12 +391,12 @@ class WhatsappService
 
   # --- Template Sending (best-effort) ---
 
-  def send_confirmation_template(patient, appointment)
+  def send_confirmation_template(patient, appointment, after_hours: false)
     # Send detailed booking confirmation with directions via free-form
     # message (within the 24-hour service window since the patient
     # just messaged us). Falls back to the Twilio template if the
     # free-form send fails.
-    send_booking_confirmation_message(patient, appointment)
+    send_booking_confirmation_message(patient, appointment, after_hours: after_hours)
   rescue StandardError => e
     Rails.logger.warn("[WhatsApp] Booking confirmation message failed, trying template: #{e.message}")
     begin
@@ -409,12 +409,18 @@ class WhatsappService
   # Sends the branded booking confirmation message with appointment
   # details and practice directions. Uses the free-form `send_text`
   # method since the patient is within the 24-hour service window.
-  def send_booking_confirmation_message(patient, appointment)
+  def send_booking_confirmation_message(patient, appointment, after_hours: false)
     day_name  = appointment.start_time.strftime("%A")
     date_str  = appointment.start_time.strftime("%-d %B %Y")
     time_str  = appointment.start_time.strftime("%H:%M")
     arrive_at = (appointment.start_time - 15.minutes).strftime("%H:%M")
     greeting  = time_greeting
+
+    after_hours_notice = if after_hours
+      "\n\n⚠️ Please note: this appointment is outside our regular working hours. A reminder will be sent the day before your appointment."
+    else
+      ""
+    end
 
     body = <<~MSG.strip
       #{greeting},
@@ -423,7 +429,7 @@ class WhatsappService
 
       #{day_name}
       #{date_str}
-      #{time_str}
+      #{time_str}#{after_hours_notice}
 
       Please arrive at #{arrive_at} to open a new patient file.
 

@@ -128,8 +128,8 @@ RSpec.describe WhatsappService do
     context "when booking outside working hours" do
       let!(:patient) { create(:patient, phone: "+27699999997") }
 
-      it "rewrites the response with the booking-failed fallback" do
-        # Sunday is closed (no active schedule)
+      it "allows the booking and creates the appointment (after-hours policy)" do
+        # Sunday is closed (no active schedule), but after-hours bookings are now allowed
         create(:doctor_schedule, :closed, day_of_week: 0)
 
         travel_to Time.zone.parse("2026-04-15 10:00") do
@@ -141,8 +141,8 @@ RSpec.describe WhatsappService do
 
           result = service.handle_incoming(from: "+27699999997", message: "Book me Sunday 10am")
 
-          expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK["en"])
-          expect(Appointment.where(patient: patient).count).to eq(0)
+          expect(Appointment.where(patient: patient).count).to eq(1)
+          expect(result[:response]).not_to eq(WhatsappService::BOOKING_FAILED_FALLBACK["en"])
         end
       end
     end
