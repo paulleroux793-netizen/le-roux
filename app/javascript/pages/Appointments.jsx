@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { router } from '@inertiajs/react'
 import { CalendarDays, List, Plus, CheckCircle, Eye, Pencil, X as XIcon } from 'lucide-react'
 import { toast } from 'sonner'
@@ -46,6 +46,19 @@ export default function Appointments({
   const openEdit   = (apt) => { if (apt) setSelected(apt); setModalMode('edit') }
   const openCancel = (apt) => { if (apt) setSelected(apt); setModalMode('cancel') }
   const closeModal = () => { setModalMode(null); setSelected(null) }
+
+  // Poll every 15s so WhatsApp bookings and status changes appear
+  // on the calendar and list without a manual page refresh.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      router.reload({
+        only: ['appointments', 'calendar_appointments', 'stats'],
+        preserveState: true,
+        preserveScroll: true,
+      })
+    }, 15_000)
+    return () => clearInterval(timer)
+  }, [])
 
   const handleEventClick = (event) => {
     const id = Number(event.id)

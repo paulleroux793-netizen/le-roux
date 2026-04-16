@@ -1,7 +1,6 @@
 # Dr Le Roux's working hours
 # Monday-Friday: 08:00 - 17:00, lunch break 12:00 - 13:00
-# Saturday: 08:00 - 12:00, no break
-# Sunday: closed
+# Saturday & Sunday: closed
 
 schedules = [
   { day_of_week: 0, active: false },                                                                    # Sunday
@@ -10,7 +9,7 @@ schedules = [
   { day_of_week: 3, start_time: "08:00", end_time: "17:00", break_start: "12:00", break_end: "13:00" }, # Wednesday
   { day_of_week: 4, start_time: "08:00", end_time: "17:00", break_start: "12:00", break_end: "13:00" }, # Thursday
   { day_of_week: 5, start_time: "08:00", end_time: "17:00", break_start: "12:00", break_end: "13:00" }, # Friday
-  { day_of_week: 6, start_time: "08:00", end_time: "12:00" }                                            # Saturday
+  { day_of_week: 6, active: false }                                                                      # Saturday
 ]
 
 schedules.each do |attrs|

@@ -148,8 +148,13 @@ class WhatsappService
 
     Rails.logger.info(
       "[WhatsApp] handle_booking intent=book date=#{date.inspect} " \
-      "time=#{time.inspect} treatment=#{entities[:treatment].inspect}"
+      "time=#{time.inspect} treatment=#{entities[:treatment].inspect} " \
+      "name=#{entities[:name].inspect}"
     )
+
+    # Update the patient's name if they provided one and they still
+    # have the placeholder "WhatsApp Patient" name.
+    update_patient_name(patient, entities[:name]) if entities[:name].present?
 
     appointment = nil
     if date.present? && time.present?
@@ -438,6 +443,27 @@ class WhatsappService
   end
 
   # --- Helpers ---
+
+  # Updates the patient's first/last name if they still have the
+  # placeholder "WhatsApp Patient" name and the AI extracted a real
+  # name from the conversation. This means the patient record,
+  # appointments list, and dashboard all show the actual name
+  # instead of the generic placeholder.
+  def update_patient_name(patient, full_name)
+    return unless patient.auto_created_placeholder_profile? ||
+                  (patient.first_name == "WhatsApp" && patient.last_name == "Patient")
+
+    parts = full_name.to_s.strip.split(/\s+/, 2)
+    return if parts.empty?
+
+    first = parts[0]
+    last  = parts[1] || patient.last_name
+
+    patient.update(first_name: first, last_name: last)
+    Rails.logger.info("[WhatsApp] Updated patient name: #{patient.phone} → #{first} #{last}")
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] Failed to update patient name: #{e.message}")
+  end
 
   def normalize_phone(phone)
     phone.gsub(/\s+/, "").then { |p| p.start_with?("+") ? p : "+#{p}" }

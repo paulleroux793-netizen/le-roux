@@ -295,7 +295,7 @@ export default function AppointmentCalendar({
         contentHeight={640}
         stickyHeaderDates
         slotDuration="00:30:00"
-        weekends
+        weekends={false}
         firstDay={1}
         buttonText={{ timeGridWeek: 'Week', timeGridDay: 'Day', dayGridMonth: 'Month' }}
         eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}

@@ -9,7 +9,7 @@ class AiService
   }.freeze
 
   FAQ = {
-    "hours" => "We're open Monday to Friday 8am–5pm, and Saturdays 8am–12pm. We're closed on Sundays.",
+    "hours" => "We're open Monday to Friday 8am–5pm. We are closed on weekends (Saturday and Sunday).",
     "location" => "Dr Chalita le Roux Inc is located on Doreen Rd in Roodepoort. From Hendrik Potgieter Rd: turn onto Doreen Rd, we are on your left-hand side at the second robot. From CR Swart Rd: turn onto Doreen Rd, we are on your right-hand side at the first robot. Free parking is available on the premises.",
     "parking" => "Free parking is available on the premises.",
     "services" => "We offer general dentistry, consultations, cleanings, fillings, extractions, root canals, crowns, bridges, and cosmetic treatments. A consultation is the best first step for any concern.",
@@ -193,7 +193,7 @@ class AiService
       ## Objection Handling
       - Price concerns: Emphasize the value (x-rays included, thorough assessment). Mention medical aid acceptance.
       - Dental fear: Acknowledge the fear, reassure about modern techniques, mention the doctor's gentle approach
-      - Timing: Offer flexible scheduling, mention Saturday availability
+      - Timing: Offer flexible scheduling within Monday–Friday 8am–5pm
       - Always try to keep the conversation moving toward a booking
 
       ## Cancellation Rules

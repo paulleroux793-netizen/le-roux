@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { Link } from '@inertiajs/react'
+import React, { useEffect, useMemo } from 'react'
+import { Link, router } from '@inertiajs/react'
 import {
   Users, CalendarCheck, UserPlus, Activity,
   Clock, Bell, Phone, MessageCircle, ArrowUpRight,
@@ -40,6 +40,31 @@ export default function Dashboard({
     if (hour < 12) return 'Good morning'
     if (hour < 17) return 'Good afternoon'
     return 'Good evening'
+  }, [])
+
+  // Poll for fresh data every 15 seconds so the dashboard reflects
+  // new bookings, confirmations, and reminders in near-real-time.
+  // `only` limits the partial reload to just our dashboard props —
+  // the server skips layout/shared data, keeping it lightweight.
+  useEffect(() => {
+    const POLL_INTERVAL = 15_000
+
+    const timer = setInterval(() => {
+      router.reload({
+        only: [
+          'stats',
+          'todays_appointments',
+          'upcoming_appointments',
+          'weekly_chart',
+          'recent_patients',
+          'reminders',
+        ],
+        preserveState: true,
+        preserveScroll: true,
+      })
+    }, POLL_INTERVAL)
+
+    return () => clearInterval(timer)
   }, [])
 
   return (

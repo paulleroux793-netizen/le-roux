@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import {
@@ -39,6 +39,18 @@ export default function Reminders({ reminders = [], stats }) {
   const [page, setPage] = useState(1)
   const [sortField, setSortField] = useState('start_time')
   const [sortDir, setSortDir] = useState('asc')
+
+  // Poll for fresh reminder data every 15 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      router.reload({
+        only: ['reminders', 'stats'],
+        preserveState: true,
+        preserveScroll: true,
+      })
+    }, 15_000)
+    return () => clearInterval(timer)
+  }, [])
 
   // Window filter
   const windowed = useMemo(() => {
