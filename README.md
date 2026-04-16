@@ -269,8 +269,8 @@ This updates the appointment status to `confirmed` and logs it in the confirmati
 
 ```
 Patient: "What are your hours?"
-Bot:     "We're open Monday to Friday 8am–5pm, and Saturdays 8am–12pm.
-          We're closed on Sundays."
+Bot:     "We're open Monday to Friday 8am–5pm. We're closed on
+          weekends (Saturday and Sunday)."
 
 Patient: "How much is a consultation?"
 Bot:     "A consultation is R850 and includes x-rays. Would you like

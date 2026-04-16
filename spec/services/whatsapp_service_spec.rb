@@ -211,7 +211,7 @@ RSpec.describe WhatsappService do
     context "with an FAQ intent" do
       it "processes FAQ questions through AI for natural multi-turn conversations" do
         allow(ai_service).to receive(:process_message).and_return({
-          response: "We're open Monday to Friday 8am–5pm, and Saturdays 8am–12pm.",
+          response: "We're open Monday to Friday 8am–5pm. We're closed on weekends.",
           intent: "faq",
           entities: {}
         })

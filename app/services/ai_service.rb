@@ -183,9 +183,17 @@ class AiService
 
   def build_system_prompt(patient: nil, context: {})
     language = context[:language] || "en"
+    today = Date.current
+    today_name = today.strftime("%A")
 
     prompt = <<~PROMPT
       You are the AI receptionist for Dr Chalita le Roux's dental practice. Your name is the Dr le Roux AI Assistant.
+
+      ## Current Date (CRITICAL)
+      Today is #{today.iso8601} (#{today_name}). Use this to correctly resolve relative dates:
+      - "today" = #{today.iso8601} (#{today_name})
+      - "tomorrow" = #{(today + 1).iso8601} (#{(today + 1).strftime("%A")})
+      Do NOT guess or assume a different day. Today is #{today_name}.
 
       ## Language Rules (CRITICAL)
       The patient's detected language is: #{language == "af" ? "Afrikaans" : "English"}.

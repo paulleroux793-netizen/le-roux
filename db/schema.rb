@@ -10,11 +10,26 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
-  # These are extensions that must be enabled in order to support this database
-  enable_extension "pg_catalog.plpgsql"
+ActiveRecord::Schema[8.1].define(version: 2026_04_16_140000) do
+  # Supabase uses an "extensions" schema; create only if missing for local/test.
+  connection.execute("CREATE SCHEMA IF NOT EXISTS extensions")
 
-  create_table "appointments", force: :cascade do |t|
+  # These are extensions that must be enabled in order to support this database
+  enable_extension "plpgsql"
+
+  create_table "public.analytics_events", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_type", null: false
+    t.datetime "occurred_at", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.string "request_id"
+    t.string "session_id"
+    t.datetime "updated_at", null: false
+    t.index ["event_type", "occurred_at"], name: "index_analytics_events_on_event_type_and_occurred_at"
+    t.index ["occurred_at"], name: "index_analytics_events_on_occurred_at"
+  end
+
+  create_table "public.appointments", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.datetime "end_time", null: false
     t.string "google_event_id"
@@ -30,7 +45,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["status"], name: "index_appointments_on_status"
   end
 
-  create_table "call_logs", force: :cascade do |t|
+  create_table "public.call_logs", force: :cascade do |t|
     t.text "ai_response"
     t.string "caller_number"
     t.datetime "created_at", null: false
@@ -46,7 +61,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["twilio_call_sid"], name: "index_call_logs_on_twilio_call_sid", unique: true
   end
 
-  create_table "cancellation_reasons", force: :cascade do |t|
+  create_table "public.cancellation_reasons", force: :cascade do |t|
     t.bigint "appointment_id", null: false
     t.datetime "created_at", null: false
     t.text "details"
@@ -56,7 +71,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["reason_category"], name: "index_cancellation_reasons_on_reason_category"
   end
 
-  create_table "confirmation_logs", force: :cascade do |t|
+  create_table "public.confirmation_logs", force: :cascade do |t|
     t.bigint "appointment_id", null: false
     t.integer "attempts", default: 0, null: false
     t.datetime "created_at", null: false
@@ -70,12 +85,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["outcome"], name: "index_confirmation_logs_on_outcome"
   end
 
-  create_table "conversations", force: :cascade do |t|
+  create_table "public.conversations", force: :cascade do |t|
     t.string "channel", null: false
     t.datetime "created_at", null: false
     t.datetime "ended_at"
     t.string "external_id"
     t.datetime "imported_at"
+    t.string "language", limit: 5
     t.jsonb "messages", default: []
     t.bigint "patient_id", null: false
     t.string "source", default: "live", null: false
@@ -90,7 +106,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["status"], name: "index_conversations_on_status"
   end
 
-  create_table "doctor_schedules", force: :cascade do |t|
+  create_table "public.doctor_schedules", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.time "break_end"
     t.time "break_start"
@@ -102,7 +118,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["day_of_week"], name: "index_doctor_schedules_on_day_of_week", unique: true
   end
 
-  create_table "notifications", force: :cascade do |t|
+  create_table "public.notifications", force: :cascade do |t|
     t.bigint "appointment_id"
     t.text "body"
     t.string "category", null: false
@@ -122,7 +138,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["read_at"], name: "index_notifications_on_unread", where: "(read_at IS NULL)"
   end
 
-  create_table "patient_medical_histories", force: :cascade do |t|
+  create_table "public.patient_medical_histories", force: :cascade do |t|
     t.text "allergies"
     t.string "blood_type"
     t.text "chronic_conditions"
@@ -139,7 +155,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["patient_id"], name: "index_patient_medical_histories_on_patient_id", unique: true
   end
 
-  create_table "patients", force: :cascade do |t|
+  create_table "public.patients", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.date "date_of_birth"
     t.string "email"
@@ -152,13 +168,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_14_120000) do
     t.index ["phone"], name: "index_patients_on_phone", unique: true
   end
 
-  add_foreign_key "appointments", "patients"
-  add_foreign_key "call_logs", "patients"
-  add_foreign_key "cancellation_reasons", "appointments"
-  add_foreign_key "confirmation_logs", "appointments"
-  add_foreign_key "conversations", "patients"
-  add_foreign_key "notifications", "appointments"
-  add_foreign_key "notifications", "conversations"
-  add_foreign_key "notifications", "patients"
-  add_foreign_key "patient_medical_histories", "patients"
+  add_foreign_key "public.appointments", "public.patients"
+  add_foreign_key "public.call_logs", "public.patients"
+  add_foreign_key "public.cancellation_reasons", "public.appointments"
+  add_foreign_key "public.confirmation_logs", "public.appointments"
+  add_foreign_key "public.conversations", "public.patients"
+  add_foreign_key "public.notifications", "public.appointments"
+  add_foreign_key "public.notifications", "public.conversations"
+  add_foreign_key "public.notifications", "public.patients"
+  add_foreign_key "public.patient_medical_histories", "public.patients"
+
 end
