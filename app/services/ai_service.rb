@@ -9,7 +9,7 @@ class AiService
   }.freeze
 
   FAQ = {
-    "hours" => "We're open Monday to Friday 8am–5pm. We are closed on weekends (Saturday and Sunday).",
+    "hours" => nil, # Dynamic — use AiService.dynamic_hours instead
     "location" => "Dr Chalita le Roux Inc is located on Doreen Rd in Roodepoort. From Hendrik Potgieter Rd: turn onto Doreen Rd, we are on your left-hand side at the second robot. From CR Swart Rd: turn onto Doreen Rd, we are on your right-hand side at the first robot. Free parking is available on the premises.",
     "parking" => "Free parking is available on the premises.",
     "services" => "We offer general dentistry, consultations, cleanings, fillings, extractions, root canals, crowns, bridges, and cosmetic treatments. A consultation is the best first step for any concern.",
@@ -18,6 +18,24 @@ class AiService
   }.freeze
 
   class Error < StandardError; end
+
+  # Dynamic hours text from DoctorSchedule DB records.
+  # Used as local fallback when AI is unavailable.
+  def self.dynamic_hours
+    schedules = DoctorSchedule.order(:day_of_week).to_a
+    active = schedules.select(&:active?)
+
+    if active.any?
+      sample = active.first
+      start_h = sample.start_time.strftime("%-I%P")
+      end_h = sample.end_time.strftime("%-I%P")
+      days = active.map(&:day_name).map(&:capitalize)
+      closed = schedules.reject(&:active?).map(&:day_name).map(&:capitalize)
+      "We're open #{days.first} to #{days.last} #{start_h}–#{end_h}. We are closed on #{closed.join(' and ')}."
+    else
+      "We're open Monday to Friday. We are closed on weekends (Saturday and Sunday)."
+    end
+  end
 
   def initialize
     @client = Anthropic::Client.new(access_token: ENV.fetch("ANTHROPIC_API_KEY"))
@@ -192,16 +210,7 @@ class AiService
       ############################################################
       ## WORKING HOURS — READ THIS FIRST (NON-NEGOTIABLE)
       ############################################################
-      Our hours are: Monday to Friday, 8am–5pm. Lunch break 12pm–1pm.
-      We are CLOSED on Saturday. We are CLOSED on Sunday.
-      We do NOT open on weekends. There are NO Saturday hours. There are NO Sunday hours.
-
-      When a patient asks about hours, say ONLY:
-      "We're open Monday to Friday 8am–5pm. We're closed on weekends."
-
-      WRONG (never say this): "We're open Monday-Friday 8am-5pm and Saturdays 8am-12pm" ← THIS IS FALSE
-      WRONG (never say this): "Saturdays 8am-12pm" ← WE ARE CLOSED ON SATURDAYS
-      CORRECT: "We're open Monday to Friday 8am–5pm. We're closed on weekends."
+      #{working_hours_block}
       ############################################################
 
       ## Current Date
@@ -276,6 +285,47 @@ class AiService
 
   # Returns Afrikaans style guidance block for the system prompt.
   # Uses curated examples from the Afrikaans dataset as phrasing reference.
+  # Builds the working hours block from the actual DoctorSchedule records
+  # so the AI prompt always matches reality.
+  def working_hours_block
+    schedules = DoctorSchedule.order(:day_of_week).to_a
+    active = schedules.select(&:active?)
+
+    if active.any?
+      sample = active.first
+      start_h = sample.start_time.strftime("%-I%P")  # e.g. "10am"
+      end_h = sample.end_time.strftime("%-I%P")
+      break_line = if sample.break_start.present? && sample.break_end.present?
+        break_s = sample.break_start.strftime("%-I%P")
+        break_e = sample.break_end.strftime("%-I%P")
+        "Break: #{break_s}–#{break_e} (no appointments during break)."
+      else
+        ""
+      end
+      active_days = active.map(&:day_name).map(&:capitalize).join(", ")
+      closed_days = schedules.reject(&:active?).map(&:day_name).map(&:capitalize)
+    else
+      start_h = "8am"
+      end_h = "5pm"
+      break_line = ""
+      active_days = "Monday, Tuesday, Wednesday, Thursday, Friday"
+      closed_days = %w[Saturday Sunday]
+    end
+
+    <<~HOURS
+      Our hours are: #{active_days}, #{start_h}–#{end_h}.
+      #{break_line}
+      We are CLOSED on #{closed_days.join(" and ")}. There are NO weekend hours.
+
+      When a patient asks about hours, state ONLY the hours listed above.
+      NEVER suggest or mention Saturday or Sunday appointments.
+      Do NOT offer times during the break (#{break_line.present? ? break_line : "N/A"}).
+
+      WRONG (never say this): "Saturdays 8am-12pm" ← WE ARE CLOSED ON SATURDAYS
+      CORRECT: "We're open #{active_days.split(', ').first} to #{active_days.split(', ').last} #{start_h}–#{end_h}. We're closed on weekends."
+    HOURS
+  end
+
   def afrikaans_style_guide
     examples = AFRIKAANS_STYLE_EXAMPLES.map { |e| "  - \"#{e[:af]}\" (#{e[:en]})" }.join("\n")
     <<~GUIDE

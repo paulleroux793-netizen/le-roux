@@ -259,7 +259,7 @@ RSpec.describe WhatsappService do
         )
 
         expect(result[:intent]).to eq("faq")
-        expect(result[:response]).to include(AiService::FAQ["hours"])
+        expect(result[:response]).to include("We're open")
       end
 
       it "answers pricing locally when AI is unavailable" do

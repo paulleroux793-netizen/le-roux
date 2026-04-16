@@ -513,7 +513,7 @@ class WhatsappService
 
     if msg_lower.match?(/\b(hours?|open|closed|time|schedule)\b/)
       return {
-        response: AiService::FAQ["hours"],
+        response: AiService.dynamic_hours,
         intent: "faq",
         entities: {}
       }
@@ -579,7 +579,7 @@ class WhatsappService
 
     if combined_text.match?(/\b(hour|hours|open|closing|close|time)\b/)
       return {
-        response: AiService::FAQ["hours"],
+        response: AiService.dynamic_hours,
         intent: "faq",
         entities: {}
       }
