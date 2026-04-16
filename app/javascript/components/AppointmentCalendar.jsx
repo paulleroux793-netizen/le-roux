@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
-import { CalendarRange, Clock3, Search, Sparkles } from 'lucide-react'
+import { CalendarRange, Search, Sparkles } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -9,72 +9,20 @@ import { toast } from 'sonner'
 
 const DEFAULT_CALENDAR_VIEW = 'timeGridWeek'
 
-// ── Status themes ────────────────────────────────────────────────
-// Phase 9.14 — every colour resolves to a brand token so the
-// calendar re-themes when tokens change. Pattern per status:
-//   dot / avatar → solid brand-<role>
-//   card         → brand-<role>/10 fill + brand-<role>/20 border
-//   chip         → brand-<role>/10 fill + brand-<role> text
-const STATUS_THEMES = {
-  scheduled: {
-    label: 'Scheduled',
-    dot: 'bg-brand-primary',
-    card: 'border border-brand-primary/20 bg-brand-primary/10',
-    avatar: 'bg-brand-primary',
-    chip: 'border border-brand-primary/10 bg-white/85 text-brand-primary',
-  },
-  confirmed: {
-    label: 'Confirmed',
-    dot: 'bg-brand-success',
-    card: 'border border-brand-success/20 bg-brand-success/10',
-    avatar: 'bg-brand-success',
-    chip: 'border border-brand-success/10 bg-white/85 text-brand-success',
-  },
-  completed: {
-    label: 'Completed',
-    dot: 'bg-brand-primary-dark',
-    card: 'border border-brand-primary-dark/20 bg-brand-primary-dark/10',
-    avatar: 'bg-brand-primary-dark',
-    chip: 'border border-brand-primary-dark/10 bg-white/85 text-brand-primary-dark',
-  },
-  cancelled: {
-    label: 'Cancelled',
-    dot: 'bg-brand-danger',
-    card: 'border border-brand-danger/20 bg-brand-danger/10',
-    avatar: 'bg-brand-danger',
-    chip: 'border border-brand-danger/10 bg-white/85 text-brand-danger',
-  },
-  no_show: {
-    label: 'No show',
-    dot: 'bg-brand-muted',
-    card: 'border border-brand-muted/20 bg-brand-muted/10',
-    avatar: 'bg-brand-muted',
-    chip: 'border border-brand-muted/10 bg-white/85 text-brand-muted',
-  },
-  rescheduled: {
-    label: 'Rescheduled',
-    dot: 'bg-brand-warning',
-    card: 'border border-brand-warning/20 bg-brand-warning/10',
-    avatar: 'bg-brand-warning',
-    chip: 'border border-brand-warning/10 bg-white/85 text-brand-warning',
-  },
+// ── Status colours ────────────────────────────────────────────────
+// Minimal: a tinted background + matching text for the compact event
+// card. All details live in the popup (AppointmentDetailModal).
+const STATUS_COLORS = {
+  scheduled:   { bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD', label: 'Scheduled',   dot: 'bg-brand-primary' },
+  confirmed:   { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0', label: 'Confirmed',   dot: 'bg-brand-success' },
+  completed:   { bg: '#E0E7FF', text: '#3730A3', border: '#C7D2FE', label: 'Completed',   dot: 'bg-brand-primary-dark' },
+  cancelled:   { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA', label: 'Cancelled',   dot: 'bg-brand-danger' },
+  no_show:     { bg: '#F3F4F6', text: '#4B5563', border: '#E5E7EB', label: 'No show',     dot: 'bg-brand-muted' },
+  rescheduled: { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'Rescheduled', dot: 'bg-brand-warning' },
 }
-
-// Initials for the avatar circle — "Jerome Bellingham" → "JB".
-const initials = (name = '') =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() || '')
-    .join('') || '·'
 
 const formatClock = (date) =>
   date.toLocaleTimeString('en-ZA', { hour: 'numeric', minute: '2-digit', hour12: true })
-
-const formatRange = (start, end) => {
-  return `${formatClock(start)} - ${formatClock(end)}`
-}
 
 // Stable, browser-tz-independent identifier for a FullCalendar visible
 // range. We intentionally avoid getTime()/Date.parse comparisons here:
@@ -123,7 +71,7 @@ export default function AppointmentCalendar({
   }, [appointments, search])
 
   const statusSummary = useMemo(() => (
-    Object.entries(STATUS_THEMES).map(([status, theme]) => ({
+    Object.entries(STATUS_COLORS).map(([status, theme]) => ({
       status,
       label: theme.label,
       count: appointments.filter((appointment) => appointment.status === status).length,
@@ -133,19 +81,23 @@ export default function AppointmentCalendar({
 
   const events = useMemo(
     () =>
-      filtered.map((apt) => ({
-        id: String(apt.id),
-        title: apt.patient_name,
-        start: apt.start_time,
-        end: apt.end_time,
-        backgroundColor: '#FFFFFF',
-        borderColor: 'transparent',
-        extendedProps: {
-          reason: apt.reason,
-          status: apt.status,
-          phone: apt.patient_phone,
-        },
-      })),
+      filtered.map((apt) => {
+        const colors = STATUS_COLORS[apt.status] || STATUS_COLORS.scheduled
+        return {
+          id: String(apt.id),
+          title: apt.patient_name,
+          start: apt.start_time,
+          end: apt.end_time,
+          backgroundColor: colors.bg,
+          borderColor: colors.border,
+          textColor: colors.text,
+          extendedProps: {
+            reason: apt.reason,
+            status: apt.status,
+            phone: apt.patient_phone,
+          },
+        }
+      }),
     [filtered]
   )
 
@@ -214,53 +166,28 @@ export default function AppointmentCalendar({
     })
   }
 
+  // Compact event card — shows only essential info that fits in a
+  // 30-minute slot. Patient name + time + reason. Click to see full
+  // details in AppointmentDetailModal.
   const renderEventContent = (arg) => {
-    const { reason, status, phone } = arg.event.extendedProps
+    const { reason } = arg.event.extendedProps
     const patient = arg.event.title
     const start = arg.event.start
     const end = arg.event.end || arg.event.start
-    const theme = STATUS_THEMES[status] || STATUS_THEMES.scheduled
 
     return (
-      <div className={`h-full w-full rounded-2xl p-3 text-[11px] leading-tight ${theme.card}`}>
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <span
-              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white ${theme.avatar}`}
-            >
-              {initials(patient)}
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold tracking-tight text-brand-ink">
-                {patient}
-              </p>
-              <p className={`mt-0.5 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${theme.chip}`}>
-                {theme.label}
-              </p>
-            </div>
-          </div>
-          <div className="rounded-full border border-white/70 bg-white/80 px-2 py-1 text-[10px] font-semibold text-brand-ink shadow-sm">
-            {formatRange(start, end)}
-          </div>
-        </div>
-
-        <div className="mt-3 space-y-1.5">
-          <p className="truncate text-[12px] font-semibold text-brand-ink">
-            {reason || 'General appointment'}
+      <div className="flex h-full w-full cursor-pointer flex-col justify-center overflow-hidden px-2 py-1">
+        <p className="truncate text-[12px] font-semibold leading-tight">
+          {patient}
+        </p>
+        <p className="truncate text-[11px] font-medium leading-tight opacity-80">
+          {formatClock(start)} – {formatClock(end)}
+        </p>
+        {reason && (
+          <p className="truncate text-[10px] leading-tight opacity-60">
+            {reason}
           </p>
-          {phone && (
-            <p className="truncate text-[11px] text-brand-muted">
-              {phone}
-            </p>
-          )}
-        </div>
-
-        <div className="mt-3 flex items-center gap-1.5 text-[10px] font-medium text-brand-muted">
-          <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-full ${theme.dot}`} />
-          <span className="sr-only">{theme.label}</span>
-          <Clock3 size={11} />
-          <span>{formatClock(start)}</span>
-        </div>
+        )}
       </div>
     )
   }
