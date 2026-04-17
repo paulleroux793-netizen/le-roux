@@ -32,11 +32,12 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
-# Ignore Google service account credentials
+# Ignore Google service account credentials (but allow AI config datasets)
 *.json
 !package.json
 !tsconfig.json
 !config/vite.json
+!config/ai/*.json
 
 
 # Vite Ruby
