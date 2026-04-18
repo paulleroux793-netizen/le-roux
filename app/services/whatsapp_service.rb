@@ -120,11 +120,13 @@ class WhatsappService
     "en" => "Hi there! It's currently after hours, so we can't confirm " \
             "an appointment for today. But you're welcome to book for " \
             "another day — just let me know your preferred date and time, " \
-            "and we'll send you a confirmation first thing in the morning. 😊",
+            "and we'll send you a confirmation first thing in the morning. 😊 " \
+            "For urgent dental emergencies, please contact Dr Chalita directly at 071 884 3204.",
     "af" => "Hallo! Dit is tans na-ure, so ons kan nie 'n afspraak vir " \
             "vandag bevestig nie. Maar jy is welkom om vir 'n ander dag " \
             "te bespreek — laat weet net jou voorkeur datum en tyd, " \
-            "en ons stuur 'n bevestiging vroeg oggend. 😊"
+            "en ons stuur 'n bevestiging vroeg oggend. 😊 " \
+            "Vir dringende tandheelkundige noodgevalle, kontak Dr Chalita direk by 071 884 3204."
   }.freeze
 
   EMERGENCY_PHONE = "071 884 3204".freeze

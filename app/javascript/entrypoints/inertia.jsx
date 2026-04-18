@@ -13,7 +13,7 @@ createInertiaApp({
   },
   setup({ el, App, props }) {
     createRoot(el).render(
-      <LanguageProvider>
+      <LanguageProvider initialServerLang={props.props?.ui_language}>
         <App {...props} />
         <Toaster position="top-right" richColors closeButton />
       </LanguageProvider>

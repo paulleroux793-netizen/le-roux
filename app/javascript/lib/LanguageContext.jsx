@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
-import { usePage, router } from '@inertiajs/react'
+import { router } from '@inertiajs/react'
 import translations from './translations'
 
 const LanguageContext = createContext()
@@ -7,12 +7,12 @@ const LanguageContext = createContext()
 const STORAGE_KEY = 'dr-leroux-language'
 const SUPPORTED = ['en', 'af']
 
-export function LanguageProvider({ children }) {
-  const { props } = usePage()
-
+// initialServerLang is passed from inertia.jsx's setup() where page props are
+// available before Inertia's page context is mounted. We can't call usePage()
+// here because LanguageProvider wraps <App>, which sets up that context.
+export function LanguageProvider({ initialServerLang, children }) {
   const [language, setLanguageState] = useState(() => {
-    // Server-provided preference (from session) wins; then localStorage; then 'en'
-    const server = SUPPORTED.includes(props.ui_language) ? props.ui_language : null
+    const server = SUPPORTED.includes(initialServerLang) ? initialServerLang : null
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
       return server || (SUPPORTED.includes(stored) ? stored : 'en')
