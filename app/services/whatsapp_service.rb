@@ -151,6 +151,11 @@ class WhatsappService
   }.freeze
   DEFAULT_DURATION = 30.minutes
 
+  RESCHEDULE_REJECTED = {
+    "en" => "Sorry — that slot isn't available or falls outside our working hours. Would you like to try a different day or time?",
+    "af" => "Jammer — daardie tyd is nie beskikbaar nie of val buite ons werksure. Wil jy 'n ander dag of tyd probeer?"
+  }.freeze
+
   BOOKING_CLAIM_PHRASES = [
     # English
     "i have you booked",
@@ -183,6 +188,7 @@ class WhatsappService
     entities = result[:entities] || {}
     date = entities[:date]
     time = entities[:time]
+    lang = conversation&.language || "en"
 
     Rails.logger.info(
       "[WhatsApp] handle_booking intent=book date=#{date.inspect} " \
@@ -196,7 +202,7 @@ class WhatsappService
 
     booking_result = nil
     if date.present? && time.present?
-      booking_result = attempt_booking(patient, date, time, entities[:treatment])
+      booking_result = attempt_booking(patient, date, time, entities[:treatment], language: lang)
     end
 
     # After-hours booking for today — blocked, rewrite response
@@ -241,7 +247,7 @@ class WhatsappService
   # the in-app calendar. The previous implementation made Google
   # the gatekeeper, so any creds/API issue silently swallowed the
   # booking with no row written and no error surfaced.
-  def attempt_booking(patient, date, time, treatment)
+  def attempt_booking(patient, date, time, treatment, language: "en")
     start_time = Time.zone.parse("#{date} #{time}")
     duration = duration_for_treatment(treatment)
     end_time = start_time + duration
@@ -286,7 +292,7 @@ class WhatsappService
     )
 
     sync_to_google_calendar(appointment, patient, reason)
-    send_confirmation_template(patient, appointment, after_hours: after_hours)
+    send_confirmation_template(patient, appointment, after_hours: after_hours, language: language)
     send_confirmation_email(appointment)
     send_confirmation_sms(appointment)
     appointment
@@ -307,11 +313,14 @@ class WhatsappService
 
   # Local conflict check — any existing non-cancelled appointment
   # whose time range overlaps the requested slot.
-  def slot_conflicts_locally?(start_time, end_time)
-    Appointment
+  # Pass exclude_appointment_id when rescheduling to avoid the
+  # appointment conflicting with its own current slot.
+  def slot_conflicts_locally?(start_time, end_time, exclude_appointment_id: nil)
+    query = Appointment
       .where.not(status: :cancelled)
       .where("start_time < ? AND end_time > ?", end_time, start_time)
-      .exists?
+    query = query.where.not(id: exclude_appointment_id) if exclude_appointment_id
+    query.exists?
   end
 
   # Best-effort Google Calendar sync. Failure here does NOT roll
@@ -351,6 +360,28 @@ class WhatsappService
     new_start = Time.zone.parse("#{entities[:date]} #{entities[:time]}")
     duration = appointment.end_time - appointment.start_time
     new_end = new_start + duration
+    lang = conversation&.language || "en"
+
+    # Guardrail: new slot must be in the future
+    unless new_start > Time.current
+      result[:response] = RESCHEDULE_REJECTED[lang] || RESCHEDULE_REJECTED["en"]
+      return
+    end
+
+    # Guardrail: new slot must be within working hours
+    unless slot_within_working_hours?(new_start, new_end)
+      result[:response] = RESCHEDULE_REJECTED[lang] || RESCHEDULE_REJECTED["en"]
+      Rails.logger.info("[WhatsApp] Reschedule rejected: outside working hours (#{new_start})")
+      return
+    end
+
+    # Guardrail: new slot must not conflict with another appointment.
+    # Exclude the appointment being moved — it's vacating the old slot.
+    if slot_conflicts_locally?(new_start, new_end, exclude_appointment_id: appointment.id)
+      result[:response] = RESCHEDULE_REJECTED[lang] || RESCHEDULE_REJECTED["en"]
+      Rails.logger.info("[WhatsApp] Reschedule rejected: slot conflict (#{new_start})")
+      return
+    end
 
     # Local record is source of truth — update regardless of Google Calendar state
     appointment.update!(
@@ -435,12 +466,12 @@ class WhatsappService
 
   # --- Template Sending (best-effort) ---
 
-  def send_confirmation_template(patient, appointment, after_hours: false)
+  def send_confirmation_template(patient, appointment, after_hours: false, language: "en")
     # Send detailed booking confirmation with directions via free-form
     # message (within the 24-hour service window since the patient
     # just messaged us). Falls back to the Twilio template if the
     # free-form send fails.
-    send_booking_confirmation_message(patient, appointment, after_hours: after_hours)
+    send_booking_confirmation_message(patient, appointment, after_hours: after_hours, language: language)
   rescue StandardError => e
     Rails.logger.warn("[WhatsApp] Booking confirmation message failed, trying template: #{e.message}")
     begin
@@ -453,34 +484,46 @@ class WhatsappService
   # Sends the branded booking confirmation message with appointment
   # details and practice directions. Uses the free-form `send_text`
   # method since the patient is within the 24-hour service window.
-  def send_booking_confirmation_message(patient, appointment, after_hours: false)
+  # Bilingual: responds in Afrikaans when language == "af".
+  def send_booking_confirmation_message(patient, appointment, after_hours: false, language: "en")
     day_name  = appointment.start_time.strftime("%A")
     date_str  = appointment.start_time.strftime("%-d %B %Y")
     time_str  = appointment.start_time.strftime("%H:%M")
-    is_new_patient = patient.first_name == "WhatsApp" || patient.auto_created_placeholder_profile?
+    is_new = patient.auto_created_placeholder_profile?
 
-    after_hours_notice = if after_hours
-      "\n\n⏳ This booking was made after hours. We'll confirm your appointment first thing in the morning once we verify the slot is available."
+    body = if language == "af"
+      after_hours_notice = after_hours ?
+        "\n\n⏳ Hierdie bespreking is na ure gemaak. Ons sal jou afspraak bevestig sodra die praktyk môreoggend oopmaak." : ""
+      new_patient_addon = is_new ?
+        "\n\nOnthou dat ons nie direk van mediesefonds eis nie. Pasiënte betaal by die praktyk en kan daarna terugeis met die staat wat ons verskaf.\n\nKom asseblief 10 minute vroeg aan sodat ons jou lêer kan voltooi." : ""
+
+      <<~MSG.strip
+        Jou afspraak is bespreek vir #{day_name}, #{date_str} om #{time_str}.#{after_hours_notice}
+
+        #{PRACTICE_ADDRESS}
+        Google Maps: #{PRACTICE_MAP_LINK}
+
+        Aanwysings: #{PRACTICE_DIRECTIONS}#{new_patient_addon}
+
+        As jy iets wil verander, antwoord net hier.
+      MSG
     else
-      ""
+      after_hours_notice = after_hours ?
+        "\n\n⏳ This booking was made after hours. We'll confirm your appointment first thing in the morning once we verify the slot is available." : ""
+      new_patient_addon = is_new ?
+        "\n\nA reminder that we do not claim directly from medical aid. Patients pay at the practice and can then claim back using the statement we provide.\n\nPlease arrive 10 minutes early so we can complete your patient file." : ""
+
+      <<~MSG.strip
+        Your appointment is booked for #{day_name}, #{date_str} at #{time_str}.#{after_hours_notice}
+
+        #{PRACTICE_ADDRESS}
+        Google Maps: #{PRACTICE_MAP_LINK}
+
+        Directions: #{PRACTICE_DIRECTIONS}#{new_patient_addon}
+
+        If you need to change anything, just reply here.
+      MSG
     end
-
-    new_patient_addon = if is_new_patient
-      "\n\nA reminder that we do not claim directly from medical aid. Patients pay at the practice and can then claim back using the statement we provide.\n\nPlease arrive 10 minutes early so we can complete your patient file."
-    else
-      ""
-    end
-
-    body = <<~MSG.strip
-      Your appointment is booked for #{day_name}, #{date_str} at #{time_str}.#{after_hours_notice}
-
-      #{PRACTICE_ADDRESS}
-      Google Maps: #{PRACTICE_MAP_LINK}
-
-      Directions: #{PRACTICE_DIRECTIONS}#{new_patient_addon}
-
-      If you need to change anything, just reply here.
-    MSG
 
     template_service&.send_text(patient.phone, body)
   end
@@ -576,15 +619,25 @@ class WhatsappService
     end
   end
 
+  FALLBACK_BUSY = {
+    "en" => "I'm sorry, our system is a bit busy right now. Please send your preferred day and time, and our team will follow up as soon as possible.",
+    "af" => "Jammer, ons stelsel is tans effens besig. Stuur asseblief jou voorkeur dag en tyd, en ons span sal so gou moontlik opvolg."
+  }.freeze
+
+  URGENT_FAST_PATH = {
+    "en" => "I'm sorry you're dealing with that. If this is an emergency, please contact Dr Chalita directly at #{EMERGENCY_PHONE} so we can assist you as quickly as possible.",
+    "af" => "Ek is jammer om dit te hoor. As dit 'n noodgeval is, kontak Dr Chalita direk by #{EMERGENCY_PHONE} sodat ons jou so gou moontlik kan help."
+  }.freeze
+
   def build_fallback_result(message:, conversation:)
     # First try urgent (always immediate)
     result = build_local_result(message: message, conversation: conversation)
     return result if result
 
-    # When AI is unavailable, handle FAQ/pricing locally
+    lang = conversation&.language || "en"
     msg_lower = message.downcase
 
-    if msg_lower.match?(/\b(hours?|open|closed|time|schedule)\b/)
+    if msg_lower.match?(/\b(hours?|open|closed|time|schedule|ure|oopmaak|tyd)\b/)
       return {
         response: AiService.dynamic_hours,
         intent: "faq",
@@ -592,7 +645,7 @@ class WhatsappService
       }
     end
 
-    if msg_lower.match?(/\b(price|cost|how much|consultation|cleaning)\b/)
+    if msg_lower.match?(/\b(price|cost|how much|consultation|cleaning|prys|koste|hoeveel)\b/)
       return {
         response: "Consultation: #{AiService::PRICING['consultation']} | Cleaning: #{AiService::PRICING['cleaning']}",
         intent: "faq",
@@ -601,7 +654,7 @@ class WhatsappService
     end
 
     {
-      response: "I'm sorry, our system is a bit busy right now. Please send your preferred day and time, and our team will follow up as soon as possible.",
+      response: FALLBACK_BUSY[lang] || FALLBACK_BUSY["en"],
       intent: "book",
       entities: {}
     }
@@ -610,9 +663,10 @@ class WhatsappService
   def build_local_result(message:, conversation:)
     # Only use fast path for urgent/emergency (always immediate)
     # Don't use for book/reschedule/cancel (need multi-turn with AI)
-    if message.downcase.match?(/\b(pain|urgent|emergency|swollen|bleeding)\b/)
+    lang = conversation&.language || "en"
+    if message.downcase.match?(/\b(pain|urgent|emergency|swollen|bleeding|pyn|noodgeval|geswel|bloeding)\b/)
       return {
-        response: "I'm sorry you're dealing with that. If this is an emergency, please contact Dr Chalita directly at #{EMERGENCY_PHONE} so we can assist you as quickly as possible.",
+        response: URGENT_FAST_PATH[lang] || URGENT_FAST_PATH["en"],
         intent: "urgent",
         entities: {}
       }

@@ -7,7 +7,10 @@ class ApplicationController < ActionController::Base
   # the navbar bell badge stays accurate on every navigation without
   # needing a separate fetch. Evaluated per-request inside the block.
   inertia_share do
-    { unread_notifications_count: safe_unread_count }
+    {
+      unread_notifications_count: safe_unread_count,
+      ui_language: session[:ui_language].presence || "en"
+    }
   end
 
   private

@@ -57,4 +57,5 @@ Rails.application.routes.draw do
   end
   get "analytics", to: "analytics#index"
   get "settings", to: "settings#index"
+  post "settings/language", to: "settings#update_language"
 end

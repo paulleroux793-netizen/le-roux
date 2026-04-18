@@ -221,8 +221,17 @@ function ConversationRow({ conv, t, language }) {
         </span>
       </div>
 
-      <div className="w-20 flex items-center justify-end flex-shrink-0">
+      <div className="w-20 flex flex-col items-end gap-1 flex-shrink-0">
         <span className="text-[11px] text-brand-muted">{conv.message_count} {t('conv_msgs')}</span>
+        {conv.language && (
+          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+            conv.language === 'af'
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-gray-100 text-gray-500'
+          }`}>
+            {conv.language.toUpperCase()}
+          </span>
+        )}
       </div>
     </li>
   )

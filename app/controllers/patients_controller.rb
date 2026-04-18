@@ -201,6 +201,7 @@ class PatientsController < ApplicationController
       email: patient.email,
       date_of_birth: patient.date_of_birth&.iso8601,
       notes: patient.notes,
+      preferred_language: patient.preferred_language,
       created_at: patient.created_at.iso8601
     }
   end

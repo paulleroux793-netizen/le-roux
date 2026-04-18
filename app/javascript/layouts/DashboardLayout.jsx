@@ -2,7 +2,7 @@ import React from 'react'
 import { Link, usePage } from '@inertiajs/react'
 import {
   LayoutDashboard, Calendar, Users, MessageSquare, BarChart2,
-  BellRing, Settings, ChevronDown, HelpCircle,
+  BellRing, Settings, ChevronDown, HelpCircle, Globe,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -20,7 +20,7 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout({ children }) {
   const { url } = usePage()
-  const { t } = useLanguage()
+  const { t, language, setLanguage } = useLanguage()
 
   const isActive = (href) =>
     href === '/dashboard'
@@ -121,8 +121,27 @@ export default function DashboardLayout({ children }) {
         {/* Search — centered, wider, functional */}
         <GlobalSearch />
 
-        {/* Right side — bell + doctor */}
+        {/* Right side — language toggle + bell + doctor */}
         <div className="flex-1 flex items-center justify-end gap-2">
+          {/* Quick language toggle — EN / AF */}
+          <div className="flex items-center gap-1 rounded-lg border border-brand-border bg-brand-surface px-1 py-0.5">
+            <Globe size={13} className="text-brand-muted ml-1" />
+            {['en', 'af'].map((lang) => (
+              <button
+                key={lang}
+                onClick={() => setLanguage(lang)}
+                className={cn(
+                  'rounded px-2 py-0.5 text-xs font-semibold transition-colors',
+                  language === lang
+                    ? 'bg-white text-brand-ink shadow-sm'
+                    : 'text-brand-muted hover:text-brand-ink'
+                )}
+              >
+                {lang.toUpperCase()}
+              </button>
+            ))}
+          </div>
+
           <NotificationBell />
 
           <div className="mx-1 h-6 w-px bg-brand-border" />

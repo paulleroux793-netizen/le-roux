@@ -95,6 +95,12 @@ export default function ConversationShow({ conversation }) {
               label={conv.status}
               tone={conv.status === 'active' ? 'sky' : 'gray'}
             />
+            {conv.language && (
+              <Chip
+                label={conv.language === 'af' ? 'Afrikaans' : 'English'}
+                tone={conv.language === 'af' ? 'green' : 'gray'}
+              />
+            )}
             {conv.source === 'import' && <Chip label="Imported" tone="slate" />}
           </div>
         </div>
@@ -193,6 +199,7 @@ function Chip({ label, tone }) {
     blue:  'bg-blue-50 text-blue-700 border border-blue-100',
     gray:  'bg-gray-100 text-gray-600 border border-gray-200',
     slate: 'bg-slate-100 text-slate-600 border border-slate-200',
+    green: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
   }
   return (
     <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full capitalize ${tones[tone] || tones.gray}`}>

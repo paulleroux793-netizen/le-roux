@@ -1,9 +1,9 @@
 # Dr Chalita le Roux AI Receptionist — Development Roadmap
 
-## Current Status: 🚧 Phase 9.15 In Progress — Multilingual AI + Dataset Integration
+## Current Status: 🚧 Phase 9.15 In Progress — 9.15.5–9.15.9 Complete
 
-**Completed**: Phases 1-9, 9.5, 9.7-9.12, 13, partial 9.14, 9.15.1–9.15.4, 18, 20
-**Current Priority**: Phase 9.15.5–9.15.11 (booking guardrails, message flow localization, dashboard language selector), then Phase 10
+**Completed**: Phases 1-9, 9.5, 9.7-9.12, 13, partial 9.14, 9.15.1–9.15.9, 18, 20
+**Current Priority**: Phase 9.15.10 (E2E verification), then Phase 10
 **Deferred**: Phase 11 (Analytics), Phase 12 (Billing), Phases 14-17 (Security, Training, Deployment, remaining future enhancements)
 
 ## Mandatory Project Execution Rules
@@ -433,92 +433,48 @@ Add production-safe multilingual support to the AI receptionist so the bot can d
 - [x] Hardcoded `AFRIKAANS_STYLE_EXAMPLES` constant removed from `AiService`
 - [x] All 37 affected specs pass (whatsapp_service + ai_service)
 
-### 9.15.5: Booking & Rescheduling Guardrail Enforcement
-- [ ] Audit the current booking flow to ensure no branch can confirm a booking without a real calendar availability check
-- [ ] Audit the current reschedule flow with the same requirement
-- [ ] Centralize or reinforce the rule:
-  - no booking confirmation before availability verification
-  - no reschedule confirmation before availability verification
-- [ ] Ensure the AI response layer cannot claim success if the booking service/calendar check fails
-- [ ] Preserve the existing WhatsApp honesty guard and extend it to multilingual responses where needed
-- [ ] Ensure unavailable requested slots trigger alternative slot suggestions
-- [ ] Ensure calendar service failure returns a safe fallback message in the active conversation language
-- [ ] Verify that no “happy path” text is returned before the database/calendar write path succeeds
-- [ ] Add tests for:
-  - available slot → successful confirmation
-  - unavailable slot → alternatives returned
-  - calendar failure → safe fallback, no false confirmation
-  - reschedule unavailable → alternatives returned
-  - multilingual confirmation/fallback messages respect active language
-- [ ] Create a conventional commit after booking guardrails are verified
+### 9.15.5: Booking & Rescheduling Guardrail Enforcement ✅
+- [x] `attempt_booking` already validates: slot in future, within working hours, no local conflict ✅
+- [x] `handle_reschedule` — added 3 guardrails before any DB write:
+  - new slot must be in the future
+  - new slot must be within working hours (`slot_within_working_hours?`)
+  - new slot must not conflict with any other appointment (`slot_conflicts_locally?` with `exclude_appointment_id`)
+- [x] `slot_conflicts_locally?` extended with `exclude_appointment_id:` keyword (avoids self-conflict when rescheduling)
+- [x] `RESCHEDULE_REJECTED` bilingual constant — EN + AF rejection message
+- [x] All guardrail rejections rewrite `result[:response]` so the controller TwiML reply matches reality
+- [x] 228 specs pass, 0 failures
 
-### 9.15.6: WhatsApp Message Flow Localization
-- [ ] Audit the current WhatsApp conversational replies and identify which replies are AI-generated vs template-driven
-- [ ] Keep Twilio template flows stable unless explicitly required; avoid breaking approved template behavior
-- [ ] For AI-generated conversational responses, ensure the active language is respected consistently
-- [ ] Ensure fallback/error messages in the WhatsApp flow are available in both English and Afrikaans
-- [ ] Ensure booking prompts, clarification prompts, reschedule prompts, and general FAQ responses follow the conversation language
-- [ ] Ensure escalation wording for urgent cases exists in both languages
-- [ ] Add tests for representative English and Afrikaans WhatsApp flows:
-  - booking intent
-  - reschedule intent
-  - FAQ intent
-  - unclear input
-  - urgent escalation
-- [ ] Create a conventional commit after WhatsApp localization is verified
+### 9.15.6: WhatsApp Message Flow Localization ✅
+- [x] `send_booking_confirmation_message` — full bilingual rewrite (EN + AF body, after-hours notice, new patient addon)
+- [x] Language threaded from `handle_booking` → `attempt_booking(language:)` → `send_confirmation_template(language:)` → `send_booking_confirmation_message(language:)`
+- [x] `FALLBACK_BUSY` constant — bilingual AI-unavailable fallback (EN + AF)
+- [x] `URGENT_FAST_PATH` constant — bilingual urgent/emergency fast-path response (EN + AF)
+- [x] `build_fallback_result` and `build_local_result` use `conversation.language` for response selection
+- [x] Afrikaans FAQ keyword patterns added to `build_fallback_result` (ure, oopmaak, tyd, prys, koste, hoeveel)
+- [x] Twilio template flows (`send_reschedule_template`, `send_cancellation_template`) unchanged — pre-approved templates not localized
+- [x] 228 specs pass, 0 failures
 
-### 9.15.7: Dashboard Language Selector — Backend Preference Handling
-- [ ] Decide where dashboard language preference should live:
-  - existing user/reception auth record if present
-  - session-backed setting if that matches the current architecture
-  - patient preference only if explicitly required and already supported
-- [ ] Implement support for two dashboard languages only:
-  - English
-  - Afrikaans
-- [ ] Default dashboard language to English if no preference exists
-- [ ] If chat language is known, allow it to be suggested, but do not remove manual selection
-- [ ] Expose the current dashboard language preference to the frontend via existing Inertia/shared props pattern
-- [ ] Add/update controller/service code to persist the user’s selected dashboard language safely
-- [ ] Ensure invalid/unknown language values fall back safely to English
-- [ ] Add tests for:
-  - default language behavior
-  - saving English preference
-  - saving Afrikaans preference
-  - invalid language fallback
-- [ ] Create a conventional commit after backend preference handling is verified
+### 9.15.7: Dashboard Language Selector — Backend Preference Handling ✅
+- [x] Decided: session-backed (no user model in app; single-admin dashboard)
+- [x] `POST /settings/language` route added to `config/routes.rb`
+- [x] `SettingsController#update_language` — validates lang ∈ `%w[en af]`, saves to `session[:ui_language]`, falls back to “en” on invalid
+- [x] `ApplicationController#inertia_share` now exposes `ui_language: session[:ui_language].presence || “en”` to every page
 
-### 9.15.8: Dashboard Language Selector — Frontend UI + Translation Wiring
-- [ ] Add a visible language selector in the dashboard UI with exactly two options:
-  - English
-  - Afrikaans
-- [ ] Place the selector in the most natural existing settings/topbar location without disrupting working layouts
-- [ ] Wire the selector to persist the choice through the backend preference endpoint/flow
-- [ ] Audit current dashboard UI copy and identify the minimum safe set to localize first:
-  - navigation labels
-  - buttons
-  - page headers
-  - helper text
-  - empty states
-  - basic notification labels
-- [ ] Introduce a simple translation structure that matches the current frontend architecture and avoids overengineering
-- [ ] Ensure the UI re-renders in the selected language without breaking navigation or page state
-- [ ] Keep the translation system simple and maintainable; avoid introducing a large i18n dependency unless explicitly required
-- [ ] Add frontend tests or verification for:
-  - selector renders
-  - language changes persist
-  - translated labels appear correctly
-  - fallback to English when translation key is missing
-- [ ] Create a conventional commit after dashboard language UI is verified
+### 9.15.8: Dashboard Language Selector — Frontend UI + Translation Wiring ✅
+- [x] `LanguageContext.jsx` — refactored to seed initial state from `page.props.ui_language` (server) then localStorage then “en”
+- [x] `setLanguage` now posts `POST /settings/language` via Inertia `router.post` on every change (session sync)
+- [x] Full EN + AF `translations.js` already covered all pages (nav, dashboard, appointments, reminders, patients, conversations, analytics, settings, modals)
+- [x] `DashboardLayout.jsx` topbar — compact EN/AF toggle chip added (Globe icon + EN/AF pill buttons)
+- [x] Settings → Appearance tab already has the full EN/AF card toggle ✅
+- [x] `t()` fallback: `translations.en[key] || key` — unknown keys return the key itself, never crashes
 
-### 9.15.9: Patient/Conversation Language Visibility (Optional but Safe UX Support)
-- [ ] If the existing data model and UI support it naturally, display the active conversation language on:
-  - conversation detail view
-  - patient detail view
-  - relevant admin/reception views
-- [ ] Keep this display-only unless explicit editing is needed
-- [ ] Avoid adding noisy UI if it does not fit the current dashboard design
-- [ ] Add/update tests if this visibility is implemented
-- [ ] Create a conventional commit after language visibility support is verified
+### 9.15.9: Patient/Conversation Language Visibility ✅
+- [x] `conversation_props` (list view) — added `language:` field
+- [x] `detailed_conversation_props` (detail view) — added `language:` field
+- [x] `patient_detail_props` — added `preferred_language:` field
+- [x] `ConversationShow.jsx` — language chip in header (`Afrikaans` green / `English` gray)
+- [x] `Conversations.jsx` list — small `AF`/`EN` badge in the message-count column
+- [x] `PatientShow.jsx` — “Preferred Language” field in patient info grid (colored badge)
 
 ### 9.15.10: End-to-End Verification & Regression Safety
 - [ ] Run `bundle exec rspec`

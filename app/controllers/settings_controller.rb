@@ -1,4 +1,15 @@
 class SettingsController < ApplicationController
+  SUPPORTED_LANGUAGES = %w[en af].freeze
+
+  # POST /settings/language
+  # Persists the dashboard UI language to session.
+  # Falls back to "en" for any unknown value.
+  def update_language
+    lang = params[:language].to_s.downcase
+    session[:ui_language] = SUPPORTED_LANGUAGES.include?(lang) ? lang : "en"
+    head :no_content
+  end
+
   def index
     page_data = dev_page_cache("settings", "index") do
       {

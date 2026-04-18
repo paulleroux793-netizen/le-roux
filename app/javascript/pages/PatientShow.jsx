@@ -47,6 +47,19 @@ export default function PatientShow({ patient, medical_history, appointments, co
           <Field label="Patient Since">
             <p className="text-sm text-gray-800">{new Date(patient.created_at).toLocaleDateString('en-ZA')}</p>
           </Field>
+          <Field label="Preferred Language">
+            {patient.preferred_language ? (
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                patient.preferred_language === 'af'
+                  ? 'bg-emerald-50 text-emerald-700'
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {patient.preferred_language === 'af' ? 'Afrikaans' : 'English'}
+              </span>
+            ) : (
+              <p className="text-sm text-gray-400">—</p>
+            )}
+          </Field>
         </div>
         {patient.notes && (
           <div className="mt-4 p-3 bg-brand-cream rounded-lg border border-gray-100">
