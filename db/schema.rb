@@ -10,13 +10,12 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_18_100000) do
   # These are extensions that must be enabled in order to support this database
-  # Note: Supabase uses "extensions.*" schema prefixes; standard PostgreSQL uses bare names.
+  enable_extension "pg_catalog.plpgsql"
   enable_extension "pg_stat_statements"
   enable_extension "pgcrypto"
   enable_extension "uuid-ossp"
-  enable_extension "plpgsql"
 
   create_table "analytics_events", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -91,6 +90,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
     t.datetime "created_at", null: false
     t.datetime "ended_at"
     t.string "external_id"
+    t.integer "follow_up_count", default: 0, null: false
+    t.datetime "follow_up_sent_at"
     t.datetime "imported_at"
     t.string "language", limit: 5
     t.jsonb "messages", default: []
@@ -103,6 +104,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_17_120000) do
     t.datetime "updated_at", null: false
     t.index ["channel"], name: "index_conversations_on_channel"
     t.index ["external_id"], name: "index_conversations_on_external_id", unique: true
+    t.index ["follow_up_sent_at"], name: "index_conversations_on_follow_up_sent_at"
     t.index ["patient_id"], name: "index_conversations_on_patient_id"
     t.index ["source"], name: "index_conversations_on_source"
     t.index ["status"], name: "index_conversations_on_status"

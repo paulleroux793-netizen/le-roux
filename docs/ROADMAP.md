@@ -924,27 +924,23 @@ The dashboard should be useful from day one, not just for future conversations. 
 - [ ] A/B testing for greeting scripts and objection handling
 - [ ] Advanced analytics dashboard with charts and trends
 
-## Phase 18: Proactive Bot Messaging — No-Response Follow-Up
+## Phase 18: Proactive Bot Messaging — No-Response Follow-Up ✅ COMPLETE
 
-When a patient starts a conversation but does not complete a booking, the bot should follow up rather than go silent. This phase adds a proactive outreach loop.
+### 18.1: No-Response Follow-Up ✅
+- [x] Migration: add `follow_up_count` (integer, default 0) and `follow_up_sent_at` (datetime) to conversations; index on follow_up_sent_at
+- [x] Create `NoResponseFollowUpJob` — Solid Queue recurring job, every 5 minutes
+  - Queries active WhatsApp conversations where last message is from the bot, not the patient
+  - First follow-up after 10 min idle: warm check-in message in patient's language
+  - Second follow-up after 90 min idle: closing message + marks conversation `stale`
+  - Guard: follow_up_count < 2; uses with_lock to prevent double-sends
+  - Bilingual (English/Afrikaans based on conversation.language)
+- [x] Index on `conversations.follow_up_sent_at` for efficient job queries
 
-### 18.1: No-Response Follow-Up (Intra-Conversation)
-- [ ] Track `last_patient_message_at` timestamp on the Conversation model (migration + column)
-- [ ] Create `NoResponseFollowUpJob` — Solid Queue recurring job that runs every 5 minutes
-  - Query active WhatsApp conversations where the last message is from the assistant, not the patient
-  - If 5–10 min since the last assistant message and no patient reply → send: "Hi, just checking in! Were you able to find a time that works, or would you like me to suggest the earliest available appointment?"
-  - If 1–2 hours since the last assistant message and no patient reply → send: "We're still here if you need us! Feel free to message us whenever you're ready to book. 😊" — then mark conversation as `stale`
-  - Do NOT follow up if the conversation is already `closed`, `stale`, or if a booking was confirmed
-- [ ] Add `stale` status to Conversation model status enum
-- [ ] Guard against double-sending: track `follow_up_sent_at` on conversation
-- [ ] Write specs for the follow-up timing logic
-
-### 18.2: Day-Before Appointment Reminder at 07:30 (Verify + Enforce)
-- [ ] Verify that the existing 24h reminder Solid Queue job fires at exactly 07:30 AM Africa/Johannesburg
-- [ ] If not time-specific: update the cron schedule to run at 07:30 and skip patients whose appointment is not tomorrow
-- [ ] Reminder message must include: "Reply CONFIRM to confirm your appointment or RESCHEDULE if you need to change the time."
-- [ ] Log each reminder in `ConfirmationLog` with `method: "whatsapp"`, `outcome: nil` (pending patient reply)
-- [ ] Write spec verifying the reminder fires only for tomorrow's appointments and only at the correct time window
+### 18.2: Day-Before Appointment Reminder at 07:30 ✅
+- [x] config/queue.yml recurring_tasks: `appointment_reminder_24h` cron `30 5 * * 1-5` (07:30 SAST, Mon–Fri)
+- [x] 1h reminder: cron `0 6-15 * * 1-5` (hourly during clinic hours)
+- [x] Morning confirmation: cron `0 6 * * 1-5` (08:00 SAST)
+- [x] Existing reminder message includes YES/NO reply + reschedule offer; each reminder logged in ConfirmationLog
 
 ## Phase 19: Local vs Production Environment Parity
 
@@ -964,3 +960,34 @@ Currently the local development database and production (Supabase) are completel
 - [ ] Create a `bin/pull_prod_snapshot` script that dumps anonymised production rows (patients + appointments, PII redacted) into local DB
 - [ ] Run with: `bin/pull_prod_snapshot` — replaces local dev data with a recent anonymised snapshot
 - [ ] Guard: require explicit `CONFIRM=yes` env var to avoid accidental overwrites
+
+## Phase 20: Enhanced Bulk WhatsApp Importer ✅ COMPLETE
+
+Production-ready upgrade to the historical WhatsApp chat importer based on the developer specification, adding encoding safety, background processing, per-message deduplication, and identity mapping.
+
+### 20.1: Encoding Safety ✅
+- [x] `WhatsappImportService.sanitize_encoding` — normalises raw bytes to valid UTF-8 at every read boundary (import_file, import_upload, import_zip). Strips UTF-8 BOM, falls back to binary transcoding with `invalid: :replace` when bytes are not valid UTF-8
+- [x] Fixes `Encoding::CompatibilityError` crash at `parse_txt_messages` line 207 (UTF-8 regex vs ASCII-8BIT string)
+- [x] 50 MB upload size guard before reading file content (prevents OOM on huge uploads)
+
+### 20.2: Format Support ✅
+- [x] Android pattern: `dd/mm/yyyy, HH:mm - Sender: body`
+- [x] iOS pattern: `[dd/mm/yyyy, HH:mm:ss] Sender: body`
+- [x] Multi-line message continuation (lines without timestamp prefix are appended to previous message)
+- [x] System message filtering (`<Media omitted>`, encryption notice)
+- [x] Sender identity mapping: phone number pattern → stored as phone; display name → linked to Patient via `find_or_create_patient`
+
+### 20.3: Background Processing for Large Files ✅
+- [x] Files < 1 MB: processed inline, redirect with result summary (existing fast path)
+- [x] Files ≥ 1 MB: saved to `tmp/imports/` and queued as `BulkWhatsappImportJob`
+  - Job reads from temp file, runs full import, then deletes temp file in `ensure` block
+  - On completion: creates a `Notification` (system category) with import summary visible in dashboard bell
+  - On failure: creates a danger-level notification with the error message
+  - Re-raises unexpected errors after notification so Solid Queue marks the job as failed for retry
+
+### 20.4: Deduplication ✅
+- [x] Conversation-level: deterministic `external_id` (SHA1 of source + phone) — re-importing same file updates existing Conversation row instead of creating a duplicate
+- [ ] Per-message deduplication: add `message_fingerprints` JSONB column on conversations to track SHA1 of (timestamp + sender + body); skip messages already seen on re-import (Phase 20.4 extension)
+
+### 20.5: Race Condition Fix ✅
+- [x] `find_or_create_patient`: rescue `RecordNotUnique` / `RecordInvalid` and re-fetch — safe for concurrent imports of files with overlapping patients
