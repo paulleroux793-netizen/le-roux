@@ -285,6 +285,8 @@ export default function AppointmentCalendar({
         }}
         events={events}
         editable
+        selectable
+        selectMirror
         eventDrop={handleEventDrop}
         eventClick={handleEventClick}
         datesSet={handleDatesSet}
@@ -293,7 +295,8 @@ export default function AppointmentCalendar({
         slotMaxTime="18:00:00"
         allDaySlot={false}
         nowIndicator
-        contentHeight={640}
+        expandRows
+        height="auto"
         stickyHeaderDates
         slotDuration="00:30:00"
         weekends={false}
@@ -302,6 +305,8 @@ export default function AppointmentCalendar({
         eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
         slotLabelFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
         dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+        dayMaxEvents={3}
+        moreLinkClick="popover"
       />
       </div>
     </div>

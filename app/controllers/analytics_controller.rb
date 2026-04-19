@@ -4,7 +4,9 @@ class AnalyticsController < ApplicationController
       {
         cancellation_stats: cancellation_stats,
         booking_stats: booking_stats,
-        channel_stats: channel_stats
+        channel_stats: channel_stats,
+        daily_bookings: daily_bookings,
+        status_distribution: status_distribution,
       }
     end
 
@@ -60,6 +62,25 @@ class AnalyticsController < ApplicationController
       voice: voice,
       whatsapp_pct: calculate_rate(whatsapp, total),
       voice_pct: calculate_rate(voice, total)
+    }
+  end
+
+  def daily_bookings
+    now = Date.current
+    days = (now - 29.days)..now
+    counts = Appointment
+      .where(created_at: days.begin.beginning_of_day..days.end.end_of_day)
+      .group("DATE(created_at)")
+      .count
+
+    days.map do |d|
+      { date: d.strftime("%b %-d"), count: counts[d] || 0 }
+    end
+  end
+
+  def status_distribution
+    Appointment.group(:status).count.map { |status, count|
+      { name: status.humanize, value: count }
     }
   end
 

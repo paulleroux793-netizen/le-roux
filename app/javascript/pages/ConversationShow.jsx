@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, router } from '@inertiajs/react'
 import { toast } from 'sonner'
-import { ArrowLeft, Send, Phone, MessageCircle, Tag, X as XIcon, Plus } from 'lucide-react'
+import { ArrowLeft, Send, Phone, MessageCircle, Tag, X as XIcon, Plus, ExternalLink } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 
 // ── Conversation detail + reply composer ───────────────────────────
@@ -86,7 +86,7 @@ export default function ConversationShow({ conversation }) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
             <Chip
               label={conv.channel}
               tone={conv.channel === 'whatsapp' ? 'sky' : 'blue'}
@@ -102,6 +102,15 @@ export default function ConversationShow({ conversation }) {
               />
             )}
             {conv.source === 'import' && <Chip label="Imported" tone="slate" />}
+            {conv.patient_id && (
+              <Link
+                href={`/patients/${conv.patient_id}`}
+                className="inline-flex items-center gap-1 rounded-full border border-sky-100 bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-100 transition-colors"
+              >
+                <ExternalLink size={10} />
+                View patient
+              </Link>
+            )}
           </div>
         </div>
         {conv.topic && (

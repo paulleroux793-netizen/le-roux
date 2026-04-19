@@ -47,6 +47,18 @@
 ### Phase 9.5 — Premium Brand Redesign
 - [x] Teal brand palette, Inter font, card-based layout
 
+### Phase 9.6 — Patient Records & UI Hardening
+- [x] Patient form modal (create & edit) with medical history — *PatientFormModal, sub-area #4*
+- [x] Appointment notes stored (DB `notes` column) and displayed in detail modal
+- [x] Appointment detail modal shows notes field
+- [x] Doctor dropdown in navbar (profile, sign out) — *DashboardLayout*
+- [x] Sidebar/navbar vertical alignment fixed (both exactly h-16)
+- [x] Language switch white-screen flash fixed (fetch instead of router.post)
+- [x] Calendar expandRows — month view shows all weeks without scrolling; selectable events
+- [x] Analytics recharts: daily bookings bar, status donut, channel bar, cancellations
+- [x] Conversation detail links to patient profile (View patient button)
+- [x] Analytics controller adds `daily_bookings` and `status_distribution` props
+
 ### Phase 9.7–9.12 — Audits & Hardening
 - [x] N+1 queries, caching strategy, data integrity
 

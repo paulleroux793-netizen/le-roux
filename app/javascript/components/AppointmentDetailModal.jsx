@@ -1,6 +1,6 @@
 import React from 'react'
 import { router } from '@inertiajs/react'
-import { Phone, Mail, Calendar, Edit3, X as XIcon, CheckCircle } from 'lucide-react'
+import { Phone, Mail, Calendar, Edit3, X as XIcon, CheckCircle, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import Modal from './Modal'
 
@@ -118,6 +118,11 @@ export default function AppointmentDetailModal({
           <Row icon={Mail} label="Reason">
             {appointment.reason || '—'}
           </Row>
+          {appointment.notes && (
+            <Row icon={FileText} label="Notes">
+              <span className="whitespace-pre-wrap">{appointment.notes}</span>
+            </Row>
+          )}
         </div>
       </div>
     </Modal>

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useCallback } from 'react'
-import { router } from '@inertiajs/react'
 import translations from './translations'
 
 const LanguageContext = createContext()
@@ -29,11 +28,17 @@ export function LanguageProvider({ initialServerLang, children }) {
     } catch {
       // localStorage unavailable — state still updates in memory
     }
-    // Persist to session so server-rendered pages start in the right language
-    router.post('/settings/language', { language: lang }, {
-      preserveState: true,
-      preserveScroll: true,
-      only: [],
+    // Persist to session via plain fetch so Inertia never triggers a
+    // page navigation (which caused the blank-screen flash on toggle).
+    fetch('/settings/language', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || '',
+      },
+      body: JSON.stringify({ language: lang }),
+    }).catch(() => {
+      // Silently swallow — the UI has already updated via state
     })
   }, [])
 

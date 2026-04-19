@@ -1,8 +1,9 @@
-import React from 'react'
-import { Link, usePage } from '@inertiajs/react'
+import React, { useEffect, useRef, useState } from 'react'
+import { Link, router, usePage } from '@inertiajs/react'
 import {
   LayoutDashboard, Calendar, Users, MessageSquare, BarChart2,
   BellRing, Settings, ChevronDown, HelpCircle, Globe,
+  User, LogOut, KeyRound,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -21,6 +22,18 @@ const NAV_ITEMS = [
 export default function DashboardLayout({ children }) {
   const { url } = usePage()
   const { t, language, setLanguage } = useLanguage()
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const isActive = (href) =>
     href === '/dashboard'
@@ -33,10 +46,9 @@ export default function DashboardLayout({ children }) {
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-brand-border bg-white">
 
-        {/* Practice identity */}
-        <div className="border-b border-brand-border px-5 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-brand-primary">
+        {/* Practice identity — h-16 matches the top navbar height exactly */}
+        <div className="flex h-16 flex-shrink-0 items-center gap-3 border-b border-brand-border px-5">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-primary">
               <span className="select-none text-sm font-bold text-white">DL</span>
             </div>
             <div className="min-w-0">
@@ -45,7 +57,6 @@ export default function DashboardLayout({ children }) {
               </h1>
               <p className="mt-0.5 text-xs tracking-wide text-brand-muted">{t('nav_subtitle')}</p>
             </div>
-          </div>
         </div>
 
         {/* Main navigation */}
@@ -146,19 +157,60 @@ export default function DashboardLayout({ children }) {
 
           <div className="mx-1 h-6 w-px bg-brand-border" />
 
-          <button className="group flex items-center gap-2 rounded-xl border border-transparent py-1.5 pl-2 pr-2 transition-colors hover:border-brand-border hover:bg-brand-surface">
-            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary">
-              <span className="text-white text-xs font-semibold select-none">DL</span>
-            </div>
-            <span className="hidden text-sm font-medium text-brand-ink sm:block">
-              Dr le Roux
-            </span>
-            <ChevronDown size={14} className="text-brand-muted group-hover:text-brand-ink" />
-          </button>
+          {/* Doctor dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen((o) => !o)}
+              className="group flex items-center gap-2 rounded-xl border border-transparent py-1.5 pl-2 pr-2 transition-colors hover:border-brand-border hover:bg-brand-surface"
+            >
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary">
+                <span className="text-white text-xs font-semibold select-none">DL</span>
+              </div>
+              <span className="hidden text-sm font-medium text-brand-ink sm:block">
+                Dr le Roux
+              </span>
+              <ChevronDown
+                size={14}
+                className={cn('text-brand-muted transition-transform group-hover:text-brand-ink', dropdownOpen && 'rotate-180')}
+              />
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-xl border border-brand-border bg-white py-1.5 shadow-[0_24px_60px_-16px_rgba(57,60,77,0.25)]">
+                <div className="border-b border-brand-border px-4 py-2.5">
+                  <p className="text-xs font-semibold text-brand-ink">Dr Chalita le Roux</p>
+                  <p className="mt-0.5 text-[11px] text-brand-muted">General Practitioner</p>
+                </div>
+                <div className="py-1">
+                  <DropdownItem
+                    icon={User}
+                    label="My Profile"
+                    onClick={() => { setDropdownOpen(false); router.visit('/settings') }}
+                  />
+                  <DropdownItem
+                    icon={KeyRound}
+                    label="Change Password"
+                    onClick={() => { setDropdownOpen(false); router.visit('/settings') }}
+                  />
+                </div>
+                <div className="border-t border-brand-border py-1">
+                  <DropdownItem
+                    icon={LogOut}
+                    label="Sign out"
+                    danger
+                    onClick={() => {
+                      setDropdownOpen(false)
+                      router.delete('/users/sign_out', { onError: () => router.visit('/') })
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* ── Page content ────────────────────────────────────────────── */}
+      {/* ── Page content ─────────────────────────────────────────── */}
       <main className="ml-64 min-h-screen pt-16">
         <div className="p-8">
           {children}
@@ -166,5 +218,23 @@ export default function DashboardLayout({ children }) {
       </main>
 
     </div>
+  )
+}
+
+function DropdownItem({ icon: Icon, label, onClick, danger = false }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex w-full items-center gap-3 px-4 py-2 text-sm transition-colors',
+        danger
+          ? 'text-brand-danger hover:bg-brand-danger/5'
+          : 'text-brand-ink hover:bg-brand-surface'
+      )}
+    >
+      <Icon size={15} className={danger ? 'text-brand-danger' : 'text-brand-muted'} />
+      {label}
+    </button>
   )
 }
