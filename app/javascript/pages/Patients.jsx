@@ -41,18 +41,11 @@ export default function Patients({ patients = [], stats }) {
       accessorKey: 'full_name',
       header: t('pat_col_name'),
       cell: ({ row }) => (
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-surface">
-            <span className="text-xs font-semibold text-brand-primary">
-              {initials(row.original.full_name)}
-            </span>
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-brand-ink">{row.original.full_name}</p>
-            {row.original.email && (
-              <p className="truncate text-xs text-brand-muted">{row.original.email}</p>
-            )}
-          </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-brand-ink">{row.original.full_name}</p>
+          {row.original.email && (
+            <p className="truncate text-xs text-brand-muted">{row.original.email}</p>
+          )}
         </div>
       ),
     },
@@ -272,13 +265,3 @@ function StatusBadge({ status, t }) {
   )
 }
 
-function initials(name = '') {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() || '')
-      .join('') || '·'
-  )
-}

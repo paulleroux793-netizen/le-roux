@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react'
 import translations from './translations'
 
 const LanguageContext = createContext()
@@ -46,8 +46,13 @@ export function LanguageProvider({ initialServerLang, children }) {
     return translations[language]?.[key] || translations.en[key] || key
   }, [language])
 
+  // Stable object reference — only changes when language (and therefore t) changes.
+  // Without this, every render of LanguageProvider creates a new object and forces
+  // all 20+ useLanguage() consumers to re-render, which was causing the visual flash.
+  const contextValue = useMemo(() => ({ language, setLanguage, t }), [language, setLanguage, t])
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   )
