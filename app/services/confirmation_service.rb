@@ -99,7 +99,7 @@ class ConfirmationService
   # any other non-cancelled, non-pending appointment.
   def slot_available?(appointment)
     !Appointment
-      .where.not(status: [:cancelled, :pending_confirmation])
+      .where.not(status: [ :cancelled, :pending_confirmation ])
       .where.not(id: appointment.id)
       .where("start_time < ? AND end_time > ?", appointment.end_time, appointment.start_time)
       .exists?

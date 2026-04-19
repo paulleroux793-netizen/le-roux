@@ -25,7 +25,12 @@ module Webhooks
       WhatsappReplyJob.perform_later(
         from: sender,
         message: message,
-        twilio_params: params.permit!.to_h
+        twilio_params: params.permit(
+          :MessageSid, :SmsSid, :SmsMessageSid, :AccountSid, :MessagingServiceSid,
+          :From, :To, :Body, :NumMedia, :NumSegments,
+          :ButtonPayload, :ButtonText, :WaId, :ProfileName,
+          :ReferralNumMedia, :Forwarded, :FreqCapFiltered
+        ).to_h
       )
 
       # Return empty TwiML immediately so Twilio doesn't retry
@@ -46,7 +51,7 @@ module Webhooks
 
       unless validator.validate(url, request.POST, twilio_signature.to_s)
         Rails.logger.warn("[WhatsApp Webhook] Invalid Twilio signature from #{request.remote_ip}")
-        return head :forbidden
+        head :forbidden
       end
     end
 

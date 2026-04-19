@@ -18,7 +18,7 @@ class ApplicationController < ActionController::Base
   def dev_page_cache(*parts, expires_in: 10.seconds)
     return yield unless Rails.env.development?
 
-    Rails.cache.fetch(["dev-page-cache", *parts].join("/"),
+    Rails.cache.fetch([ "dev-page-cache", *parts ].join("/"),
       expires_in: expires_in,
       race_condition_ttl: 1.second) do
       yield

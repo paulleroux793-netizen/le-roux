@@ -67,7 +67,7 @@ RSpec.describe GoogleCalendarService do
         end: zone.parse("2026-04-20 10:00")
       )
       busy_response = double("freebusy_response",
-        calendars: { GoogleCalendarService::CALENDAR_ID => double(busy: [busy_period]) }
+        calendars: { GoogleCalendarService::CALENDAR_ID => double(busy: [ busy_period ]) }
       )
       allow_any_instance_of(Google::Apis::CalendarV3::CalendarService)
         .to receive(:query_freebusy).and_return(busy_response)

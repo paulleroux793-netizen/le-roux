@@ -15,7 +15,7 @@ RSpec.describe AiService do
   end
 
   def mock_claude_response(text)
-    { "content" => [{ "type" => "text", "text" => text }] }
+    { "content" => [ { "type" => "text", "text" => text } ] }
   end
 
   describe "#classify_intent" do

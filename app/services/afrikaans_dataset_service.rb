@@ -17,7 +17,7 @@ class AfrikaansDatasetService
     "cancel"     => %w[Health\ and\ Wellness Work\ or\ Career],
     "urgent"     => %w[Health\ and\ Wellness],
     "faq"        => %w[Health\ and\ Wellness Finance\ and\ Economy],
-    "confirm"    => %w[Health\ and\ Wellness Family\ and\ Relationships],
+    "confirm"    => %w[Health\ and\ Wellness Family\ and\ Relationships]
   }.freeze
 
   class << self

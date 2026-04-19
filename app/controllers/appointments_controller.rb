@@ -348,7 +348,7 @@ class AppointmentsController < ApplicationController
     requested_end = parse_time(params[:calendar_end])
 
     if requested_start.present? && requested_end.present? && requested_end > requested_start
-      return [requested_start, requested_end]
+      return [ requested_start, requested_end ]
     end
 
     anchor = calendar_anchor_date

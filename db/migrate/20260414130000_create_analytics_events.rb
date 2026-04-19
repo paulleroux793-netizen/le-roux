@@ -27,7 +27,7 @@ class CreateAnalyticsEvents < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :analytics_events, [:event_type, :occurred_at]
+    add_index :analytics_events, [ :event_type, :occurred_at ]
     add_index :analytics_events, :occurred_at
   end
 end

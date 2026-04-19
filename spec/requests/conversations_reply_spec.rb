@@ -4,7 +4,7 @@ RSpec.describe 'Conversations reply', type: :request do
   let(:patient) { create(:patient, phone: '+27831234567') }
   let(:conversation) do
     create(:conversation, patient: patient, channel: 'whatsapp', status: 'active',
-           messages: [{ role: 'user', content: 'Hi', timestamp: 1.day.ago.iso8601 }])
+           messages: [ { role: 'user', content: 'Hi', timestamp: 1.day.ago.iso8601 } ])
   end
 
   before do

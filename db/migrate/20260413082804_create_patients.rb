@@ -12,6 +12,6 @@ class CreatePatients < ActiveRecord::Migration[8.1]
     end
 
     add_index :patients, :phone, unique: true
-    add_index :patients, [:last_name, :first_name]
+    add_index :patients, [ :last_name, :first_name ]
   end
 end

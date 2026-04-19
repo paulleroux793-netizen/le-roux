@@ -4,13 +4,13 @@ require 'inertia_rails/rspec'
 RSpec.describe 'Conversations import', type: :request do
   let(:json_file) do
     path = Rails.root.join('tmp', 'request_import.json')
-    File.write(path, JSON.dump([{
+    File.write(path, JSON.dump([ {
       phone: '+27831234567',
       name:  'Emily Clark',
       messages: [
         { from: 'patient', text: 'Hi, need appointment', timestamp: '2024-01-15T10:23:00Z' }
       ]
-    }]))
+    } ]))
     Rack::Test::UploadedFile.new(path, 'application/json')
   end
 

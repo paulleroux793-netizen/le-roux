@@ -25,6 +25,6 @@ module DrLerouxReceptionist
     # config.eager_load_paths << Rails.root.join("extras")
 
     # Session store for Inertia dashboard (middleware already included via rails/all)
-    config.session_store :cookie_store, key: '_dr_leroux_receptionist_session'
+    config.session_store :cookie_store, key: "_dr_leroux_receptionist_session"
   end
 end

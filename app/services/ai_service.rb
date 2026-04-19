@@ -1,6 +1,6 @@
 class AiService
   INTENTS = %w[book reschedule cancel confirm faq objection urgent other].freeze
-  RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504, 529].freeze
+  RETRYABLE_STATUS_CODES = [ 429, 500, 502, 503, 504, 529 ].freeze
   MAX_RETRIES = 0
 
   PRICING = {
@@ -87,7 +87,7 @@ class AiService
       model: "claude-sonnet-4-20250514",
       max_tokens: 256,
       system: entity_extraction_prompt,
-      messages: [{ role: "user", content: message }]
+      messages: [ { role: "user", content: message } ]
     )
 
     parse_entities_response(response)

@@ -125,7 +125,7 @@ class GoogleCalendarService
     request = Google::Apis::CalendarV3::FreeBusyRequest.new(
       time_min: time_min,
       time_max: time_max,
-      items: [{ id: CALENDAR_ID }]
+      items: [ { id: CALENDAR_ID } ]
     )
 
     response = @service.query_freebusy(request)
@@ -170,7 +170,7 @@ class GoogleCalendarService
   end
 
   def build_description(patient, reason)
-    parts = ["Patient: #{patient.full_name}", "Phone: #{patient.phone}"]
+    parts = [ "Patient: #{patient.full_name}", "Phone: #{patient.phone}" ]
     parts << "Reason: #{reason}" if reason.present?
     parts.join("\n")
   end

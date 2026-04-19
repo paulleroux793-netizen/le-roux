@@ -22,14 +22,14 @@ Rails.application.routes.draw do
   get "dashboard", to: "pages#dashboard"
 
   # Dashboard pages
-  resources :appointments, only: [:index, :show, :create, :update] do
+  resources :appointments, only: [ :index, :show, :create, :update ] do
     member do
       patch :cancel
       patch :confirm
     end
   end
-  resources :patients, only: [:index, :show, :create, :update]
-  resources :conversations, only: [:index, :show] do
+  resources :patients, only: [ :index, :show, :create, :update ]
+  resources :conversations, only: [ :index, :show ] do
     collection do
       post :import
       get :export_tagged
@@ -47,7 +47,7 @@ Rails.application.routes.draw do
        to: "reminders#send_reminder",
        as: :send_reminder
 
-  resources :notifications, only: [:index] do
+  resources :notifications, only: [ :index ] do
     member do
       patch :mark_read
     end

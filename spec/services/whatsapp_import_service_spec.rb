@@ -51,10 +51,10 @@ RSpec.describe WhatsappImportService do
     end
 
     it 'is idempotent — re-running the same file updates instead of duplicating' do
-      payload = [{
+      payload = [ {
         phone: '+27831234567', name: 'Emily Clark',
-        messages: [{ from: 'patient', text: 'Hi', timestamp: '2024-01-15T10:23:00Z' }]
-      }]
+        messages: [ { from: 'patient', text: 'Hi', timestamp: '2024-01-15T10:23:00Z' } ]
+      } ]
       File.write(path, JSON.dump(payload))
 
       described_class.import_file(path.to_s)
@@ -67,10 +67,10 @@ RSpec.describe WhatsappImportService do
 
     it 'reuses an existing patient matched by phone' do
       existing = create(:patient, phone: '+27831234567', first_name: 'Existing', last_name: 'Person')
-      File.write(path, JSON.dump([{
+      File.write(path, JSON.dump([ {
         phone: '+27831234567', name: 'Emily Clark',
-        messages: [{ from: 'patient', text: 'Hello', timestamp: '2024-01-15T10:23:00Z' }]
-      }]))
+        messages: [ { from: 'patient', text: 'Hello', timestamp: '2024-01-15T10:23:00Z' } ]
+      } ]))
 
       expect { described_class.import_file(path.to_s) }.not_to change(Patient, :count)
       expect(Conversation.last.patient_id).to eq(existing.id)
@@ -79,7 +79,7 @@ RSpec.describe WhatsappImportService do
     it 'records errors for malformed threads without aborting the batch' do
       File.write(path, JSON.dump([
         { phone: nil, messages: [] },  # bad
-        { phone: '+27831112222', name: 'OK', messages: [{ from: 'patient', text: 'hi', timestamp: '2024-01-15T10:00:00Z' }] }
+        { phone: '+27831112222', name: 'OK', messages: [ { from: 'patient', text: 'hi', timestamp: '2024-01-15T10:00:00Z' } ] }
       ]))
 
       result = described_class.import_file(path.to_s)

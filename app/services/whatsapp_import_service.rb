@@ -256,7 +256,7 @@ class WhatsappImportService
 
     # Drop the internal _sender key before returning.
     messages.each { |msg| msg.delete(:_sender) }
-    [messages, last_other]
+    [ messages, last_other ]
   end
 
   def persist_thread(phone:, name:, topic:, started:, messages:)
@@ -305,10 +305,10 @@ class WhatsappImportService
 
   def split_name(display_name, phone_fallback)
     name = display_name.to_s.strip
-    return ["Unknown", phone_fallback] if name.blank?
+    return [ "Unknown", phone_fallback ] if name.blank?
 
     parts = name.split(/\s+/, 2)
-    [parts.first, parts[1].presence || "(imported)"]
+    [ parts.first, parts[1].presence || "(imported)" ]
   end
 
   def normalize_phone(phone)

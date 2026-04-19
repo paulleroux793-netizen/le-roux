@@ -11,7 +11,7 @@ namespace :whatsapp do
   # See WhatsappImportService for the JSON schema and .txt format
   # expectations.
   desc "Import historical WhatsApp chats from a JSON or TXT export"
-  task :import, [:path, :owner_name, :patient_phone] => :environment do |_, args|
+  task :import, [ :path, :owner_name, :patient_phone ] => :environment do |_, args|
     path = args[:path]
     abort "Usage: rails 'whatsapp:import[path,owner_name?,patient_phone?]'" if path.blank?
 

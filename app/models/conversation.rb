@@ -15,10 +15,10 @@ class Conversation < ApplicationRecord
   scope :recent, -> { order(updated_at: :desc) }
   scope :live,     -> { where(source: "live") }
   scope :imported, -> { where(source: "import") }
-  scope :tagged, ->(tag) { where("tags @> ?", [tag].to_json) }
+  scope :tagged, ->(tag) { where("tags @> ?", [ tag ].to_json) }
 
   def add_message(role:, content:, timestamp: Time.current)
-    add_messages([{ role: role, content: content, timestamp: timestamp }])
+    add_messages([ { role: role, content: content, timestamp: timestamp } ])
   end
 
   def add_messages(entries)

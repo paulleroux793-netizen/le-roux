@@ -149,7 +149,7 @@ class WhatsappService
     "checkup"               => 45.minutes,
     "examination"           => 45.minutes,
     "cosmetic consultation" => 45.minutes,
-    "cosmetic"              => 45.minutes,
+    "cosmetic"              => 45.minutes
   }.freeze
   DEFAULT_DURATION = 30.minutes
 

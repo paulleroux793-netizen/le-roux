@@ -56,7 +56,7 @@ RSpec.describe 'Search', type: :request do
 
     it 'finds appointments by reason' do
       get '/search', params: { q: 'Root canal' }
-      expect(response.parsed_body['appointments'].map { |a| a['id'] }).to eq([alice_appt.id])
+      expect(response.parsed_body['appointments'].map { |a| a['id'] }).to eq([ alice_appt.id ])
     end
 
     it 'finds conversations by patient name' do

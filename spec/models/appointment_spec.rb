@@ -20,7 +20,7 @@ RSpec.describe Appointment, type: :model do
       create(:appointment, :cancelled, start_time: 3.days.from_now, end_time: 3.days.from_now + 30.minutes)
       create(:appointment, start_time: 1.day.ago, end_time: 1.day.ago + 30.minutes)
 
-      expect(described_class.upcoming).to eq([sooner, later])
+      expect(described_class.upcoming).to eq([ sooner, later ])
     end
   end
 end

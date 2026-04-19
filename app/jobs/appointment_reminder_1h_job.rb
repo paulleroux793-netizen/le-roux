@@ -11,7 +11,7 @@ class AppointmentReminder1hJob < ApplicationJob
     window_end   = 75.minutes.from_now
 
     appointments = Appointment
-      .where(status: [:scheduled, :confirmed])
+      .where(status: [ :scheduled, :confirmed ])
       .where(start_time: window_start..window_end)
       .includes(:patient)
       .order(:start_time)

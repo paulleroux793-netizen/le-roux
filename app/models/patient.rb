@@ -1,7 +1,7 @@
 class Patient < ApplicationRecord
   AUTO_CREATED_PLACEHOLDER_NAMES = [
-    ["WhatsApp", "Patient"],
-    ["Phone", "Caller"]
+    [ "WhatsApp", "Patient" ],
+    [ "Phone", "Caller" ]
   ].freeze
 
   has_many :appointments, dependent: :destroy
@@ -46,7 +46,7 @@ class Patient < ApplicationRecord
   end
 
   def auto_created_placeholder_profile?
-    AUTO_CREATED_PLACEHOLDER_NAMES.include?([first_name, last_name]) &&
+    AUTO_CREATED_PLACEHOLDER_NAMES.include?([ first_name, last_name ]) &&
       email.blank? &&
       date_of_birth.blank? &&
       notes.blank? &&

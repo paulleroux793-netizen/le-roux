@@ -37,7 +37,6 @@ RSpec.describe 'Reminders', type: :request do
       expect(match).to be_present
       expect(match[:reminder_status]).to eq("Confirmed")
     end
-
   end
 
   describe 'POST /reminders/:appointment_id/send' do

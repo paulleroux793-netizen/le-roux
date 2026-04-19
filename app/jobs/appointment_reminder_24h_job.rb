@@ -4,7 +4,7 @@ class AppointmentReminder24hJob < ApplicationJob
   def perform
     tomorrow     = Date.tomorrow
     appointments = Appointment
-      .where(status: [:scheduled, :confirmed])
+      .where(status: [ :scheduled, :confirmed ])
       .where(start_time: tomorrow.all_day)
       .includes(:patient)
       .order(:start_time)
