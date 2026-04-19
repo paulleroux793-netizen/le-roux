@@ -626,6 +626,124 @@ Production-grade error surfaces: custom 404/422/500 pages via Inertia, React err
 - [ ] Verify "Back to Dashboard" returns to root
 - [ ] Run `bundle exec rspec` — 0 failures
 
+## Phase 9.18: Production Implementation Pass
+
+Full production-grade hardening sprint covering PDF bot processing, audit trail, conversation improvements, settings persistence, calendar cleanup, reminder automation, voice documentation, and README.
+
+### 9.18.1 — PDF Processing for Bot *(implement first)*
+- [x] Audit `whatsapp_controller.rb` — `NumMedia`/`MediaUrl0` captured but never processed
+- [x] `WhatsappService#handle_incoming`: extract PDF/image attachments from `twilio_params` when `NumMedia > 0`
+- [x] `WhatsappService#download_media`: download media from Twilio CDN using HTTP basic auth (AccountSid:AuthToken)
+- [x] `AiService#process_message`: accept `media_attachments:` kwarg; pass to `generate_response`
+- [x] `AiService#generate_response`: when PDF present, build message content as array with document block + text block (Claude document API)
+- [x] `WhatsappReplyJob`: extract `NumMedia` + `MediaUrl0`/`MediaContentType0` from `twilio_params`, pass to service
+- [x] Graceful fallback: if PDF download fails, continue without document and log warning
+- [ ] **Requires**: `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` env vars (already required elsewhere)
+- [ ] Manual test: send PDF via WhatsApp sandbox → bot responds with content-aware reply
+
+### 9.18.2 — Audit Trail Dashboard Page *(implement second)*
+- [x] Migration: `create_audit_logs` table — action, resource_type, resource_id, summary, details (jsonb), performed_by, ip_address, created_at
+- [x] `AuditLog` model with scopes (by_action, by_resource, by_date_range) and indexes
+- [x] `AuditService` module: `AuditService.log(action:, summary:, resource:, details:, performed_by:, ip_address:)` — never raises
+- [x] Wire `AuditService.log` into `AppointmentsController`: create, update (reschedule), cancel, confirm
+- [x] Wire into `PatientsController`: create, update
+- [x] Wire into `ConversationsController#reply`
+- [x] Wire into `WhatsappReplyJob` (system action on every inbound message processed)
+- [x] `AuditLogsController#index` — filterable by action, resource_type, date range, free-text search; paginated
+- [x] `AuditLogsController#export` — CSV download with all columns
+- [x] Route: `get 'audit_log', to: 'audit_logs#index'` + `get 'audit_log/export', to: 'audit_logs#export'`
+- [x] `AuditLog.jsx` — DataTable page: timestamp, action badge, resource, summary, performed_by; filters; Export CSV button
+- [x] Add "Audit Log" to sidebar navigation (DashboardLayout)
+- [x] Translations: EN + AF keys for new page
+
+### 9.18.3 — Username Navbar Spacing *(already complete)*
+- [x] Added `whitespace-nowrap` to doctor name span — committed in da17bcb
+
+### 9.18.4 — Conversation UI: Brand Color Alignment
+- [x] `ConversationShow.jsx`: replace `sky-600`/`sky-50`/`sky-100` with brand tokens (`brand-primary`, `brand-surface`, `brand-accent`)
+- [x] Clinic (assistant) bubbles: `bg-brand-primary text-white`
+- [x] Patient (user) bubbles: `bg-white border border-brand-border text-brand-ink`
+- [x] Header chips, links, tags: replace sky palette with brand tokens throughout
+
+### 9.18.5 — Conversation Composer Modernization
+- [x] Redesign `ConversationShow.jsx` composer as a single unified card
+- [x] Text area + action icons inside one cohesive bordered container with focus ring
+- [x] Paper clip icon for document attachment; Send icon inside container (not separate button)
+- [x] Polished focus states, icon alignment, spacing
+
+### 9.18.6 — Admin Invoice/Statement Sending from Conversations *(deferred)*
+- [ ] `ConversationShow.jsx`: "Send Document" button in header action area
+- [ ] `DocumentSendModal.jsx`: file picker (PDF only), subject line, delivery method (Email / WhatsApp MMS)
+- [ ] Backend: `ConversationsController#send_document` — validates file, emails attachment to patient, logs to audit trail
+- [ ] Route: `post '/conversations/:id/send_document'`
+- [ ] **WhatsApp MMS**: requires Twilio media URL (file must be publicly hosted)
+
+### 9.18.7 — Calendar UI Cleanup
+- [x] `AppointmentCalendar.jsx`: reduce `contentHeight`, simplify toolbar (remove redundant buttons)
+- [x] Cleaner event cards (tighter padding, clear time hierarchy)
+- [x] Remove FullCalendar grid overflow causing excessive vertical space
+- [x] Toolbar pill buttons match brand token system
+
+### 9.18.8 — Settings: Editable Practice Details & Pricing
+- [x] Migration: `create_practice_settings` — name, address, phone, email, map_link, price_consultation, price_cleaning, price_checkup
+- [x] `PracticeSettings` model: singleton pattern (`PracticeSettings.current`), seeded from existing constants
+- [x] `SettingsController#update_practice` — PATCH `/settings/practice`, validates params, persists
+- [x] `SettingsController#update_pricing` — PATCH `/settings/pricing`, validates pricing fields > 0
+- [ ] `AiService::PRICING` and `WhatsappService::PRACTICE_ADDRESS` now delegate to `PracticeSettings.instance` at runtime *(not yet — constants still used in bot prompts)*
+- [x] `Settings.jsx`: Practice Info tab becomes editable form with validation, loading, success/error states
+- [x] `Settings.jsx`: Pricing section becomes editable with per-field validation
+- [x] Cache bust on practice/pricing update
+
+### 9.18.9 — Appointments List: Remove Patient Initials Avatar
+- [x] `Appointments.jsx`: remove the `h-9 w-9` initials circle from the patient name column
+- [x] Display patient name + phone without avatar (clean, scannable)
+
+### 9.18.10 — Appointment Reminder Auto-Cancel
+- [x] Create `AppointmentNoConfirmationJob` — runs daily at 07:00 SAST (05:00 UTC)
+- [x] Finds appointments today with status `:scheduled` (not `:confirmed`) where a 24h reminder was sent
+- [x] Auto-cancels each: sets `status = :cancelled`, creates `CancellationReason` (category: "auto_cancelled", details: "Patient did not confirm 24h reminder")
+- [x] Sends WhatsApp free-form message to patient: "Your appointment today was cancelled because we did not receive a confirmation. Please reply to rebook."
+- [x] Releases slot: cancelled appointments are excluded from `slot_conflicts_locally?` (already works this way)
+- [x] Creates `AuditLog` entry (performed_by: "system")
+- [x] Register in `config/queue.yml` recurring tasks: `0 5 * * 1-5` (07:00 SAST Mon–Fri)
+
+### 9.18.11 — Reschedule Flow from Reminder *(deferred)*
+- [ ] `WhatsappService`: when patient replies "RESCHEDULE" to a reminder (detected via intent), clear old slot and search for new one via `AvailabilityService`
+- [ ] Old slot freed immediately on reschedule (cancelled appointments excluded from conflict check)
+- [ ] New slot validated via `attempt_booking` (working hours + conflict check) before confirmation
+- [ ] Confirmation message includes old vs new appointment details
+
+### 9.18.12 — Voice Functionality Audit & Documentation
+- [ ] Read `VoiceService` + `VoiceController` and test each endpoint path
+- [ ] Document working vs missing: call flow, speech gather, TTS response, confirmation outbound
+- [ ] **Known gap**: `status` callback does not update `Appointment` or `Conversation` records
+- [ ] **Requires to work**: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, Twilio voice-capable number, `ANTHROPIC_API_KEY` (for TTS/STT-style processing)
+- [ ] Update README with voice setup instructions
+- [ ] Update roadmap to reflect voice status
+
+### 9.18.13 — README: Production-Grade Documentation
+- [x] All required `.env` variables with descriptions and examples
+- [x] Local setup steps (ruby, bundler, postgres, env, migrations, seed)
+- [x] Background job / Solid Queue setup
+- [x] Webhook setup via ngrok
+- [x] Twilio WhatsApp + Voice configuration
+- [x] Google Calendar service account setup
+- [x] AI/Claude API key setup
+- [x] Email (SMTP) setup
+- [x] SMS (Twilio SMS) setup
+- [x] Common troubleshooting
+
+### 9.18.14 — Production Safety Pass & 9.15.10 E2E Verification *(final step)*
+- [ ] Run full `bundle exec rspec` — 0 new failures
+- [ ] Run `npx vite build` — 0 errors
+- [ ] Manually verify: appointment create/edit/cancel/confirm flows
+- [ ] Manually verify: patient create/edit
+- [ ] Manually verify: audit log page loads, filters work, CSV export downloads
+- [ ] Manually verify: settings edit (practice + pricing) persists and reflects in AI prompts
+- [ ] Manually verify: conversation colors consistent, composer polished
+- [ ] Document voice gaps in README
+- [ ] Mark 9.15.10 complete only after full pass
+
 ## Phase 10: Import Historical WhatsApp Chats
 
 The dashboard should be useful from day one, not just for future conversations. This phase backfills the database with real historical data by importing exported WhatsApp chats through the dashboard.
