@@ -1,4 +1,4 @@
-class NoResponseFollowUpJob < ApplicationJob
+class NoResponseFollowupJob < ApplicationJob
   queue_as :default
 
   # How long after the last bot message before each follow-up fires.

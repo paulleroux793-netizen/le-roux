@@ -38,6 +38,6 @@ production:
 
     # No-response follow-up every 5 minutes
     no_response_followup:
-      class: NoResponseFollowUpJob
+      class: NoResponseFollowupJob
       schedule: "*/5 * * * *"
       queue: default
