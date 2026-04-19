@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
-import { CalendarRange, Search, Sparkles } from 'lucide-react'
+import { CalendarRange, Search } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -195,81 +195,53 @@ export default function AppointmentCalendar({
 
   return (
     <div className="appointment-calendar overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
-      <div className="border-b border-brand-border bg-gradient-to-br from-brand-surface via-white to-white px-6 py-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white/90 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
-              <Sparkles size={12} />
-              Booking desk
-            </div>
-            <div>
-              <h2 className="text-[1.9rem] font-semibold tracking-tight text-brand-ink">
-                Clinic booking calendar
-              </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-brand-muted">
-                Review live bookings, drag appointments to new times, and keep reception aligned with the diary at a glance.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 xl:min-w-[360px] xl:items-end">
-            <div className="relative w-full max-w-md">
-              <Search
-                size={16}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-brand-muted"
-              />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search patient, phone, reason…"
-                className="w-full rounded-2xl border border-brand-border bg-white px-11 py-3 text-sm text-brand-ink placeholder:text-brand-muted focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-primary/20"
-              />
-              {search && (
-                <button
-                  type="button"
-                  onClick={() => setSearch('')}
-                  aria-label="Clear search"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-xs font-medium text-brand-muted transition hover:bg-brand-surface hover:text-brand-ink"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <MetaChip icon={CalendarRange}>
-                {filtered.length} visible bookings
-              </MetaChip>
-              <MetaChip>
-                {appointments.length} in loaded window
-              </MetaChip>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-b border-brand-border bg-white px-6 py-4">
-        <div className="flex flex-wrap gap-2.5">
-          {statusSummary.map((item) => (
-            <div
-              key={item.status}
-              className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-brand-surface px-3 py-1.5 text-xs font-medium text-brand-muted"
+      {/* Compact toolbar: search + legend */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-border bg-brand-surface px-4 py-3">
+        {/* Search */}
+        <div className="relative w-full max-w-xs">
+          <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search patient, phone, reason…"
+            className="w-full rounded-lg border border-brand-border bg-white py-1.5 pl-9 pr-8 text-sm text-brand-ink placeholder:text-brand-muted focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-brand-muted hover:text-brand-ink"
             >
-              <span className={`h-2.5 w-2.5 rounded-full ${item.dot}`} />
-              <span>{item.label}</span>
-              <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold text-brand-ink">
-                {item.count}
-              </span>
-            </div>
+              ×
+            </button>
+          )}
+        </div>
+
+        {/* Legend pills */}
+        <div className="flex flex-wrap gap-1.5">
+          {statusSummary.filter(i => i.count > 0).map((item) => (
+            <span
+              key={item.status}
+              className="inline-flex items-center gap-1.5 rounded-full border border-brand-border bg-white px-2.5 py-1 text-[11px] font-medium text-brand-muted"
+            >
+              <span className={`h-2 w-2 rounded-full ${item.dot}`} />
+              {item.label}
+              <span className="font-semibold text-brand-ink">{item.count}</span>
+            </span>
           ))}
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-border bg-white px-2.5 py-1 text-[11px] font-medium text-brand-muted">
+            <CalendarRange size={11} className="text-brand-primary" />
+            {filtered.length} shown
+          </span>
         </div>
       </div>
 
-      <div className="px-4 pb-5 pt-5 md:px-6">
+      <div className="px-4 pb-4 pt-3 md:px-5">
         {search && filtered.length === 0 && (
-          <div className="mb-4 rounded-2xl border border-dashed border-brand-border bg-brand-surface px-4 py-3 text-sm text-brand-muted">
-            No appointments in this calendar window match your current search.
+          <div className="mb-3 rounded-lg border border-dashed border-brand-border bg-brand-surface px-4 py-2.5 text-sm text-brand-muted">
+            No appointments match your search.
           </div>
         )}
 
@@ -292,11 +264,11 @@ export default function AppointmentCalendar({
         datesSet={handleDatesSet}
         eventContent={renderEventContent}
         slotMinTime="08:00:00"
-        slotMaxTime="18:00:00"
+        slotMaxTime="17:30:00"
         allDaySlot={false}
         nowIndicator
-        expandRows
-        height="auto"
+        expandRows={false}
+        height={600}
         stickyHeaderDates
         slotDuration="00:30:00"
         weekends={false}
@@ -313,11 +285,3 @@ export default function AppointmentCalendar({
   )
 }
 
-function MetaChip({ children, icon: Icon }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-brand-border bg-white px-3 py-1.5 text-xs font-medium text-brand-muted shadow-sm">
-      {Icon ? <Icon size={13} className="text-brand-primary" /> : null}
-      {children}
-    </span>
-  )
-}
