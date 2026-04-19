@@ -50,6 +50,10 @@ export default function AppointmentCalendar({
   const loadedRangeKeyRef = useRef(null)
   const hasMountedRef = useRef(false)
   const [search, setSearch] = useState('')
+  // Freeze initialDate at mount. FullCalendar treats this as mount-only
+  // but silently navigates when the prop reference changes — which
+  // happens on every Inertia partial reload that updates calendarMeta.
+  const [stableInitialDate] = useState(() => calendarMeta.initial_date)
 
   // Filter appointments client-side by search text. Looks at patient
   // name, phone, reason, and status so a single input covers every
@@ -249,7 +253,7 @@ export default function AppointmentCalendar({
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView={calendarMeta.view || DEFAULT_CALENDAR_VIEW}
-        initialDate={calendarMeta.initial_date}
+        initialDate={stableInitialDate}
         headerToolbar={{
           left: 'title',
           center: '',

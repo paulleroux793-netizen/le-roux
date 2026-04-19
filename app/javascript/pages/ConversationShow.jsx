@@ -109,7 +109,7 @@ export default function ConversationShow({ conversation }) {
         {/* Messages scroller */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-5 py-5 space-y-3 bg-[#DDE8F0]"
+          className="flex-1 overflow-y-auto px-5 py-5 space-y-3 bg-gray-50"
         >
           {conv.messages?.length > 0 ? (
             conv.messages.map((msg, i) => <Bubble key={i} msg={msg} />)
