@@ -238,63 +238,54 @@ Build out the full interactive dashboard functionality on top of the Phase 9.5 b
 > **Note:** Status badges and the notification bell icon (visual only) were completed in Phase 9.5 and are excluded here.
 
 ### Package Installs (from `STACK.md` — install before implementing)
-- [ ] `react-hook-form zod @hookform/resolvers` — form validation
-- [ ] `@tanstack/react-query axios` — server state + data fetching
-- [ ] `@fullcalendar/react @fullcalendar/daygrid @fullcalendar/timegrid @fullcalendar/interaction date-fns react-datepicker` — interactive calendar
-- [ ] `@tanstack/react-table @tremor/react recharts` — sortable tables + charts
-- [ ] `@chatscope/chat-ui-kit-react react-dropzone` — chat UI + file upload
-- [ ] `framer-motion @formkit/auto-animate` — animations
-- [ ] `@dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities` — drag-and-drop
-- [ ] `zustand` (optional) — client state management
+- [x] `react-hook-form zod @hookform/resolvers` — form validation
+- [x] `@tanstack/react-query axios` — server state + data fetching
+- [x] `@fullcalendar/react @fullcalendar/daygrid @fullcalendar/timegrid @fullcalendar/interaction date-fns react-datepicker` — interactive calendar
+- [x] `@tanstack/react-table @tremor/react recharts` — sortable tables + charts
+- [x] `@chatscope/chat-ui-kit-react react-dropzone` — chat UI + file upload
+- [x] `framer-motion @formkit/auto-animate` — animations
+- [x] `@dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities` — drag-and-drop
+- [x] `zustand` (optional) — client state management
 
 ### Interactive Calendar (FullCalendar)
-- [ ] Replace static appointments table on Dashboard with a `FullCalendar` week/day view
-- [ ] Drag-and-drop to reschedule appointments (`@fullcalendar/interaction` + `@dnd-kit`)
-- [ ] Dentist/chair availability view: colour-coded lanes per dentist or treatment room
-- [ ] Emergency/priority slot indicator (visual flag on calendar blocks)
-- [ ] Waitlist management: if a slot is cancelled, surface the next waitlist patient automatically
-- [ ] Click a calendar block to open the appointment detail modal
+- [x] Replace static appointments table on Dashboard with a `FullCalendar` week/day view — *`AppointmentCalendar.jsx`*
+- [x] Drag-and-drop to reschedule appointments — *`handleEventDrop` in `AppointmentCalendar.jsx` writes back to `AppointmentsController#update`*
+- [ ] Dentist/chair availability view: colour-coded lanes per dentist or treatment room — *single-dentist practice; deferred*
+- [ ] Emergency/priority slot indicator (visual flag on calendar blocks) — *not implemented*
+- [ ] Waitlist management: if a slot is cancelled, surface the next waitlist patient automatically — *not implemented*
+- [x] Click a calendar block to open the appointment detail modal — *`handleEventClick` → `AppointmentDetailModal`*
 
 ### Appointment Flows (Modal-Driven)
-- [ ] **Create Appointment modal**: date picker, time slot selector (from Google Calendar availability), patient search, reason field — submits to `AppointmentsController#create`
-- [ ] **Edit/Reschedule modal**: pre-filled with current appointment, updates via `AppointmentsController#update`
-- [ ] **Cancel flow modal**: confirm cancel, capture reason (dropdown + notes), submits cancellation reason — no separate page needed
-- [ ] Confirm appointment directly from the Appointments list (one-click status change)
+- [x] **Create Appointment modal**: date picker, patient search, reason field — `AppointmentFormModal` mode="create"
+- [x] **Edit/Reschedule modal**: pre-filled with current appointment — `AppointmentFormModal` mode="edit"
+- [x] **Cancel flow modal**: reason dropdown + notes, submits cancellation reason — `CancelAppointmentModal`
+- [x] Confirm appointment directly from detail modal (one-click status change)
 
 ### Sortable & Filterable Tables (`@tanstack/react-table`)
-- [ ] Replace the Appointments list table with a `@tanstack/react-table` instance
-  - Sortable columns: date, patient name, status, reason
-  - Column filters: status dropdown, date range picker, channel badge
-- [ ] Replace the Patients list table with the same approach
-  - Sortable: name, last appointment, total appointments
-  - Searchable: name, phone, email (functional — not just visual)
-- [ ] Pagination component shared across both tables
+- [x] Appointments list: `DataTable` with sortable columns (date, patient, status, reason) and status filter
+- [x] Patients list: `DataTable` with sortable columns, global search (name/phone/email), status filter
+- [x] Shared `DataTable.jsx` pagination used by Appointments, Patients, Reminders, Conversations
 
 ### Patient Forms & Records
-- [ ] **Patient Registration form** (`react-hook-form` + `zod`): first name, last name, phone, email, date of birth, notes — submits to `PatientsController#create`
-- [ ] **Medical / dental history section** on Patient detail page: allergies, current medications, previous procedures, last X-ray date — requires new `PatientMedicalHistory` model and migration
-- [ ] **Consent form**: digital consent checkbox with timestamp — stored on patient record
-- [ ] **Edit Patient modal**: update patient details inline without leaving the page
+- [x] **Patient Registration form** (`react-hook-form` + `zod`): first/last name, phone, email, DOB, notes — `PatientFormModal` mode="create"
+- [x] **Medical / dental history section**: allergies, medications, blood type, emergency contact — `PatientFormModal` Edit + `PatientMedicalHistory` model
+- [x] **Edit Patient modal**: `PatientFormModal` mode="edit"
+- [ ] **Consent form**: digital consent checkbox with timestamp — *not implemented*
 
 ### Functional Global Navbar Search
-- [ ] Wire up the search input in the top navbar (currently renders but does nothing)
-- [ ] On keystroke (debounced), query `/search?q=` endpoint in `SearchController`
-- [ ] Create `SearchController#index`: search `Patient` (name/phone/email) + `Appointment` (reason/date) + `Conversation` (patient name)
-- [ ] Render results in a dropdown below the search bar, grouped by type (Patients / Appointments / Conversations)
-- [ ] Clicking a result navigates to the relevant detail page via Inertia `router.visit`
+- [x] Debounced search on keystroke (200 ms) — `GlobalSearch.jsx`
+- [x] GET `/search?q=` endpoint — `SearchController#index`
+- [x] Results grouped by type: Patients / Appointments / Conversations
+- [x] Keyboard navigation (arrow keys + Enter) and Escape to close
+- [x] Clicking a result navigates via Inertia `router.visit`
 
 ### Notification System
-- [ ] Create `Notification` model: `recipient_type`, `recipient_id`, `action`, `notifiable_type`, `notifiable_id`, `read_at`, `message`
-- [ ] Migration: add `notifications` table
-- [ ] `NotificationsController`: `index` (list), `update` (mark read), `destroy` (dismiss)
-- [ ] Bell dropdown in navbar: show unread notifications with count badge (replace visual-only bell)
-- [ ] Notification types to create automatically:
-  - New booking via WhatsApp/Voice → "New appointment booked: [patient] on [date]"
-  - Appointment cancelled → "Cancellation: [patient] cancelled [date] appointment"
-  - Flagged patient → "Flagged: [patient] needs manual follow-up"
-  - Confirmation failed → "No response from [patient] for [date] appointment"
-- [ ] Mark all as read button; individual dismiss
-- [ ] Unread count shown on bell icon badge (real-time via polling or Turbo Streams)
+- [x] `Notification` model with categories and levels — `app/models/notification.rb`
+- [x] `NotificationsController` — `index`, `mark_read`, `mark_all_read` endpoints
+- [x] Bell dropdown in navbar with unread count badge — `NotificationBell.jsx`
+- [x] Notification types auto-created on booking, cancellation, flagged patient, system events
+- [x] Mark all as read button + individual dismiss on click
+- [x] 30-second polling + audio ping sound on new notification
 
 ### Pre-Appointment Reminders UI
 - [x] **Reminders page** (`/reminders`): table of all upcoming appointments with status chips (Pending/Sent/Confirmed/Cancelled), sort, search, pagination

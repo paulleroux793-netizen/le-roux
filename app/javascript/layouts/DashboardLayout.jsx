@@ -166,7 +166,7 @@ export default function DashboardLayout({ children }) {
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary">
                 <span className="text-white text-xs font-semibold select-none">DL</span>
               </div>
-              <span className="hidden text-sm font-medium text-brand-ink sm:block">
+              <span className="hidden whitespace-nowrap text-sm font-medium text-brand-ink sm:block">
                 Dr le Roux
               </span>
               <ChevronDown
