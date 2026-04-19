@@ -219,7 +219,6 @@ export default function Appointments({
 
       {view === 'schedule' ? (
         <AppointmentCalendar
-          key={calendar_appointments.map(a => `${a.id}-${a.status}`).join(',')}
           appointments={calendar_appointments}
           calendarMeta={calendar_meta}
           onEventClick={handleEventClick}
