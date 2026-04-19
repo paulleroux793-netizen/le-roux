@@ -126,37 +126,78 @@ export default function ConversationShow({ conversation }) {
         </div>
 
         {/* Composer */}
-        <form
-          onSubmit={handleSend}
-          className="border-t border-brand-border px-4 py-3 bg-white rounded-b-xl"
-        >
-          {!canReply && (
-            <p className="text-[11px] text-amber-600 mb-2">
-              Replies are only supported on WhatsApp conversations.
-            </p>
-          )}
-          <div className="flex items-end gap-2">
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={!canReply || sending}
-              placeholder={canReply ? 'Type your message… (Enter to send, Shift+Enter for new line)' : 'Cannot reply to this conversation'}
-              rows={1}
-              className="flex-1 resize-none max-h-40 text-sm bg-brand-surface border border-brand-border rounded-xl px-4 py-2.5 text-brand-ink placeholder:text-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-primary/30 focus:border-brand-primary disabled:opacity-50 disabled:cursor-not-allowed"
-            />
+        <MessageComposer
+          body={body}
+          setBody={setBody}
+          onSend={handleSend}
+          onKeyDown={handleKeyDown}
+          canReply={canReply}
+          sending={sending}
+        />
+      </div>
+    </DashboardLayout>
+  )
+}
+
+function MessageComposer({ body, setBody, onSend, onKeyDown, canReply, sending }) {
+  const charCount = body.length
+  const showCounter = charCount > 140
+
+  return (
+    <div className="border-t border-brand-border bg-white rounded-b-xl">
+      {!canReply && (
+        <div className="px-4 pt-3 pb-0">
+          <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Replies are only supported on WhatsApp conversations.
+          </p>
+        </div>
+      )}
+
+      <form onSubmit={onSend} className="px-4 py-3">
+        {/* Unified input + button border group */}
+        <div className={`flex items-end gap-0 rounded-xl border transition-colors ${
+          canReply
+            ? 'border-brand-border focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20'
+            : 'border-brand-border opacity-50'
+        } bg-white overflow-hidden`}>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={onKeyDown}
+            disabled={!canReply || sending}
+            placeholder="Type your message…"
+            rows={2}
+            className="flex-1 resize-none max-h-36 min-h-[56px] text-sm bg-transparent px-4 py-3 text-brand-ink placeholder:text-brand-muted focus:outline-none disabled:cursor-not-allowed"
+          />
+          <div className="flex flex-col items-center justify-end pb-2.5 pr-2.5 gap-1">
             <button
               type="submit"
               disabled={!canReply || sending || !body.trim()}
-              className="w-10 h-10 rounded-xl bg-brand-primary text-white flex items-center justify-center hover:bg-brand-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0 shadow-sm"
+              className="h-9 w-9 rounded-lg bg-brand-primary text-white flex items-center justify-center hover:bg-brand-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-sm flex-shrink-0"
               aria-label="Send reply"
             >
-              <Send size={16} />
+              {sending ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <Send size={15} />
+              )}
             </button>
           </div>
-        </form>
-      </div>
-    </DashboardLayout>
+        </div>
+
+        {/* Footer hint row */}
+        <div className="mt-1.5 flex items-center justify-between px-0.5">
+          <p className="text-[11px] text-brand-muted">
+            Enter to send · Shift+Enter for new line
+          </p>
+          {showCounter && (
+            <p className={`text-[11px] font-medium ${charCount > 1024 ? 'text-brand-danger' : 'text-brand-muted'}`}>
+              {charCount}
+            </p>
+          )}
+        </div>
+      </form>
+    </div>
   )
 }
 
