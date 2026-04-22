@@ -7,6 +7,7 @@ Rails.application.routes.draw do
 
   # Webhooks
   namespace :webhooks do
+    get  "whatsapp", to: proc { [200, {}, ["OK"]] }
     post "whatsapp", to: "whatsapp#incoming"
 
     # Voice call webhooks
