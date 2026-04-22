@@ -15,6 +15,8 @@ class AdminWhatsappService
     • *help* — show this message
   HELP
 
+  GREETINGS = %w[hi hello hey hallo howzit morning afternoon evening].freeze
+
   def self.admin?(phone)
     normalize(phone) == normalize(ADMIN_NUMBER)
   end
@@ -23,7 +25,7 @@ class AdminWhatsappService
     cmd = message.strip.downcase
 
     case cmd
-    when "help"
+    when "help", *GREETINGS
       send_reply(HELP_TEXT)
     when "show"
       instructions = settings.admin_instructions.presence
