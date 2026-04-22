@@ -291,6 +291,21 @@ class PromptBuilder
       prompt += "\n## Extracted Info: #{@context[:entities].compact.to_json}"
     end
 
+    admin_instructions = PracticeSettings.instance.admin_instructions.presence
+    if admin_instructions
+      prompt += <<~ADMIN
+
+        ############################################################
+        ## CUSTOM INSTRUCTIONS FROM PRACTICE OWNER (HIGHEST PRIORITY)
+        ############################################################
+        The following instructions have been set by the practice owner and
+        OVERRIDE any conflicting default behaviour above:
+
+        #{admin_instructions}
+        ############################################################
+      ADMIN
+    end
+
     prompt
   end
 

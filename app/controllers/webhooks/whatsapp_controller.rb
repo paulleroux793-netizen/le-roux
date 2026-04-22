@@ -21,6 +21,13 @@ module Webhooks
 
       message = button_payload.presence || body
 
+      # Admin commands from Paul Le Roux are handled synchronously and bypass the AI.
+      if AdminWhatsappService.admin?(sender)
+        AdminWhatsappService.new.handle(message)
+        respond_with_empty_twiml
+        return
+      end
+
       # Enqueue async processing — reply comes via Twilio REST API
       WhatsappReplyJob.perform_later(
         from: sender,

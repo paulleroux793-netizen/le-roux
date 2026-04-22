@@ -21,7 +21,16 @@ class AppointmentReminder24hJob < ApplicationJob
       # Send WhatsApp reminder with confirmation request
       begin
         if template_service
-          send_confirmation_request(template_service, appointment)
+          # Use the approved template so outbound messages work outside Twilio's
+          # 24-hour session window (free-form send_text fails with error 63016).
+          template_service.send_confirmation_request_with_buttons(appointment.patient, appointment)
+          appointment.confirmation_logs.create!(
+            method:   "whatsapp",
+            outcome:  nil,
+            attempts: (appointment.confirmation_logs.count + 1),
+            flagged:  false,
+            notes:    "24h reminder sent"
+          )
           Rails.logger.info("[Reminder24h] WhatsApp sent to #{appointment.patient.phone} (appointment #{appointment.id})")
         end
       rescue StandardError => e
@@ -44,42 +53,5 @@ class AppointmentReminder24hJob < ApplicationJob
         Rails.logger.error("[Reminder24h] SMS failed for appointment #{appointment.id}: #{e.message}")
       end
     end
-  end
-
-  private
-
-  def send_confirmation_request(template_service, appointment)
-    patient = appointment.patient
-    day_name = appointment.start_time.strftime("%A")
-    date_str = appointment.start_time.strftime("%-d %B %Y")
-    time_str = appointment.start_time.strftime("%H:%M")
-
-    body = <<~MSG.strip
-      Hi #{patient.first_name},
-
-      This is a friendly reminder that you have an appointment tomorrow:
-
-      #{day_name}
-      #{date_str}
-      #{time_str}
-
-      Will you still be attending? Please reply:
-      *YES* — to confirm
-      *NO* — to cancel
-
-      If you need to reschedule, just let us know your preferred day and time.
-
-      Dr Chalita & team
-    MSG
-
-    template_service.send_text(patient.phone, body)
-
-    appointment.confirmation_logs.create!(
-      method: "whatsapp",
-      outcome: nil,
-      attempts: (appointment.confirmation_logs.count + 1),
-      flagged: false,
-      notes: "24h reminder sent"
-    )
   end
 end
