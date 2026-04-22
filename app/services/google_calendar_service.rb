@@ -83,6 +83,18 @@ class GoogleCalendarService
     raise Error, "Failed to reschedule: #{e.message}"
   end
 
+  # Marks a Google Calendar event as confirmed — updates summary prefix and
+  # colour so the doctor can see at a glance which slots are locked in.
+  def confirm_appointment(event_id)
+    event = @service.get_event(CALENDAR_ID, event_id)
+    event.summary = "[CONFIRMED] #{event.summary}" unless event.summary.to_s.start_with?("[CONFIRMED]")
+    event.color_id = "2" # Sage green in Google Calendar
+    @service.update_event(CALENDAR_ID, event_id, event)
+  rescue Google::Apis::ClientError => e
+    raise NotFoundError, "Event not found: #{e.message}" if e.status_code == 404
+    raise Error, "Failed to confirm appointment on calendar: #{e.message}"
+  end
+
   # Cancels an appointment on Google Calendar and updates local record.
   def cancel_appointment(event_id, reason_category: nil, reason_details: nil)
     @service.delete_event(CALENDAR_ID, event_id)

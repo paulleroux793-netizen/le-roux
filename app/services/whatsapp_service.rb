@@ -7,6 +7,11 @@ class WhatsappService
   # Supported MIME types for Claude document API.
   SUPPORTED_MEDIA_TYPES = %w[application/pdf image/jpeg image/png image/gif image/webp].freeze
 
+  # Payloads sent by WhatsApp quick-reply buttons in the confirmation request.
+  # When a patient taps a button Twilio delivers these as the inbound Body.
+  BUTTON_CONFIRM_PAYLOAD    = "CONFIRM APPOINTMENT".freeze
+  BUTTON_RESCHEDULE_PAYLOAD = "RESCHEDULE APPOINTMENT".freeze
+
   def initialize
     @ai = nil
     @templates = nil
@@ -36,6 +41,15 @@ class WhatsappService
 
     # Detect and persist language from the first message
     detect_and_persist_language(conversation, message)
+
+    # Button-reply fast path — intercepts quick-reply payloads before the AI
+    # so "CONFIRM APPOINTMENT" / "RESCHEDULE APPOINTMENT" never waste an API call.
+    button_result = build_button_payload_result(message: message, conversation: conversation)
+    if button_result
+      persist_exchange(conversation, message, button_result[:response])
+      handle_intent(button_result, patient, conversation)
+      return button_result
+    end
 
     fast_path_result = build_local_result(message: message, conversation: conversation)
 
@@ -113,6 +127,8 @@ class WhatsappService
       handle_cancellation(result, patient, conversation)
     when "confirm"
       handle_confirmation(patient)
+    when "confirm_upcoming"
+      handle_upcoming_confirmation(patient)
     when "urgent"
       handle_urgent(patient, conversation)
     end
@@ -482,6 +498,62 @@ class WhatsappService
       attempts: 1,
       flagged: false
     )
+  end
+
+  # Confirms the patient's next upcoming appointment (used for button-reply
+  # confirmations where the appointment may be tomorrow, not today).
+  # The existing handle_confirmation targets same-day appointments for the
+  # voice/manual-reply flow and is left unchanged.
+  def handle_upcoming_confirmation(patient)
+    appointment = patient.appointments
+      .where(status: :scheduled)
+      .where("start_time > ?", Time.current)
+      .order(:start_time)
+      .first
+
+    return unless appointment
+
+    appointment.confirmed!
+
+    appointment.confirmation_logs.create!(
+      method:   "whatsapp",
+      outcome:  "confirmed",
+      attempts: 1,
+      flagged:  false,
+      notes:    "Confirmed via WhatsApp button"
+    )
+
+    mark_appointment_confirmed_on_calendar(appointment)
+  end
+
+  # Detects whether the inbound message is a quick-reply button tap and
+  # returns a pre-built result hash, bypassing the AI entirely.
+  # Returns nil for any other message so the normal flow continues.
+  def build_button_payload_result(message:, conversation:)
+    lang   = conversation&.language || "en"
+    body   = message.to_s.strip.upcase
+
+    if body == BUTTON_CONFIRM_PAYLOAD
+      response = lang == "af" ?
+        "Uitstekend! Jou afspraak is bevestig. Ons sien jou môre! 😊" :
+        "Great! Your appointment is confirmed. We'll see you tomorrow! 😊"
+      { response: response, intent: "confirm_upcoming", entities: {} }
+
+    elsif body == BUTTON_RESCHEDULE_PAYLOAD
+      response = lang == "af" ?
+        "Geen probleem! Stuur asseblief jou voorkeur datum en tyd en ons sal dit reël." :
+        "No problem! Please send your preferred date and time and we'll arrange that for you."
+      { response: response, intent: "reschedule", entities: {} }
+    end
+  end
+
+  # Best-effort Google Calendar update when appointment is confirmed.
+  def mark_appointment_confirmed_on_calendar(appointment)
+    return unless appointment.google_event_id
+
+    GoogleCalendarService.new.confirm_appointment(appointment.google_event_id)
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] Google Calendar confirm sync skipped: #{e.message}")
   end
 
   # --- Urgent Flow ---

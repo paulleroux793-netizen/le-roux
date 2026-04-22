@@ -8,7 +8,8 @@ class WhatsappTemplateService
       reminder_1h: ENV.fetch("WHATSAPP_TPL_REMINDER_1H", ""),
       cancellation: ENV.fetch("WHATSAPP_TPL_CANCELLATION", ""),
       reschedule: ENV.fetch("WHATSAPP_TPL_RESCHEDULE", ""),
-      flagged_alert: ENV.fetch("WHATSAPP_TPL_FLAGGED_ALERT", "")
+      flagged_alert: ENV.fetch("WHATSAPP_TPL_FLAGGED_ALERT", ""),
+      confirm_request: ENV.fetch("WHATSAPP_TPL_CONFIRM_REQUEST", "")
     }
   end
 
@@ -92,6 +93,24 @@ class WhatsappTemplateService
     raise Error, "Failed to send WhatsApp message: #{e.message}"
   end
 
+  # Send interactive confirmation request for an upcoming appointment.
+  # Uses a Twilio quick-reply template (WHATSAPP_TPL_CONFIRM_REQUEST) when
+  # configured — buttons payload "CONFIRM_APPOINTMENT" / "RESCHEDULE_APPOINTMENT".
+  # Falls back to a formatted free-form text message if the template SID is not set.
+  # Variables: {{1}} patient_name, {{2}} date, {{3}} time
+  def send_confirmation_request_with_buttons(patient, appointment)
+    content_sid = self.class.templates[:confirm_request]
+    if content_sid.present?
+      send_template(:confirm_request, patient.phone, {
+        "1" => patient.first_name,
+        "2" => appointment.start_time.strftime("%A, %b %d"),
+        "3" => appointment.start_time.strftime("%I:%M %p")
+      })
+    else
+      send_confirmation_request_text(patient, appointment)
+    end
+  end
+
   # Send flagged patient alert to reception
   # Variables: {{1}} patient_name, {{2}} phone, {{3}} reason
   def send_flagged_alert(patient, reason)
@@ -104,6 +123,32 @@ class WhatsappTemplateService
   end
 
   private
+
+  # Plain-text fallback when WHATSAPP_TPL_CONFIRM_REQUEST is not configured.
+  # Instructs the patient to reply with the exact keyword the inbound handler
+  # recognises ("CONFIRM APPOINTMENT" / "RESCHEDULE APPOINTMENT").
+  def send_confirmation_request_text(patient, appointment)
+    day_name = appointment.start_time.strftime("%A")
+    date_str = appointment.start_time.strftime("%-d %B %Y")
+    time_str = appointment.start_time.strftime("%H:%M")
+
+    body = <<~MSG.strip
+      Hi #{patient.first_name} 👋
+
+      Reminder: you have an appointment *tomorrow*:
+
+      📅 #{day_name}, #{date_str}
+      🕐 #{time_str}
+
+      Please let us know:
+      ✅ Reply *CONFIRM APPOINTMENT* to confirm
+      🔄 Reply *RESCHEDULE APPOINTMENT* to request a new time
+
+      Dr Chalita & team
+    MSG
+
+    send_text(patient.phone, body)
+  end
 
   def send_template(template_key, to_phone, variables)
     content_sid = self.class.templates[template_key]
