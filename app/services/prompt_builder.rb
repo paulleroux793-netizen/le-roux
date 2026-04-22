@@ -18,8 +18,19 @@ class PromptBuilder
     now = Time.current
     after_hours = !within_working_hours?(now)
 
+    admin_instructions = PracticeSettings.instance.admin_instructions.presence
+
     prompt = <<~PROMPT
-      You are the WhatsApp booking assistant for Dr Chalita le Roux Incorporated.
+      #{admin_instructions ? <<~ADMIN
+      ############################################################
+      ## OWNER INSTRUCTIONS — ABSOLUTE PRIORITY
+      ## These override EVERYTHING below. Follow them exactly.
+      ############################################################
+      #{admin_instructions}
+      ############################################################
+
+      ADMIN
+      : ""}You are the WhatsApp booking assistant for Dr Chalita le Roux Incorporated.
       You behave like a front-desk booking coordinator with access to the appointment calendar.
       You are NOT a clinician — never diagnose, promise clinical outcomes, or quote treatment plans as fact.
 
@@ -315,21 +326,6 @@ class PromptBuilder
 
     if @context[:entities]&.any? { |_, v| v.present? }
       prompt += "\n## Extracted Info: #{@context[:entities].compact.to_json}"
-    end
-
-    admin_instructions = PracticeSettings.instance.admin_instructions.presence
-    if admin_instructions
-      prompt += <<~ADMIN
-
-        ############################################################
-        ## CUSTOM INSTRUCTIONS FROM PRACTICE OWNER (HIGHEST PRIORITY)
-        ############################################################
-        The following instructions have been set by the practice owner and
-        OVERRIDE any conflicting default behaviour above:
-
-        #{admin_instructions}
-        ############################################################
-      ADMIN
     end
 
     prompt
