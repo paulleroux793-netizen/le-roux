@@ -255,7 +255,12 @@ class WhatsappService
       return
     end
 
-    return if booking_result.is_a?(Appointment)
+    if booking_result.is_a?(Appointment)
+      # Confirmation was already sent via send_booking_confirmation_message.
+      # Clear the AI's response so the job doesn't send a second conflicting message.
+      result[:response] = nil
+      return
+    end
 
     # We did NOT persist an Appointment — either because the classifier
     # didn't normalize the date/time (relative phrases like "Friday")
