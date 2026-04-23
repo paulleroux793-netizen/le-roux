@@ -20,4 +20,18 @@ class PracticeSettings < ApplicationRecord
   def full_address
     [ address_line1, address_line2, city ].compact_blank.join(", ")
   end
+
+  def admin_mode_for(phone)
+    normalized = self.class.normalize_phone(phone)
+    (admin_modes || {})[normalized] || "admin"
+  end
+
+  def set_admin_mode(phone, mode)
+    normalized = self.class.normalize_phone(phone)
+    update!(admin_modes: (admin_modes || {}).merge(normalized => mode))
+  end
+
+  def self.normalize_phone(phone)
+    phone.to_s.gsub(/\D/, "")
+  end
 end

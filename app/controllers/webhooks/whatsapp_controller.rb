@@ -21,11 +21,23 @@ module Webhooks
 
       message = button_payload.presence || body
 
-      # Admin commands from Paul Le Roux are handled synchronously and bypass the AI.
       if AdminWhatsappService.admin?(sender)
-        AdminWhatsappService.new(sender).handle(message)
-        respond_with_empty_twiml
-        return
+        # Mode-switch commands (1/2/menu) are always handled synchronously.
+        if AdminWhatsappService.mode_command?(message)
+          AdminWhatsappService.new(sender).handle(message)
+          respond_with_empty_twiml
+          return
+        end
+
+        # Patient-test mode: route through the normal patient flow so the
+        # admin experiences the bot exactly as a patient would.
+        unless AdminWhatsappService.admin_in_patient_mode?(sender)
+          AdminWhatsappService.new(sender).handle(message)
+          respond_with_empty_twiml
+          return
+        end
+
+        # Falls through to the patient job below when in patient-test mode.
       end
 
       # Enqueue async processing — reply comes via Twilio REST API

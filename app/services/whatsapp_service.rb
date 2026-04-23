@@ -72,6 +72,11 @@ class WhatsappService
     # Route based on detected intent
     handle_intent(result, patient, conversation)
 
+    # Persist the exchange after intent handling so the stored response
+    # reflects any rewrite that handle_intent may have applied (e.g.
+    # booking-claim rewrites, after-hours blocks, nil on successful booking).
+    persist_exchange(conversation, message, result[:response]) if conversation
+
     result
   rescue AiService::Error => e
     Rails.logger.warn("[WhatsApp] AI unavailable, using fallback response: #{e.message}")
@@ -777,77 +782,6 @@ class WhatsappService
     end
 
     # For other intents, let Claude handle multi-turn conversation
-    nil
-  end
-
-  def build_local_result_disabled(message:, conversation:)
-    # DISABLED: These patterns were causing conversation loops
-    # Now delegating to AI service for proper multi-turn handling
-
-    if message.downcase.match?(/\b(book|appointment|schedule)\b/)
-      return {
-        response: "I'd be happy to help you book an appointment. Please send your preferred day and time, and our team will follow up as soon as possible.",
-        intent: "book",
-        entities: {}
-      }
-    end
-
-    if message.downcase.match?(/\b(reschedule|move|change)\b/)
-      return {
-        response: "I can help with a reschedule. Please send your current appointment day and the new day and time you'd prefer, and our team will follow up shortly.",
-        intent: "reschedule",
-        entities: {}
-      }
-    end
-
-    if message.downcase.match?(/\b(cancel|cancellation)\b/)
-      return {
-        response: "I can help with that. If you'd like, send the appointment day and whether you'd prefer to cancel or reschedule, and our team will follow up shortly.",
-        intent: "cancel",
-        entities: {}
-      }
-    end
-
-    if combined_text.match?(/\b(hour|hours|open|closing|close|time)\b/)
-      return {
-        response: AiService.dynamic_hours,
-        intent: "faq",
-        entities: {}
-      }
-    end
-
-    if combined_text.match?(/\b(where|location|address|directions|pretoria)\b/)
-      return {
-        response: AiService::FAQ["location"],
-        intent: "faq",
-        entities: {}
-      }
-    end
-
-    if combined_text.match?(/\b(payment|medical aid|medicalaid|card|cash)\b/)
-      return {
-        response: AiService::FAQ["payment"],
-        intent: "faq",
-        entities: {}
-      }
-    end
-
-    if combined_text.match?(/\b(service|services|treatment|treatments)\b/)
-      return {
-        response: AiService::FAQ["services"],
-        intent: "faq",
-        entities: {}
-      }
-    end
-
-    if combined_text.match?(/\b(price|pricing|cost|quote|consultation|cleaning)\b/)
-      return {
-        response: "A consultation is #{AiService::PRICING['consultation']}. A cleaning is #{AiService::PRICING['cleaning']}. For other treatments, the doctor would first need to assess you at a consultation.",
-        intent: "faq",
-        entities: {}
-      }
-    end
-
     nil
   end
 
