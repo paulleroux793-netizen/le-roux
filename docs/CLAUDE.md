@@ -115,6 +115,34 @@ The system includes an AI receptionist with multilingual support.
 
 ---
 
+## After-Hours Booking Behaviour (PERMANENT — DO NOT CHANGE)
+
+Working hours: **Monday–Friday, 08:00–17:00**. Closed weekends.
+
+When a patient messages **outside working hours**, the bot MUST:
+
+1. Clearly state the practice is closed and what the working hours are.
+2. Still take the full booking (name, contact, reason, preferred time).
+3. Confirm the booking was noted and that the team will confirm it when the practice opens.
+4. Provide Dr Chalita's emergency number (071 884 3204) for urgent cases.
+
+The bot must NEVER refuse to take a booking after hours.
+This is enforced via `PromptBuilder#after_hours_block` — do not remove or weaken this method.
+
+---
+
+## Admin WhatsApp Control (Paul Le Roux — +27714475022)
+
+Paul can manage the chatbot's behaviour by sending WhatsApp messages to the sandbox number.
+
+- Any instruction Paul sends is stored in `PracticeSettings#admin_instructions` and injected at the **top** of the AI system prompt with absolute priority.
+- Greetings (hi, hello, hey, etc.) show the help menu instead of saving as instructions.
+- Commands: `show` (view instructions), `clear` (remove all), `help` (show commands).
+- Handled by `AdminWhatsappService` — Paul's messages bypass the patient AI flow entirely.
+- `ADMIN_WHATSAPP_NUMBER` env var must be set in Railway to `+27714475022`.
+
+---
+
 ## Dashboard Language Feature
 
 - Support English + Afrikaans language selector.
@@ -164,14 +192,37 @@ When debugging:
 
 Before completing any task:
 
-- Run tests: `bundle exec rspec`
-- Run linting if configured
+- Run tests: `bin/rails test`
+- Run linting: `bin/rubocop -f simple`
+- Run security scan: `bin/brakeman --no-pager`
 - Verify:
   - new feature works
   - no regressions
 - Clearly summarize:
   - what changed
   - what did NOT change
+
+---
+
+## CI/CD (GitHub Actions)
+
+The CI runs three jobs on every push to `main`:
+
+| Job | Command |
+|-----|---------|
+| `scan_ruby` | `bin/brakeman --no-pager` + `bin/bundler-audit --update` |
+| `lint` | `bin/rubocop -f github` |
+| `test` | `bin/rails db:test:prepare test` |
+
+**All three must pass before deploying.**
+
+Common failure causes:
+- `actions/checkout@v6` — does not exist, use `@v4`
+- Missing env vars in test job — `SECRET_KEY_BASE`, `DATABASE_URL`, `TWILIO_*`, `ANTHROPIC_API_KEY` must be set as dummy values in CI env
+- RuboCop offenses — always run `bin/rubocop -f simple` locally before pushing
+- Brakeman warnings — run `bin/brakeman --no-pager` before pushing
+
+Railway auto-deploys on push to `main` — CI must be green first.
 
 ---
 
