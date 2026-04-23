@@ -23,7 +23,7 @@ module Webhooks
 
       # Admin commands from Paul Le Roux are handled synchronously and bypass the AI.
       if AdminWhatsappService.admin?(sender)
-        AdminWhatsappService.new.handle(message)
+        AdminWhatsappService.new(sender).handle(message)
         respond_with_empty_twiml
         return
       end

@@ -1,5 +1,8 @@
 class AdminWhatsappService
-  ADMIN_NUMBER = ENV.fetch("ADMIN_WHATSAPP_NUMBER", "+27714475022")
+  ADMIN_NUMBERS = [
+    ENV.fetch("ADMIN_WHATSAPP_NUMBER", "+27714475022"),  # Paul Le Roux
+    ENV.fetch("ADMIN_WHATSAPP_NUMBER_2", "+27721690521") # Dieumerci
+  ].freeze
 
   HELP_TEXT = <<~HELP.strip
     *Dr Le Roux Admin Commands*
@@ -18,7 +21,12 @@ class AdminWhatsappService
   GREETINGS = %w[hi hello hey hallo howzit morning afternoon evening].freeze
 
   def self.admin?(phone)
-    normalize(phone) == normalize(ADMIN_NUMBER)
+    normalized = normalize(phone)
+    ADMIN_NUMBERS.any? { |n| normalize(n) == normalized }
+  end
+
+  def initialize(sender_phone)
+    @sender_phone = sender_phone
   end
 
   def handle(message)
@@ -52,7 +60,7 @@ class AdminWhatsappService
   end
 
   def send_reply(text)
-    WhatsappTemplateService.new.send_text(ADMIN_NUMBER, text)
+    WhatsappTemplateService.new.send_text(@sender_phone, text)
   rescue StandardError => e
     Rails.logger.error("[AdminWhatsapp] Failed to send reply to admin: #{e.message}")
   end

@@ -78,12 +78,13 @@ jobs:
       - name: Run tests
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/dr_leroux_receptionist_test
-          SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE || 'test_secret_key_base_for_ci_only_not_used_in_production_1234567890' }}
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/dr_leroux_receptionist_test
+          SECRET_KEY_BASE: test_secret_key_base_for_ci_only_not_used_in_production_1234567890
           TWILIO_ACCOUNT_SID: test_account_sid
           TWILIO_AUTH_TOKEN: test_auth_token
           TWILIO_WHATSAPP_NUMBER: "+14155238886"
           ANTHROPIC_API_KEY: test_anthropic_key
           OPENAI_API_KEY: test_openai_key
           APP_BASE_URL: http://localhost:3000
+          ADMIN_WHATSAPP_NUMBER: "+27714475022"
         run: bin/rails db:test:prepare test
