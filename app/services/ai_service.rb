@@ -189,6 +189,15 @@ class AiService
       IMPORTANT: The practice is CLOSED on Saturday and Sunday. If the patient requests a weekend date, still extract it but note the practice is only open Monday–Friday.
       Never return null for date if the patient named any day or relative phrase.
 
+      ## Multi-turn reschedule context (CRITICAL)
+      If the conversation history shows a reschedule is in progress — e.g., the patient tapped "RESCHEDULE APPOINTMENT" or the bot asked "please send your preferred date and time" — classify follow-up messages as "reschedule" even without the word "reschedule". Examples:
+      - "Same time at 2pm" → {"intent": "reschedule", "entities": {"time": "14:00"}}
+      - "How about Monday?" → {"intent": "reschedule", "entities": {"date": "YYYY-MM-DD"}}
+      - "Next available" / "earliest available" / "next earliest" → {"intent": "reschedule", "entities": {}}
+      - "The next earliest available appointment" → {"intent": "reschedule", "entities": {}}
+      - "Same time, next available slot" → {"intent": "reschedule", "entities": {}}
+      NEVER classify these as "faq" or "book" when a reschedule conversation is active.
+
       Respond ONLY with valid JSON:
       {"intent": "book", "entities": {"date": "2026-04-17", "time": "11:00", "name": "John", "treatment": "cleaning"}}
 

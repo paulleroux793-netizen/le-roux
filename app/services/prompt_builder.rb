@@ -310,18 +310,19 @@ class PromptBuilder
 
         ⚠️ IT IS CURRENTLY AFTER HOURS. You MUST follow ALL of these rules:
 
-        1. At the START of every conversation, clearly state:
-           "Please note that our practice is currently closed. Our working hours are Monday to Friday, 08:00 to 17:00. However, I can still take your booking and our team will confirm your slot first thing when we open."
+        1. At the START of every after-hours conversation, clearly state that the practice is closed and give the emergency number FIRST:
+           "Please note our practice is currently closed. 🚨 For dental emergencies, contact Dr Chalita directly at *071 884 3204*. For non-urgent bookings, I can take your details now and our team will confirm the next available working day slot first thing when we open."
 
         2. STILL collect all booking details: full name, contact number, reason, preferred date and time.
+           Always suggest the NEXT WORKING DAY as the booking date.
 
         3. After taking the booking, ALWAYS add:
-           "Your booking has been noted. Our team will confirm your appointment when the practice opens. You will receive a confirmation message."
+           "Your booking has been noted for the next working day. Our team will confirm your appointment when the practice opens."
 
-        4. For dental emergencies ALWAYS say:
-           "If this is an urgent dental emergency, please contact Dr Chalita directly at 071 884 3204."
+        4. For dental emergencies ALWAYS prominently display:
+           "🚨 DENTAL EMERGENCY: Call Dr Chalita NOW at 071 884 3204."
 
-        5. NEVER refuse a booking because it is after hours. Patients CAN book — confirmation happens next morning.
+        5. NEVER refuse a booking because it is after hours. Patients CAN book for the next working day — confirmation happens next morning.
 
         VIOLATION OF THESE RULES IS NOT PERMITTED UNDER ANY CIRCUMSTANCE.
       BLOCK

@@ -163,16 +163,14 @@ class WhatsappService
   }.freeze
 
   AFTER_HOURS_TODAY_BLOCKED = {
-    "en" => "Hi there! It's currently after hours, so we can't confirm " \
-            "an appointment for today. But you're welcome to book for " \
-            "another day — just let me know your preferred date and time, " \
-            "and we'll send you a confirmation first thing in the morning. 😊 " \
-            "For urgent dental emergencies, please contact Dr Chalita directly at 071 884 3204.",
-    "af" => "Hallo! Dit is tans na-ure, so ons kan nie 'n afspraak vir " \
-            "vandag bevestig nie. Maar jy is welkom om vir 'n ander dag " \
-            "te bespreek — laat weet net jou voorkeur datum en tyd, " \
-            "en ons stuur 'n bevestiging vroeg oggend. 😊 " \
-            "Vir dringende tandheelkundige noodgevalle, kontak Dr Chalita direk by 071 884 3204."
+    "en" => "Hi there! Our practice is currently closed (after hours). 🕐\n\n" \
+            "🚨 *Dental emergency?* Contact Dr Chalita directly: *071 884 3204*\n\n" \
+            "For non-urgent bookings, you're welcome to book for the next working day — " \
+            "just send me your preferred date and time and we'll confirm first thing when we open. 😊",
+    "af" => "Hallo! Ons praktyk is tans gesluit (na-ure). 🕐\n\n" \
+            "🚨 *Tandheelkundige noodgeval?* Kontak Dr Chalita direk: *071 884 3204*\n\n" \
+            "Vir nie-dringende besprekings kan jy gerus vir die volgende werksdag bespreek — " \
+            "stuur net jou voorkeur datum en tyd en ons bevestig sodra ons oopmaak. 😊"
   }.freeze
 
   EMERGENCY_PHONE = "071 884 3204".freeze
@@ -401,13 +399,33 @@ class WhatsappService
     appointments = patient.appointments.upcoming
 
     return if appointments.empty?
-    return unless entities[:date].present? && entities[:time].present?
+
+    # Bail early only when we have neither a date nor a time.
+    # A time-only response ("same time at 2pm") is valid — we'll
+    # find the next available date for that time below.
+    return unless entities[:date].present? || entities[:time].present?
 
     appointment = appointments.first
-    new_start = Time.zone.parse("#{entities[:date]} #{entities[:time]}")
     duration = appointment.end_time - appointment.start_time
-    new_end = new_start + duration
     lang = conversation&.language || "en"
+
+    new_start = if entities[:date].present? && entities[:time].present?
+      Time.zone.parse("#{entities[:date]} #{entities[:time]}")
+    elsif entities[:time].present?
+      # Patient gave a time but no specific date — find the next available
+      # working day where that time slot is free.
+      next_date = next_available_date_for_time(entities[:time], duration)
+      unless next_date
+        result[:response] = RESCHEDULE_REJECTED[lang] || RESCHEDULE_REJECTED["en"]
+        return
+      end
+      Time.zone.parse("#{next_date} #{entities[:time]}")
+    else
+      # Date only, no time — ask the AI to gather the time; bail for now
+      return
+    end
+
+    new_end = new_start + duration
 
     # Guardrail: new slot must be in the future
     unless new_start > Time.current
@@ -902,6 +920,31 @@ class WhatsappService
     raise Error, "HTTP #{response.code} downloading media from Twilio" unless response.is_a?(Net::HTTPSuccess)
 
     { content_type: content_type, data: Base64.strict_encode64(response.body) }
+  end
+
+  # Find the next working day (up to 14 days ahead) where the requested
+  # time string ("14:00") is available for `duration` minutes without
+  # conflicting with existing appointments.
+  def next_available_date_for_time(time_str, duration = DEFAULT_DURATION)
+    date = Date.current
+    14.times do
+      date = date.next_day
+      schedule = DoctorSchedule.for_day(date.wday)
+      next unless schedule
+
+      candidate_start = Time.zone.parse("#{date} #{time_str}")
+      candidate_end   = candidate_start + duration
+
+      next unless candidate_start > Time.current
+      next unless schedule.working?(candidate_start) && schedule.working?(candidate_end - 1.minute)
+      next if slot_conflicts_locally?(candidate_start, candidate_end)
+
+      return date
+    end
+    nil
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] next_available_date_for_time failed: #{e.message}")
+    nil
   end
 
   def ai_service

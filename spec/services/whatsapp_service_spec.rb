@@ -234,6 +234,100 @@ RSpec.describe WhatsappService do
       end
     end
 
+    context "with a reschedule intent — both date and time provided" do
+      let!(:patient) { create(:patient, phone: "+27611000001") }
+      let(:template_service) { instance_double(WhatsappTemplateService) }
+
+      before do
+        allow(WhatsappTemplateService).to receive(:new).and_return(template_service)
+        allow(template_service).to receive(:send_reschedule)
+        create(:doctor_schedule, day_of_week: 4) # Thursday
+      end
+
+      it "moves the appointment to the new date and time" do
+        appointment = create(:appointment,
+          patient: patient,
+          start_time: Time.zone.parse("2026-04-20 10:00"),
+          end_time: Time.zone.parse("2026-04-20 10:30"),
+          status: :scheduled
+        )
+
+        travel_to Time.zone.parse("2026-04-15 10:00") do
+          allow(ai_service).to receive(:process_message).and_return({
+            response: "Sure! I've moved your appointment to Thursday at 9am.",
+            intent: "reschedule",
+            entities: { date: "2026-04-16", time: "09:00" }
+          })
+
+          service.handle_incoming(from: "+27611000001", message: "Can I move to Thursday at 9am?")
+
+          appointment.reload
+          expect(appointment.start_time).to eq(Time.zone.parse("2026-04-16 09:00"))
+          expect(appointment.status).to eq("scheduled")
+        end
+      end
+    end
+
+    context "with a reschedule intent — time only, no date (infer next available)" do
+      let!(:patient) { create(:patient, phone: "+27611000002") }
+      let(:template_service) { instance_double(WhatsappTemplateService) }
+
+      before do
+        allow(WhatsappTemplateService).to receive(:new).and_return(template_service)
+        allow(template_service).to receive(:send_reschedule)
+        create(:doctor_schedule, day_of_week: 4) # Thursday
+      end
+
+      it "finds the next working day slot at the requested time and reschedules" do
+        # Appointment on a Monday in the future
+        appointment = create(:appointment,
+          patient: patient,
+          start_time: Time.zone.parse("2026-04-20 10:00"),
+          end_time: Time.zone.parse("2026-04-20 10:30"),
+          status: :scheduled
+        )
+
+        # Frozen to Wednesday — next working day with a 09:00 slot is Thursday
+        travel_to Time.zone.parse("2026-04-15 10:00") do
+          allow(ai_service).to receive(:process_message).and_return({
+            response: "No problem! I'll find you the next available slot at that time.",
+            intent: "reschedule",
+            entities: { date: nil, time: "09:00" }
+          })
+
+          service.handle_incoming(from: "+27611000002", message: "Same time at 9am, next available")
+
+          appointment.reload
+          # Should be rescheduled to next Thursday (2026-04-16) at 09:00
+          expect(appointment.start_time.strftime("%H:%M")).to eq("09:00")
+          expect(appointment.start_time).to be > Time.zone.parse("2026-04-15 10:00")
+          expect(appointment.status).to eq("scheduled")
+        end
+      end
+    end
+
+    context "after-hours booking for today — blocked with emergency number" do
+      let!(:patient) { create(:patient, phone: "+27611000003") }
+
+      it "returns the after-hours message with emergency number prominently" do
+        create(:doctor_schedule, day_of_week: 3) # Wednesday
+
+        travel_to Time.zone.parse("2026-04-15 19:00") do # Wednesday evening, before 20:00
+          allow(ai_service).to receive(:process_message).and_return({
+            response: "Perfect! I have you booked for tonight.",
+            intent: "book",
+            entities: { date: "2026-04-15", time: "20:00", treatment: "consultation" }
+          })
+
+          result = service.handle_incoming(from: "+27611000003", message: "Book tonight at 8pm")
+
+          expect(result[:response]).to include("071 884 3204")
+          expect(result[:response]).to include("closed")
+          expect(Appointment.where(patient: patient).count).to eq(0)
+        end
+      end
+    end
+
     context "with an FAQ intent" do
       it "processes FAQ questions through AI for natural multi-turn conversations" do
         allow(ai_service).to receive(:process_message).and_return({
