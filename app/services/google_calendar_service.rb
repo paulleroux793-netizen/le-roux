@@ -8,8 +8,6 @@ class GoogleCalendarService
   def initialize
     @service = Google::Apis::CalendarV3::CalendarService.new
     @service.authorization = authorization
-    @service.request_options.timeout_sec = 15
-    @service.request_options.open_timeout_sec = 5
   rescue Error
     raise
   rescue StandardError => e
@@ -52,6 +50,23 @@ class GoogleCalendarService
     )
   rescue Google::Apis::Error => e
     raise Error, "Failed to book appointment: #{e.message}"
+  end
+
+  # Creates only the Google Calendar event and returns the event ID.
+  # Unlike book_appointment, this does NOT create a local Appointment row —
+  # used by sync_to_google_calendar when the row already exists.
+  def create_event(patient:, start_time:, end_time:, reason: nil)
+    event = Google::Apis::CalendarV3::Event.new(
+      summary: "Dental Appointment — #{patient.full_name}",
+      description: build_description(patient, reason),
+      start: event_datetime(start_time),
+      end: event_datetime(end_time),
+      reminders: { use_default: false }
+    )
+    result = @service.insert_event(CALENDAR_ID, event)
+    result.id
+  rescue Google::Apis::Error => e
+    raise Error, "Failed to create calendar event: #{e.message}"
   end
 
   # Finds appointments for a patient within a date range.

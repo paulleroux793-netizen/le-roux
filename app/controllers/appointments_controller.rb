@@ -91,6 +91,13 @@ class AppointmentsController < ApplicationController
         status: :see_other
     end
 
+    if start_at <= Time.current
+      return redirect_back fallback_location: appointments_path,
+        alert: "Appointment must be in the future",
+        inertia: { errors: { start_time: "must be in the future" } },
+        status: :see_other
+    end
+
     patient = Patient.find(create_params[:patient_id])
 
     appointment =

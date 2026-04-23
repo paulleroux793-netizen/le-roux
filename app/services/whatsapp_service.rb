@@ -383,19 +383,13 @@ class WhatsappService
   # for unsynced appointments.
   def sync_to_google_calendar(appointment, patient, reason)
     calendar = GoogleCalendarService.new
-    synced = calendar.book_appointment(
+    event_id = calendar.create_event(
       patient: patient,
       start_time: appointment.start_time,
       end_time: appointment.end_time,
       reason: reason
     )
-    # `book_appointment` creates its own Appointment row — we don't
-    # want a duplicate. Move its google_event_id onto our row and
-    # delete the duplicate.
-    if synced && synced.id != appointment.id
-      appointment.update_column(:google_event_id, synced.google_event_id)
-      synced.destroy
-    end
+    appointment.update_column(:google_event_id, event_id) if event_id
   rescue StandardError => e
     Rails.logger.warn("[WhatsApp] Google Calendar sync skipped: #{e.class}: #{e.message}")
   end

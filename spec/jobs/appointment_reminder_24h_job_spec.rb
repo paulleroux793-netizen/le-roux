@@ -5,8 +5,7 @@ RSpec.describe AppointmentReminder24hJob, type: :job do
 
   before do
     allow(WhatsappTemplateService).to receive(:new).and_return(template_service)
-    allow(template_service).to receive(:send_reminder_24h)
-    allow(template_service).to receive(:send_text)
+    allow(template_service).to receive(:send_confirmation_request_with_buttons)
     # Stub mailer and SMS to avoid external calls
     allow(AppointmentMailer).to receive_message_chain(:reminder, :deliver_later)
     allow(SmsService).to receive(:send_reminder)
@@ -32,7 +31,7 @@ RSpec.describe AppointmentReminder24hJob, type: :job do
       it "sends a 24h reminder for the appointment" do
         described_class.perform_now
 
-        expect(template_service).to have_received(:send_text).with(patient.phone, anything)
+        expect(template_service).to have_received(:send_confirmation_request_with_buttons).with(patient, appointment)
       end
     end
 
@@ -49,7 +48,7 @@ RSpec.describe AppointmentReminder24hJob, type: :job do
       it "sends a reminder for confirmed appointments too" do
         described_class.perform_now
 
-        expect(template_service).to have_received(:send_text).with(patient.phone, anything)
+        expect(template_service).to have_received(:send_confirmation_request_with_buttons).with(patient, appointment)
       end
     end
 
@@ -66,7 +65,7 @@ RSpec.describe AppointmentReminder24hJob, type: :job do
       it "skips cancelled appointments" do
         described_class.perform_now
 
-        expect(template_service).not_to have_received(:send_reminder_24h)
+        expect(template_service).not_to have_received(:send_confirmation_request_with_buttons)
       end
     end
 
@@ -83,7 +82,7 @@ RSpec.describe AppointmentReminder24hJob, type: :job do
       it "skips today's appointments" do
         described_class.perform_now
 
-        expect(template_service).not_to have_received(:send_reminder_24h)
+        expect(template_service).not_to have_received(:send_confirmation_request_with_buttons)
       end
     end
 
@@ -108,7 +107,7 @@ RSpec.describe AppointmentReminder24hJob, type: :job do
 
       before do
         call_count = 0
-        allow(template_service).to receive(:send_text) do
+        allow(template_service).to receive(:send_confirmation_request_with_buttons) do
           call_count += 1
           raise WhatsappTemplateService::Error, "Send failed" if call_count == 1
         end
@@ -117,7 +116,7 @@ RSpec.describe AppointmentReminder24hJob, type: :job do
       it "continues sending reminders for remaining appointments" do
         expect { described_class.perform_now }.not_to raise_error
 
-        expect(template_service).to have_received(:send_text).twice
+        expect(template_service).to have_received(:send_confirmation_request_with_buttons).twice
       end
     end
   end

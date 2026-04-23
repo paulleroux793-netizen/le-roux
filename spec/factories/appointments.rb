@@ -18,5 +18,12 @@ FactoryBot.define do
     trait :with_google_event do
       sequence(:google_event_id) { |n| "google_event_#{n}" }
     end
+
+    trait :past do
+      start_time { 1.day.ago.change(hour: 10) }
+      end_time   { 1.day.ago.change(hour: 10, min: 30) }
+
+      to_create { |instance| instance.save!(validate: false) }
+    end
   end
 end

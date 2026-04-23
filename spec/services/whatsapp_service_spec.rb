@@ -65,14 +65,17 @@ RSpec.describe WhatsappService do
 
     context "when booking with valid date/time and available slot" do
       let!(:patient) { create(:patient, phone: "+27699999999") }
+      let(:template_service) { instance_double(WhatsappTemplateService) }
 
-      it "creates a local Appointment and the booking shows on calendar" do
-        # Thursday 2026-04-16, wday=4 — need a DoctorSchedule for Thursday
+      before do
+        # Override the outer raise-stub so the confirmation message can be sent
+        allow(WhatsappTemplateService).to receive(:new).and_return(template_service)
+        allow(template_service).to receive(:send_text)
         create(:doctor_schedule, day_of_week: 4)
-
-        # Stub Google Calendar so it doesn't fail the test
         allow(GoogleCalendarService).to receive(:new).and_raise(StandardError, "no creds")
+      end
 
+      it "creates a local Appointment and sends a booking confirmation" do
         # Freeze time to Wed 2026-04-15 so Thursday is in the future
         travel_to Time.zone.parse("2026-04-15 10:00") do
           allow(ai_service).to receive(:process_message).and_return({
@@ -83,8 +86,10 @@ RSpec.describe WhatsappService do
 
           result = service.handle_incoming(from: "+27699999999", message: "Book me Thursday 9am")
 
-          # The booking succeeded locally, so the AI's response stands
-          expect(result[:response]).to include("booked")
+          # When booking succeeds, the AI's response is cleared (nil) because the
+          # confirmation is sent directly via send_booking_confirmation_message so
+          # WhatsappReplyJob doesn't send a second conflicting message.
+          expect(result[:response]).to be_nil
 
           appointment = Appointment.find_by(patient: patient)
           expect(appointment).to be_present
@@ -92,6 +97,27 @@ RSpec.describe WhatsappService do
           expect(appointment.end_time).to eq(Time.zone.parse("2026-04-16 09:30"))
           expect(appointment.reason).to eq("Consultation")
           expect(appointment.status).to eq("scheduled")
+
+          expect(template_service).to have_received(:send_text).with(patient.phone, a_string_including("Thursday"))
+        end
+      end
+    end
+
+    context "when the AI provides a date/time that is already in the past" do
+      let!(:patient) { create(:patient, phone: "+27699999996") }
+
+      it "rewrites the response with the booking-failed fallback" do
+        travel_to Time.zone.parse("2026-04-15 10:00") do
+          allow(ai_service).to receive(:process_message).and_return({
+            response: "Perfect! I have you booked for yesterday at 9am.",
+            intent: "book",
+            entities: { date: "2026-04-14", time: "09:00", treatment: "consultation" }
+          })
+
+          result = service.handle_incoming(from: "+27699999996", message: "Book me yesterday 9am")
+
+          expect(result[:response]).to eq(WhatsappService::BOOKING_FAILED_FALLBACK["en"])
+          expect(Appointment.where(patient: patient).count).to eq(0)
         end
       end
     end

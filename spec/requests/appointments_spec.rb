@@ -194,6 +194,22 @@ RSpec.describe 'Appointments', type: :request do
       expect(response).to have_http_status(:see_other)
       expect(session[:inertia_errors]).to include(start_time: 'Invalid start or end time')
     end
+
+    it 'rejects bookings with a start_time in the past' do
+      expect {
+        post appointments_path, params: {
+          appointment: {
+            patient_id: patient.id,
+            start_time: 2.hours.ago.iso8601,
+            end_time: 1.hour.ago.iso8601,
+            reason: 'Cleaning'
+          }
+        }, headers: { 'X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest' }
+      }.not_to change(Appointment, :count)
+
+      expect(response).to have_http_status(:see_other)
+      expect(session[:inertia_errors]).to include(start_time: 'must be in the future')
+    end
   end
 
   describe 'PATCH /appointments/:id/cancel' do
