@@ -338,6 +338,50 @@ class WhatsappService
             "Andersins, stuur my jou voorkeurdatum en -tyd (binne werksure) " \
             "en ek kry jou bespreek."
   }.freeze
+  # South African public holidays. Bookings on these dates are rejected.
+  # Includes statutory substitutes per Public Holidays Act 36 of 1994:
+  # when a holiday falls on a Sunday, the following Monday is also a holiday.
+  PUBLIC_HOLIDAYS_SA = [
+    # 2026
+    "2026-01-01", # New Year's Day
+    "2026-03-21", # Human Rights Day
+    "2026-04-03", # Good Friday
+    "2026-04-06", # Family Day
+    "2026-04-27", # Freedom Day
+    "2026-05-01", # Workers' Day
+    "2026-06-16", # Youth Day
+    "2026-08-09", # National Women's Day
+    "2026-08-10", # National Women's Day (Sunday substitute)
+    "2026-09-24", # Heritage Day
+    "2026-12-16", # Day of Reconciliation
+    "2026-12-25", # Christmas Day
+    "2026-12-26", # Day of Goodwill
+    # 2027
+    "2027-01-01", # New Year's Day
+    "2027-03-21", # Human Rights Day
+    "2027-03-22", # Human Rights Day (Sunday substitute)
+    "2027-03-26", # Good Friday
+    "2027-03-29", # Family Day
+    "2027-04-27", # Freedom Day
+    "2027-05-01", # Workers' Day
+    "2027-06-16", # Youth Day
+    "2027-08-09", # National Women's Day
+    "2027-09-24", # Heritage Day
+    "2027-12-16", # Day of Reconciliation
+    "2027-12-25", # Christmas Day
+    "2027-12-27"  # Day of Goodwill (Sunday substitute)
+  ].map { |s| Date.parse(s) }.freeze
+
+  PUBLIC_HOLIDAY_BLOCKED = {
+    "en" => "That day is a South African public holiday and we'll be closed. " \
+            "We're open Monday to Friday (excluding public holidays), 8am–5pm. " \
+            "Could you try a different day? I'm happy to book the next available " \
+            "working day.",
+    "af" => "Daardie dag is 'n Suid-Afrikaanse openbare vakansiedag en ons is " \
+            "gesluit. Ons is oop Maandag tot Vrydag (uitgesluit openbare " \
+            "vakansiedae), 8vm–5nm. Kan jy 'n ander dag probeer? Ek bespreek " \
+            "graag die volgende beskikbare werksdag."
+  }.freeze
 
   PRACTICE_ADDRESS = "Unit 2, Amorosa Office Park, Corner of Doreen Road & Lawrence Rd, Amorosa, Roodepoort, Johannesburg, 2040".freeze
 
@@ -493,6 +537,11 @@ class WhatsappService
       result[:response] = AFTER_HOURS_TODAY_BLOCKED[lang] || AFTER_HOURS_TODAY_BLOCKED["en"]
       return
     end
+    # Public holiday → always blocked (never bookable).
+    if booking_result == :public_holiday
+      result[:response] = PUBLIC_HOLIDAY_BLOCKED[lang] || PUBLIC_HOLIDAY_BLOCKED["en"]
+      return
+    end
 
     if booking_result.is_a?(Appointment)
       # Confirmation was already sent via send_booking_confirmation_message.
@@ -557,6 +606,10 @@ class WhatsappService
       Rails.logger.info("[WhatsApp] Booking rejected: slot is in the past (#{start_time})")
       return nil
     end
+    if public_holiday?(start_time.to_date)
+      Rails.logger.info("[WhatsApp] Booking rejected: #{start_time.to_date} is a SA public holiday")
+      return :public_holiday
+    end
 
     after_hours = !slot_within_working_hours?(start_time, end_time)
     if after_hours && start_time.to_date == Date.current
@@ -618,6 +671,10 @@ class WhatsappService
   # Working-hours check against DoctorSchedule. Rejects bookings
   # outside the doctor's hours, on closed days, or that overlap
   # the lunch break.
+  # Returns true if the given date is a South African public holiday.
+  def public_holiday?(date)
+    PUBLIC_HOLIDAYS_SA.include?(date)
+  end
   def slot_within_working_hours?(start_time, end_time)
     schedule = DoctorSchedule.for_day(start_time.wday)
     return false unless schedule
