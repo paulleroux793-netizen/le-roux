@@ -15,7 +15,7 @@ const TABS = [
   { key: 'appearance',    label: 'settings_tab_appearance',    labelAf: 'Voorkoms',       icon: Palette },
 ]
 
-export default function Settings({ schedules, pricing, practice, notifications }) {
+export default function Settings({ schedules, pricing, practice, notifications, ai_costs }) {
   const { t, language, setLanguage } = useLanguage()
   const [activeTab, setActiveTab] = useState('practice')
 
@@ -29,6 +29,19 @@ export default function Settings({ schedules, pricing, practice, notifications }
           </div>
           <div>
             <h1 className="text-2xl font-bold text-brand-ink">{t('settings_title')}</h1>
+        {ai_costs?.last_7_days && (
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm mb-4">
+            <h2 className="text-sm font-semibold text-brand-ink mb-2">🤖 AI usage (last 7 days)</h2>
+            <div className="grid grid-cols-3 gap-4 text-sm">
+              <div><div className="text-gray-500">Calls</div><div className="text-lg font-semibold">{ai_costs.last_7_days.calls}</div></div>
+              <div><div className="text-gray-500">Tokens</div><div className="text-lg font-semibold">{(ai_costs.last_7_days.input_tokens + ai_costs.last_7_days.output_tokens).toLocaleString()}</div></div>
+              <div><div className="text-gray-500">Cost (USD)</div><div className="text-lg font-semibold">${Number(ai_costs.last_7_days.cost_usd).toFixed(4)}</div></div>
+            </div>
+            {ai_costs.today && (
+              <div className="mt-3 text-xs text-gray-600">Today: {ai_costs.today.calls} call{ai_costs.today.calls === 1 ? '' : 's'}, ${Number(ai_costs.today.cost_usd).toFixed(4)}</div>
+            )}
+          </div>
+        )}
             <p className="text-sm text-brand-muted">{t('settings_subtitle')}</p>
           </div>
         </div>
