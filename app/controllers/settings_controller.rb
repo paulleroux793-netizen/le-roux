@@ -41,7 +41,8 @@ class SettingsController < ApplicationController
           whatsapp_confirmations: true,
           whatsapp_reminders: true,
           reminder_hours_before: 24
-        }
+        },
+        ai_costs: ai_costs_summary
       }
     end
 
@@ -96,6 +97,31 @@ class SettingsController < ApplicationController
 
   private
 
+  # Reads the [AiCost] rollup counters from Rails.cache (solid_cache_store)
+  # and returns a structured hash for the Settings dashboard. Counters are
+  # written in AiService#log_anthropic_usage with 40-day retention.
+  def ai_costs_summary
+    today = Date.current
+    days = (0..6).map { |i| (today - i).to_s }
+    by_day = days.each_with_object({}) do |date, hash|
+      hash[date] = {
+        calls:         Rails.cache.read("ai_cost:#{date}:calls").to_i,
+        input_tokens:  Rails.cache.read("ai_cost:#{date}:input_tokens").to_i,
+        output_tokens: Rails.cache.read("ai_cost:#{date}:output_tokens").to_i,
+        cost_usd:      (Rails.cache.read("ai_cost:#{date}:cost_micros").to_i / 1_000_000.0).round(4)
+      }
+    end
+    total_7d = by_day.values.each_with_object({ calls: 0, input_tokens: 0, output_tokens: 0, cost_usd: 0.0 }) do |d, acc|
+      acc[:calls]         += d[:calls]
+      acc[:input_tokens]  += d[:input_tokens]
+      acc[:output_tokens] += d[:output_tokens]
+      acc[:cost_usd]      += d[:cost_usd]
+    end
+    { today: by_day[today.to_s], last_7_days: total_7d, daily: by_day }
+  rescue StandardError => e
+    Rails.logger.warn("[Settings] ai_costs_summary failed: #{e.message}")
+    { today: nil, last_7_days: nil, daily: {} }
+  end
   def practice_params
     params.require(:practice).permit(:name, :phone, :email, :address_line1, :address_line2, :city, :map_link, :emergency_phone)
   end
