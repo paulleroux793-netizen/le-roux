@@ -71,6 +71,10 @@ class WhatsappService
 
     # Route based on detected intent
     handle_intent(result, patient, conversation)
+    # Safety net: if handle_intent's response still claims a booking but the
+    # DB has no new Appointment for this patient, override. Guards against
+    # AI classifier misses (entities missing date/time) and prompt leakage.
+    verify_booking_response_consistency(result, patient, conversation)
 
     # Persist the exchange after intent handling so the stored response
     # reflects any rewrite that handle_intent may have applied (e.g.
@@ -89,6 +93,54 @@ class WhatsappService
   end
 
   private
+  # --- Booking Safety Net ---
+
+  # Runs after handle_intent. If the AI's response text looks like a booking
+  # claim ("I've booked...", "securing this appointment...", "booking noted")
+  # but no Appointment row was created for this patient in the last 15 seconds,
+  # rewrite the response to the failure fallback. Prevents false confirmations
+  # regardless of classifier intent accuracy.
+  def verify_booking_response_consistency(result, patient, conversation)
+    return if result[:response].blank?
+    return unless looks_like_booking_claim?(result[:response])
+    return if patient_has_recent_appointment?(patient)
+    lang_code = (conversation && conversation.language.presence) || "en"
+    Rails.logger.warn(
+      "[WhatsApp] Booking claim in response but no recent Appointment for patient " \
+      "##{patient.id}; overriding. lang=#{lang_code.inspect}"
+    )
+    result[:response] = BOOKING_FAILED_FALLBACK[lang_code] || BOOKING_FAILED_FALLBACK["en"]
+  end
+
+  # Broader match than BOOKING_CLAIM_PHRASES — covers confirmation-flavored
+  # text the AI sometimes emits even when intent classifier said faq/other.
+  BOOKING_CLAIM_PATTERNS = [
+    /\bbooked you in\b/i,
+    /\bbooking (noted|confirmed|complete|secured|locked)\b/i,
+    /\bsecur(ing|ed) (this|that|your) appointment\b/i,
+    /\bsecured your slot\b/i,
+    /\bflag(ging|ged) that slot\b/i,
+    /\block(ing|ed)? (it|that|this) in\b/i,
+    /\ball set for\b/i,
+    /\bappointment confirmed\b/i,
+    /\bhere'?s (a )?summary of what i have\b/i,
+    /\byou'?re (booked|confirmed|locked in)\b/i,
+    /\bi'?ve (booked|scheduled) you\b/i,
+    /\brequested slot:\b/i,
+    /✅\s*\*?appointment\s+confirmed\*?/i
+  ].freeze
+
+  def looks_like_booking_claim?(response)
+    return false if response.blank?
+    txt = response.to_s
+    BOOKING_CLAIM_PATTERNS.any? { |re| re.match?(txt) } || booking_claim?(txt)
+  end
+
+  def patient_has_recent_appointment?(patient)
+    return false unless patient
+    patient.appointments.where("created_at > ?", 15.seconds.ago).exists?
+  end
+
 
   # --- Patient Management ---
 
