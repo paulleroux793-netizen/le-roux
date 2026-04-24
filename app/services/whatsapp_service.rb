@@ -138,7 +138,7 @@ class WhatsappService
 
   def patient_has_recent_appointment?(patient)
     return false unless patient
-    patient.appointments.where("created_at > ?", 15.seconds.ago).exists?
+    patient.appointments.where("created_at > ?", 5.minutes.ago).exists?
   end
 
 
