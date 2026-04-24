@@ -75,6 +75,10 @@ class WhatsappService
     # DB has no new Appointment for this patient, override. Guards against
     # AI classifier misses (entities missing date/time) and prompt leakage.
     verify_booking_response_consistency(result, patient, conversation)
+    # Safety net #2: if the AI could not give a useful answer, flag the
+    # conversation for staff review and swap the patient message to a
+    # "human will follow up" template.
+    verify_response_is_actionable(result, patient, conversation)
 
     # Persist the exchange after intent handling so the stored response
     # reflects any rewrite that handle_intent may have applied (e.g.
@@ -136,6 +140,60 @@ class WhatsappService
     BOOKING_CLAIM_PATTERNS.any? { |re| re.match?(txt) } || booking_claim?(txt)
   end
 
+  # --- Staff-review safety net ---
+
+  # Patterns suggesting the AI could not answer the query usefully. When
+  # matched, verify_response_is_actionable escalates to staff review.
+  UNCERTAINTY_PATTERNS = [
+    /system is a bit busy/i,
+    /\bi'?m not sure\b/i,
+    /\bi don'?t (have|know) (that|the) (answer|information)\b/i,
+    /that'?s outside (my|our) scope/i,
+    /\blet me get back to you\b/i,
+    /\bi'?ll need to check with (the team|our team|the practice)\b/i,
+    /cannot answer that (query|question)/i
+  ].freeze
+
+  def verify_response_is_actionable(result, patient, conversation)
+    return if result[:response].blank?
+    return unless response_signals_uncertainty?(result[:response])
+    # Patient-facing rewrite + flag the conversation + notify staff.
+    flag_conversation_for_staff_review(conversation, patient, original_response: result[:response])
+    lang_code = (conversation && conversation.language.presence) || "en"
+    result[:response] = STAFF_REVIEW_FALLBACK[lang_code] || STAFF_REVIEW_FALLBACK["en"]
+  end
+
+  def response_signals_uncertainty?(response)
+    txt = response.to_s
+    UNCERTAINTY_PATTERNS.any? { |re| re.match?(txt) }
+  end
+
+  def flag_conversation_for_staff_review(conversation, patient, original_response:)
+    return unless conversation
+    tags = Array(conversation.tags || [])
+    unless tags.include?("needs_review")
+      conversation.update(tags: (tags + ["needs_review"]).uniq)
+    end
+    Rails.logger.warn(
+      "[WhatsApp] Flagged conversation ##{conversation.id} for staff review. " \
+      "AI said: #{original_response.to_s[0..180].inspect}"
+    )
+    send_flagged_alert(patient, "WhatsApp query needs manual response: #{original_response.to_s[0..200]}")
+  rescue StandardError => e
+    Rails.logger.error("[WhatsApp] flag_conversation_for_staff_review failed: #{e.class}: #{e.message}")
+  end
+
+  def whitening_already_sent?(conversation)
+    return false unless conversation
+    msgs = conversation.messages || []
+    msgs.any? do |m|
+      role = m.is_a?(Hash) ? (m["role"] || m[:role]) : nil
+      content = m.is_a?(Hash) ? (m["content"] || m[:content] || "") : ""
+      role == "assistant" && content.to_s.include?("Biolase laser teeth whitening")
+    end
+  rescue StandardError
+    false
+  end
   def patient_has_recent_appointment?(patient)
     return false unless patient
     patient.appointments.where("created_at > ?", 5.minutes.ago).exists?
@@ -261,11 +319,16 @@ class WhatsappService
   # Canvas Section 9: Appointment durations by treatment type
   APPOINTMENT_DURATIONS = {
     "check-up"              => 45.minutes,
-    "check up"              => 45.minutes,
-    "checkup"               => 45.minutes,
-    "examination"           => 45.minutes,
-    "cosmetic consultation" => 45.minutes,
-    "cosmetic"              => 45.minutes
+    "check up"               => 45.minutes,
+    "checkup"                => 45.minutes,
+    "examination"            => 45.minutes,
+    "cosmetic consultation"  => 45.minutes,
+    "cosmetic"               => 45.minutes,
+    "whitening"              => 90.minutes,
+    "teeth whitening"        => 90.minutes,
+    "laser whitening"        => 90.minutes,
+    "bleaching"              => 90.minutes,
+    "biolase"                => 90.minutes
   }.freeze
   DEFAULT_DURATION = 30.minutes
 
@@ -273,6 +336,73 @@ class WhatsappService
     "en" => "Sorry — that slot isn't available or falls outside our working hours. Would you like to try a different day or time?",
     "af" => "Jammer — daardie tyd is nie beskikbaar nie of val buite ons werksure. Wil jy 'n ander dag of tyd probeer?"
   }.freeze
+  # Teeth-whitening standard message. Deterministic full-info reply the moment
+  # a patient mentions whitening — avoids the AI misquoting price, duration, or
+  # deposit requirement. 90-minute Biolase appointment, R7,800 total, R2,000
+  # deposit secures the slot (because we book 90 min out of the diary).
+  WHITENING_INFO = {
+    "en" => <<~MSG.strip,
+      *Biolase Laser Teeth Whitening* 🌿
+
+      Our Biolase laser teeth whitening is a comfortable, in-chair procedure designed to safely brighten your smile while protecting your enamel and gums.
+
+      *The appointment includes:*
+      • A professional dental cleaning
+      • Application of a medical-grade whitening gel
+      • Activation with the Biolase laser for enhanced, even results
+
+      The treatment takes approximately *90 minutes*, and most patients notice a visibly brighter smile immediately after the session.
+
+      *Cost:* R7,800 for the full whitening treatment.
+
+      *To secure your booking* we require a *R2,000 deposit* up front (we book 90 minutes of the diary for you). The remaining R5,800 is settled on the day.
+
+      *Banking details:*
+      Bank: Investec Bank Limited
+      Branch: 100 Grayston Drive, Sandton
+      Branch code: 58 01 05
+      Account type: Current Account
+      Account name: Dr Chalita Le Roux Inc
+      Account number: 10013494325
+      Company No: 2022/698149/21
+      Reference: Your full name
+
+      Once you've sent proof of payment, I'll secure your slot. Please share your preferred date and time (Monday to Friday, 8am–5pm) and I'll pencil you in while we wait for the deposit.
+
+      Any questions — just ask! 😊
+    MSG
+    "af" => <<~MSG.strip
+      *Biolase Laser Tandebleiking* 🌿
+
+      Ons Biolase laser tandebleiking is 'n gemaklike in-stoel prosedure wat jou glimlag veilig verhelder terwyl dit jou emalj en gom beskerm.
+
+      *Die afspraak sluit in:*
+      • 'n Professionele tand-skoonmaak
+      • Aanbring van 'n mediese graad bleikgel
+      • Aktivering met die Biolase laser vir beter, eweredige resultate
+
+      Die behandeling neem ongeveer *90 minute*, en die meeste pasiënte sien 'n sigbaar helderder glimlag onmiddellik na die sessie.
+
+      *Koste:* R7,800 vir die volle bleikingsbehandeling.
+
+      *Om jou afspraak te bevestig* benodig ons 'n *R2,000 deposito* vooruit (ons bespreek 90 minute van die dagboek vir jou). Die oorblywende R5,800 is betaalbaar op die dag.
+
+      *Bankbesonderhede:*
+      Bank: Investec Bank Limited
+      Tak: 100 Grayston Drive, Sandton
+      Takkode: 58 01 05
+      Rekeningtipe: Lopende Rekening
+      Rekeningnaam: Dr Chalita Le Roux Inc
+      Rekeningnommer: 10013494325
+      Maatskappy No: 2022/698149/21
+      Verwysing: Jou volle naam
+
+      Sodra jy bewys van betaling gestuur het, sal ek jou gleuf vasmaak. Stuur asseblief jou voorkeurdatum en -tyd (Maandag tot Vrydag, 8vm–5nm) en ek sal dit vir jou reserveer terwyl ons wag vir die deposito.
+
+      Enige vrae — laat weet gerus! 😊
+    MSG
+  }.freeze
+
 
   BOOKING_CLAIM_PHRASES = [
     # English
@@ -829,6 +959,19 @@ class WhatsappService
     "en" => "I'm sorry, our system is a bit busy right now. Please send your preferred day and time, and our team will follow up as soon as possible.",
     "af" => "Jammer, ons stelsel is tans effens besig. Stuur asseblief jou voorkeur dag en tyd, en ons span sal so gou moontlik opvolg."
   }.freeze
+  # Used when the AI returns an uncertain/out-of-scope answer. We flag the
+  # conversation for staff review, notify internal channel, then swap the
+  # patient-facing message to this fallback so the patient knows a human
+  # will follow up rather than being left with a vague AI answer.
+  STAFF_REVIEW_FALLBACK = {
+    "en" => "Thanks for your message! 😊 I'm an AI assistant, so I can help with *bookings* and most general questions.\n\n" \
+            "I'll hand this specific one over to our team — someone from the practice will come back to you personally as soon as possible.\n\n" \
+            "In the meantime, is there anything I can help you book? (Check-ups, cosmetic consultations, whitening, fillings, emergencies)",
+    "af" => "Baie dankie vir jou boodskap! 😊 Ek is 'n KI-assistent, so ek kan help met *besprekings* en algemene vrae.\n\n" \
+            "Vir hierdie spesifieke een sal ek dit aan ons span oorhandig — iemand van die praktyk sal so gou moontlik persoonlik by jou terugkom.\n\n" \
+            "Intussen, kan ek help om enigiets te bespreek? (Ondersoeke, kosmetiese konsultasies, bleiking, vullings, noodgevalle)"
+  }.freeze
+
 
   URGENT_FAST_PATH = {
     "en" => "I'm sorry you're dealing with that. We're open *Monday to Friday, 8am–5pm* and we don't have dentists on duty outside those hours. Please share your name, contact number and a short description — we'll prioritise your case and book you into the very first available slot.",
@@ -874,6 +1017,17 @@ class WhatsappService
       return {
         response: URGENT_FAST_PATH[lang] || URGENT_FAST_PATH["en"],
         intent: "urgent",
+        entities: {}
+      }
+    end
+    # Teeth-whitening: first mention deterministically returns the full info
+    # (price, 90 min duration, R2,000 deposit, banking details). Subsequent
+    # messages in the same conversation fall through to the AI so follow-up
+    # booking questions can be handled conversationally.
+    if message.downcase.match?(/\b(teeth whitening|whitening|bleach(ing)?|biolase)\b/) && !whitening_already_sent?(conversation)
+      return {
+        response: WHITENING_INFO[lang] || WHITENING_INFO["en"],
+        intent: "whitening_info",
         entities: {}
       }
     end
