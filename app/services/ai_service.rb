@@ -241,6 +241,37 @@ class AiService
       - "Same time, next available slot" → {"intent": "reschedule", "entities": {}}
       NEVER classify these as "faq" or "book" when a reschedule conversation is active.
 
+      ## Booking-intent rule (CRITICAL, overrides ambiguity)
+      If the message contains BOTH a specific date AND a specific time, and the patient is asking about an appointment slot, the intent is "book" (or "reschedule" if a reschedule flow is active). NEVER return "other" or "faq" in that case. Always extract date + time into entities.
+
+      ## Whitening rule
+      Any mention of teeth whitening, Biolase, bleiking, tandebleiking, or laser whitening is a BOOK intent with treatment="whitening". Duration is 90 minutes (handled downstream).
+
+      ## Few-shot examples
+      Input: "Book me a cleaning Monday 4 May 2026 at 10:00"
+      Output: {"intent": "book", "entities": {"date": "2026-05-04", "time": "10:00", "treatment": "cleaning"}}
+
+      Input: "I need a check-up Thursday 15 May 09:30 please"
+      Output: {"intent": "book", "entities": {"date": "2026-05-15", "time": "09:30", "treatment": "check-up"}}
+
+      Input: "Can I book whitening for tomorrow at 11am"
+      Output: {"intent": "book", "entities": {"date": "#{(today + 1).iso8601}", "time": "11:00", "treatment": "whitening"}}
+
+      Input: "My name is Jane Doe, phone 0712345678, new patient. 20 May at 2pm cosmetic"
+      Output: {"intent": "book", "entities": {"date": "2026-05-20", "time": "14:00", "treatment": "cosmetic consultation", "name": "Jane Doe"}}
+
+      Input: "What time do you open?"
+      Output: {"intent": "faq", "entities": {}}
+
+      Input: "I have severe pain, this is urgent"
+      Output: {"intent": "urgent", "entities": {}}
+
+      Input: "Please reschedule to Friday 09:30"
+      Output: {"intent": "reschedule", "entities": {"date": "2026-05-15", "time": "09:30"}}
+
+      Input: "yes please confirm"
+      Output: {"intent": "confirm", "entities": {}}
+
       Respond ONLY with valid JSON:
       {"intent": "book", "entities": {"date": "2026-04-17", "time": "11:00", "name": "John", "treatment": "cleaning"}}
 
