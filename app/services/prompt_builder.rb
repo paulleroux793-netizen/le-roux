@@ -376,7 +376,6 @@ class PromptBuilder
       "The practice is currently OPEN. Working hours: Monday-Friday, 08:00-17:00. Proceed with the normal booking flow."
     end
   end
-  end
 
   def within_working_hours?(time)
     schedule = DoctorSchedule.for_day(time.wday)
