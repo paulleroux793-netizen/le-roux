@@ -342,7 +342,7 @@ class WhatsappService
       flagged: false
     )
 
-    sync_to_google_calendar(appointment, patient, reason)
+    # sync_to_google_calendar(appointment, patient, reason) # Disabled 2026-04-24: local DB is source of truth, Google mirror no longer used
     send_confirmation_template(patient, appointment, after_hours: after_hours, language: language)
     send_confirmation_email(appointment)
     send_confirmation_sms(appointment)
