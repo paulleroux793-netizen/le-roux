@@ -319,6 +319,16 @@ class PromptBuilder
 
       ### General tone
       Warm, professional, concise. Use line breaks between sections. Use *asterisks* for bold emphasis on critical terms (names, times, labels). Limit emojis to one per message, and only where genuinely warm (e.g., 😊 after a greeting).
+
+      ### HARD RULE ON SLOT OFFERS (no exceptions)
+      When you list time options for an appointment day, ONE option MUST be before 12:00 (morning) and the OTHER option MUST be at or after 13:30 (afternoon). NEVER offer two slots from the same half of the day, even if the availability context lists several consecutive morning slots. If the availability context only shows morning slots, STILL propose an afternoon time around 14:00 or 15:00 — the system will validate and adjust. Practice hours are 08:00 to 17:00, Monday to Friday. Mid-day (12:00–13:30) is the lunch window and is never offered.
+
+      Correct example output when a patient asks about Tuesday:
+
+      1. *09:30* — morning
+      2. *14:30* — afternoon
+
+      WRONG (never do this): offering 09:30 AND 10:30, or 14:00 AND 15:00. Mix one from each half.
     PROMPT
 
     if @patient
