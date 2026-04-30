@@ -12,6 +12,14 @@ class WhatsappService
   BUTTON_CONFIRM_PAYLOAD    = "CONFIRM APPOINTMENT".freeze
   BUTTON_RESCHEDULE_PAYLOAD = "RESCHEDULE APPOINTMENT".freeze
 
+  # POPIA disclosure prepended to the FIRST AI/template reply this patient
+  # ever receives on this conversation. Required by POPIA — explicit notice
+  # that we're storing patient messages. Self-detecting via
+  # `consent_already_sent?` so a long thread never sees this line twice.
+  # Trigger phrase "By replying you consent" is what the detector matches on,
+  # so don't change that wording without updating consent_already_sent? too.
+  POPIA_CONSENT_LINE = "_By replying you consent to Dr Chalita le Roux's practice storing your messages so we can help you. Reply STOP at any time to delete your data._\n\n".freeze
+
   def initialize
     @ai = nil
     @templates = nil
@@ -63,6 +71,7 @@ class WhatsappService
     # so "CONFIRM APPOINTMENT" / "RESCHEDULE APPOINTMENT" never waste an API call.
     button_result = build_button_payload_result(message: message, conversation: conversation)
     if button_result
+      maybe_prepend_consent(button_result, conversation)
       persist_exchange(conversation, message, button_result[:response])
       handle_intent(button_result, patient, conversation)
       return button_result
@@ -71,6 +80,7 @@ class WhatsappService
     fast_path_result = build_local_result(message: message, conversation: conversation)
 
     if fast_path_result
+      maybe_prepend_consent(fast_path_result, conversation)
       persist_exchange(conversation, message, fast_path_result[:response])
       handle_intent(fast_path_result, patient, conversation)
       return fast_path_result
@@ -97,6 +107,13 @@ class WhatsappService
     # "human will follow up" template.
     verify_response_is_actionable(result, patient, conversation)
 
+    # Prepend POPIA consent if this is the first assistant message in
+    # the conversation. Order matters: AFTER all safety-net rewrites
+    # (so the consent precedes the final patient-visible response) and
+    # BEFORE persist_exchange (so the stored conversation reflects what
+    # the patient actually saw).
+    maybe_prepend_consent(result, conversation)
+
     # Persist the exchange after intent handling so the stored response
     # reflects any rewrite that handle_intent may have applied (e.g.
     # booking-claim rewrites, after-hours blocks, nil on successful booking).
@@ -108,12 +125,43 @@ class WhatsappService
 
     fallback_result = build_fallback_result(message: message, conversation: conversation)
 
+    maybe_prepend_consent(fallback_result, conversation)
     persist_exchange(conversation, message, fallback_result[:response]) if conversation
 
     fallback_result
   end
 
   private
+
+  # --- POPIA consent ---
+
+  # If this conversation has never seen an assistant message containing the
+  # consent disclosure, prepend POPIA_CONSENT_LINE to result[:response].
+  # Mutates `result` in place. No-op if result has no response, no
+  # conversation, or consent has already been sent.
+  def maybe_prepend_consent(result, conversation)
+    return unless result.is_a?(Hash) && result[:response].to_s.strip.present?
+    return if consent_already_sent?(conversation)
+
+    result[:response] = POPIA_CONSENT_LINE + result[:response].to_s
+  end
+
+  # Detects whether the consent line has been sent before in this thread.
+  # Looks at the JSONB `messages` array on the Conversation record for any
+  # assistant message containing the trigger phrase. Treat nil/missing
+  # conversation as "already sent" (safer than spamming consent lines on
+  # mis-routed traffic).
+  CONSENT_DETECTOR = "By replying you consent".freeze
+  def consent_already_sent?(conversation)
+    return true unless conversation
+
+    (conversation.messages || []).any? do |m|
+      role = (m["role"] || m[:role]).to_s
+      content = (m["content"] || m[:content]).to_s
+      role == "assistant" && content.include?(CONSENT_DETECTOR)
+    end
+  end
+
   # --- Booking Safety Net ---
 
   # Runs after handle_intent. If the AI's response text looks like a booking
