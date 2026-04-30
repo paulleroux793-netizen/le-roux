@@ -19,9 +19,12 @@ class VoiceAudioController < ApplicationController
     audio = ElevenLabsService.new.cached_audio(hash)
     return head :not_found if audio.blank?
 
+    # Audio is μ-law 8kHz (Twilio-native). Content-type drives Twilio's
+    # decoder, not the URL extension; we keep the .mp3 URL pattern for
+    # backwards-compat with existing TwiML <Play> URLs in flight.
     send_data audio,
-      type: "audio/mpeg",
+      type: ElevenLabsService::CONTENT_TYPE,
       disposition: "inline",
-      filename: "#{hash}.mp3"
+      filename: "#{hash}.ulaw"
   end
 end

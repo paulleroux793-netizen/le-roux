@@ -4,22 +4,14 @@ class VoiceService
   # is ElevenLabs Ava (SA-English) routed via TwiML <Play>; see
   # `play_or_say` and ElevenLabsService.
   VOICE            = "Polly.Joanna"
-  GATHER_TIMEOUT   = "5"    # seconds of silence before giving up on current utterance
+  GATHER_TIMEOUT   = "3"    # seconds of silence before giving up — was 5, shortened to reduce dead air
   CONFIDENCE_FLOOR = 0.3    # ignore speech below this Twilio confidence score
 
-  GREETING = <<~TEXT.strip
-    Hello, you've reached Dr Chalita le Roux's dental practice. I'm the AI assistant and I can help you book, \
-reschedule, or cancel an appointment, or answer any questions about our practice. How can I help you today?
-  TEXT
+  GREETING = "Hi, you've reached Dr Chalita le Roux's practice. I'm the AI assistant — how can I help you today?".freeze
 
-  NO_SPEECH_REPLY = <<~TEXT.strip
-    I'm sorry, I didn't catch that. Please try speaking again, or send us a WhatsApp message and we'll get back \
-to you shortly.
-  TEXT
+  NO_SPEECH_REPLY = "Sorry, I didn't catch that. Could you say that again?".freeze
 
-  GOODBYE_REPLY = <<~TEXT.strip
-    Thank you for calling Dr Chalita le Roux's practice. We look forward to seeing you. Goodbye!
-  TEXT
+  GOODBYE_REPLY = "Thanks for calling. Have a lovely day!".freeze
 
   GOODBYE_PATTERNS = /\b(goodbye|bye|thank you|thanks|that'?s all|that is all|nothing else|no thanks|no thank you)\b/i
 

@@ -22,7 +22,13 @@ class ElevenLabsService
   CACHE_NAMESPACE = "voice_audio".freeze
   CACHE_TTL = 30.days
   HTTP_READ_TIMEOUT = 30
-  DEFAULT_MODEL_ID = "eleven_multilingual_v2".freeze
+  DEFAULT_MODEL_ID = "eleven_turbo_v2_5".freeze
+  # Twilio-native μ-law 8kHz mono. Avoids the MP3-then-Twilio-downsample chain
+  # that otherwise turns rich 44kHz TTS into tinny 8kHz phone audio. ElevenLabs
+  # renders directly at the phone's playback format, so what Twilio plays is
+  # bit-identical to what ElevenLabs produced.
+  OUTPUT_FORMAT = "ulaw_8000".freeze
+  CONTENT_TYPE = "audio/basic".freeze
   HASH_REGEX = /\A[a-f0-9]{64}\z/
 
   # Returns the public URL of a cached MP3 of `text`. Generates and caches
@@ -90,15 +96,20 @@ class ElevenLabsService
   end
 
   def generate_mp3(text)
-    uri = URI("#{API_BASE}/text-to-speech/#{voice_id}")
+    uri = URI("#{API_BASE}/text-to-speech/#{voice_id}?output_format=#{OUTPUT_FORMAT}")
     request = Net::HTTP::Post.new(uri)
     request["xi-api-key"] = api_key
-    request["accept"] = "audio/mpeg"
+    request["accept"] = CONTENT_TYPE
     request["content-type"] = "application/json"
     request.body = {
       text: text,
       model_id: model_id,
-      voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75,
+        style: 0.3,
+        use_speaker_boost: true
+      }
     }.to_json
 
     response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true) do |http|

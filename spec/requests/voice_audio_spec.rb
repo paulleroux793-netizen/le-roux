@@ -12,11 +12,11 @@ RSpec.describe "Voice audio endpoint", type: :request do
         Rails.cache.write("voice_audio:#{valid_hash}", fake_mp3, expires_in: 30.days)
       end
 
-      it "returns 200 with audio/mpeg content type" do
+      it "returns 200 with audio/basic content type (Twilio-native μ-law 8kHz)" do
         get "/voice/audio/#{valid_hash}.mp3"
 
         expect(response).to have_http_status(:ok)
-        expect(response.content_type).to start_with("audio/mpeg")
+        expect(response.content_type).to start_with("audio/basic")
       end
 
       it "returns the cached MP3 bytes" do
