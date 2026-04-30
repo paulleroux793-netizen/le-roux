@@ -155,6 +155,29 @@ RSpec.describe PromptBuilder do
             expect(prompt).to include("Roodepoort")
             expect(prompt).to include("NEVER say \"Pretoria\"")
           end
+
+          it "includes the surgical-extraction refer-out rule" do
+            expect(prompt).to include("SERVICES WE DO NOT OFFER")
+            expect(prompt).to include("Surgical extractions")
+            expect(prompt).to include("oral surgeon")
+            expect(prompt).to include("don't perform surgical extractions in-house")
+          end
+
+          it "includes the orthodontics-beyond-aligners refer-out rule" do
+            expect(prompt).to include("Orthodontic work beyond clear aligners")
+            expect(prompt).to include("orthodontist")
+          end
+
+          it "lists trigger phrases the AI must catch for surgical/orthodontics" do
+            expect(prompt).to include("surgical extraction")
+            expect(prompt).to include("impacted tooth")
+            expect(prompt).to include("wisdom tooth surgery")
+          end
+
+          it "still allows in-house standard extractions to book normally" do
+            expect(prompt).to include("Standard extractions")
+            expect(prompt).to include("ARE done in-house")
+          end
         end
       end
     end
