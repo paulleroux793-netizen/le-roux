@@ -5,9 +5,16 @@ class PromptBuilder
   PRACTICE_DIRECTIONS = AiService::PRACTICE_DIRECTIONS
   FAQ = AiService::FAQ
 
-  def initialize(patient: nil, context: {}, afrikaans_examples: nil)
+  # Channels recognised by the prompt builder. Today both branches emit the
+  # same prompt; they will diverge in a follow-up PR (Phase 9.16) so the
+  # voice agent gets format rules tuned for spoken delivery while WhatsApp
+  # keeps its current numbered-list / asterisks formatting.
+  CHANNELS = %i[whatsapp voice].freeze
+
+  def initialize(patient: nil, context: {}, channel: :whatsapp, afrikaans_examples: nil)
     @patient = patient
     @context = context
+    @channel = channel.to_sym
     @language = context[:language] || "en"
     @afrikaans_examples = afrikaans_examples
   end

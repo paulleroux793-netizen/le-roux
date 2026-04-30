@@ -65,8 +65,10 @@ class AiService
 
   # Generate a conversational response as Dr le Roux's receptionist.
   # Accepts conversation history and optional media attachments (PDFs/images).
-  def generate_response(message:, conversation_history: [], patient: nil, context: {}, media_attachments: [])
-    system = build_system_prompt(patient: patient, context: context)
+  # `channel` selects the prompt format (defaults to :whatsapp for backwards
+  # compatibility — voice callers pass :voice).
+  def generate_response(message:, conversation_history: [], patient: nil, context: {}, channel: :whatsapp, media_attachments: [])
+    system = build_system_prompt(patient: patient, context: context, channel: channel)
     messages = build_messages(conversation_history, message, media_attachments: media_attachments)
 
     response = create_message(
@@ -96,7 +98,9 @@ class AiService
   end
 
   # Handle a full conversation turn: classify, respond, and return structured result.
-  def process_message(message:, conversation: nil, patient: nil, media_attachments: [])
+  # `channel` selects the prompt format (:whatsapp or :voice). Defaults to
+  # :whatsapp so existing WhatsApp callers don't need to change.
+  def process_message(message:, conversation: nil, patient: nil, channel: :whatsapp, media_attachments: [])
     raw_history = (conversation&.messages || []).last(20)
     sanitized = []
     raw_history.each do |m|
@@ -124,6 +128,7 @@ class AiService
       conversation_history: history,
       patient: patient,
       context: context,
+      channel: channel,
       media_attachments: media_attachments
     )
 
@@ -293,8 +298,10 @@ class AiService
 
   # Delegates to PromptBuilder, which assembles the full system prompt
   # and injects dynamically fetched Afrikaans examples when applicable.
-  def build_system_prompt(patient: nil, context: {})
-    PromptBuilder.new(patient: patient, context: context).build
+  # `channel` is forwarded to PromptBuilder so voice-channel callers can
+  # receive a voice-tuned prompt (PR 2). Defaults to :whatsapp.
+  def build_system_prompt(patient: nil, context: {}, channel: :whatsapp)
+    PromptBuilder.new(patient: patient, context: context, channel: channel).build
   end
 
   # Mutates `context` in place with real availability data so PromptBuilder

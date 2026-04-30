@@ -46,7 +46,8 @@ to you shortly.
     result = ai_service.process_message(
       message:      speech_result,
       conversation: conversation,
-      patient:      patient
+      patient:      patient,
+      channel:      :voice
     )
 
     update_call_log(call_log, result)
