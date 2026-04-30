@@ -3,9 +3,14 @@ require "rails_helper"
 RSpec.describe VoiceService do
   let(:service)    { described_class.new }
   let(:ai_service) { instance_double(AiService) }
+  let(:eleven_labs) { instance_double(ElevenLabsService, audio_url_for: nil) }
 
   before do
     allow(AiService).to receive(:new).and_return(ai_service)
+    # ElevenLabs default to "unconfigured / unavailable" in tests so
+    # play_or_say falls back to Polly <Say> — keeps the spoken text
+    # inspectable in the TwiML XML for assertions below.
+    allow(ElevenLabsService).to receive(:new).and_return(eleven_labs)
     stub_const("ENV", ENV.to_h.merge("APP_BASE_URL" => "https://test.ngrok.io"))
   end
 
@@ -354,6 +359,43 @@ RSpec.describe VoiceService do
         expect(twiml).to include("<Response>")
         expect(twiml).to include("<Hangup")
       end
+    end
+  end
+
+  # ── ElevenLabs preferred path ─────────────────────────────────────────
+  #
+  # When ElevenLabs returns a usable audio URL, TwiML emits <Play> with
+  # that URL instead of <Say> with Polly. Polly is the fallback only.
+
+  describe "#handle_incoming with ElevenLabs configured" do
+    let(:eleven_labs) do
+      instance_double(
+        ElevenLabsService,
+        audio_url_for: "https://test.ngrok.io/voice/audio/abc.mp3"
+      )
+    end
+
+    it "emits <Play> pointing at the ElevenLabs cache, not <Say>" do
+      twiml = service.handle_incoming(call_sid: "CA_eleven_1", caller: "+27821234567")
+
+      expect(twiml).to include("<Play")
+      expect(twiml).to include("/voice/audio/")
+      expect(twiml).not_to include("<Say")
+    end
+  end
+
+  describe "Polly fallback when ElevenLabs is unavailable" do
+    # Default before-block stubs eleven_labs.audio_url_for to nil — every
+    # test above this section is implicitly exercising the Polly fallback
+    # path, but this test makes the contract explicit so a future ElevenLabs
+    # refactor can't silently regress it.
+
+    it "emits TwiML <Say> with Polly Joanna voice when audio_url_for returns nil" do
+      twiml = service.handle_incoming(call_sid: "CA_polly_1", caller: "+27829999999")
+
+      expect(twiml).to include("<Say")
+      expect(twiml).to include("Polly.Joanna")
+      expect(twiml).not_to include("<Play")
     end
   end
 end
