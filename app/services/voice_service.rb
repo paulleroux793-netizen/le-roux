@@ -1,4 +1,8 @@
 class VoiceService
+  # Polly.Joanna is the FALLBACK voice — used only when ElevenLabs is
+  # unconfigured, unreachable, or returns an error. The preferred voice
+  # is ElevenLabs Ava (SA-English) routed via TwiML <Play>; see
+  # `play_or_say` and ElevenLabsService.
   VOICE            = "Polly.Joanna"
   GATHER_TIMEOUT   = "5"    # seconds of silence before giving up on current utterance
   CONFIDENCE_FLOOR = 0.3    # ignore speech below this Twilio confidence score
@@ -90,19 +94,15 @@ to you shortly.
     time          = appointment.start_time.strftime("%I:%M %p")
     gather_action = "#{base_url}/webhooks/voice/confirmation_gather?appointment_id=#{appointment.id}"
 
+    confirmation_message = "Hello #{patient.first_name}, this is a reminder from Dr Chalita le Roux's dental practice. " \
+                           "You have an appointment on #{date} at #{time}. " \
+                           "Press 1 to confirm, press 2 to reschedule, or press 3 to cancel."
+
     Twilio::TwiML::VoiceResponse.new do |r|
       r.gather(input: "dtmf", action: gather_action, num_digits: "1", timeout: "10") do |g|
-        g.say(
-          message: "Hello #{patient.first_name}, this is a reminder from Dr Chalita le Roux's dental practice. " \
-                   "You have an appointment on #{date} at #{time}. " \
-                   "Press 1 to confirm, press 2 to reschedule, or press 3 to cancel.",
-          voice: VOICE
-        )
+        play_or_say(g, confirmation_message)
       end
-      r.say(
-        message: "We didn't receive a response. Please call us or send a WhatsApp message to confirm your appointment. Goodbye.",
-        voice: VOICE
-      )
+      play_or_say(r, "We didn't receive a response. Please call us or send a WhatsApp message to confirm your appointment. Goodbye.")
       r.hangup
     end.to_xml
   end
@@ -151,21 +151,32 @@ to you shortly.
   def gather_twiml(message, action)
     Twilio::TwiML::VoiceResponse.new do |r|
       r.gather(input: "speech", action: action, timeout: GATHER_TIMEOUT, speech_timeout: "auto") do |g|
-        g.say(message: message, voice: VOICE)
+        play_or_say(g, message)
       end
-      r.say(
-        message: "I didn't hear anything. Please call us back or send a WhatsApp message. Goodbye.",
-        voice: VOICE
-      )
+      play_or_say(r, "I didn't hear anything. Please call us back or send a WhatsApp message. Goodbye.")
       r.hangup
     end.to_xml
   end
 
   def farewell_twiml(message)
     Twilio::TwiML::VoiceResponse.new do |r|
-      r.say(message: message, voice: VOICE)
+      play_or_say(r, message)
       r.hangup
     end.to_xml
+  end
+
+  # Speaks `text` via ElevenLabs Ava (preferred SA-English voice) by
+  # generating + caching an MP3 and pointing TwiML <Play> at it. If
+  # ElevenLabs is unconfigured or fails, falls back to TwiML <Say> with
+  # Polly Joanna so the call still completes — voice quality degrades
+  # but the patient is never dropped.
+  def play_or_say(node, text)
+    audio_url = eleven_labs.audio_url_for(text)
+    if audio_url
+      node.play(url: audio_url)
+    else
+      node.say(message: text, voice: VOICE)
+    end
   end
 
   # ── URL helpers ──────────────────────────────────────────────────────
@@ -235,5 +246,9 @@ to you shortly.
 
   def ai_service
     @ai ||= AiService.new
+  end
+
+  def eleven_labs
+    @eleven_labs ||= ElevenLabsService.new
   end
 end
