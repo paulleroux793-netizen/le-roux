@@ -162,5 +162,70 @@ RSpec.describe AiService do
     it "has answers for common questions" do
       expect(AiService::FAQ.keys).to include("hours", "location", "services", "payment")
     end
+
+    it "includes the reception-derived FAQ entries (walk-ins, costs, sedation, aftercare, family)" do
+      expect(AiService::FAQ.keys).to include(
+        "walk_ins",
+        "consultation_cost",
+        "filling_cost",
+        "extraction_cost",
+        "surgical_extraction",
+        "sedation_kids",
+        "aftercare_eating",
+        "family_booking"
+      )
+    end
+
+    it "walk_ins answer offers an alternative instead of refusing" do
+      expect(AiService::FAQ.fetch("walk_ins")).to include("don't accept walk-ins")
+      expect(AiService::FAQ.fetch("walk_ins")).to include("same-day or next-day")
+    end
+
+    it "extraction_cost answer mentions standard price AND consultation-first for surgical" do
+      txt = AiService::FAQ.fetch("extraction_cost")
+      expect(txt).to include("R1,900")
+      expect(txt).to include("consultation first")
+      expect(txt).to include("CBCT scan")
+      expect(txt).to include("in-house")
+      # Anti-regression: must NOT contain the OLD wrong refer-out language
+      expect(txt).not_to include("we refer you to an oral surgeon")
+      expect(txt).not_to include("don't perform surgical extractions in-house")
+    end
+
+    it "surgical_extraction answer offers consultation-first (NOT refer-out)" do
+      txt = AiService::FAQ.fetch("surgical_extraction")
+      expect(txt).to include("we can usually help")
+      expect(txt).to include("CBCT scan")
+      expect(txt).to include("oral surgeons are much more expensive")
+      expect(txt).to include("X-rays")
+      # Anti-regression: must NOT say we don't do them
+      expect(txt).not_to include("don't perform surgical extractions in-house")
+      expect(txt).not_to include("you'll need to see an oral surgeon")
+    end
+
+    it "sedation_kids answer says consultation-first (NOT sedation upfront)" do
+      txt = AiService::FAQ.fetch("sedation_kids")
+      expect(txt).to include("consultation first")
+      expect(txt).to include("NOT a sedation appointment")
+      expect(txt).to include("only considered later")
+      # Anti-regression: must NOT promise sedation as a default for first visit
+      expect(txt).not_to match(/Yes\s*[-—]\s*for young children's first dental visit we offer sedation/i)
+    end
+
+    it "consultation_cost answer states approximate R850 with caveats" do
+      txt = AiService::FAQ.fetch("consultation_cost")
+      expect(txt).to include("R850")
+      expect(txt).to include("excludes 2D/3D scans")
+    end
+
+    it "aftercare_eating answer reassures the patient + warns about numb lip/cheek" do
+      txt = AiService::FAQ.fetch("aftercare_eating")
+      expect(txt).to include("light-cured")
+      expect(txt).to include("numb")
+    end
+
+    it "FAQ remains frozen after additions" do
+      expect(AiService::FAQ).to be_frozen
+    end
   end
 end

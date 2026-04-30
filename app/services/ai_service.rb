@@ -30,7 +30,59 @@ class AiService
     "parking" => "Free parking is available on the premises.",
     "services" => "We offer general dentistry, check-ups, cleanings, fillings, extractions, root canals, crowns, bridges, and cosmetic treatments. An examination is the best first step for any concern.",
     "emergency" => "For dental emergencies, please share your name, contact number and a short description of the issue. We're open *Monday to Friday, 8am–5pm* and we don't have dentists on duty outside those hours — we always prioritise emergencies and will book you in at the very first available slot the moment we reopen.",
-    "payment" => "We do not claim directly from medical aid. All patients pay at the practice, and we then provide a statement so you can claim back from your medical aid. We have card facilities at the practice and also accept cash."
+    "payment" => "We do not claim directly from medical aid. All patients pay at the practice, and we then provide a statement so you can claim back from your medical aid. We have card facilities at the practice and also accept cash.",
+
+    # ── Reception-derived FAQ entries (from Cube ACR call corpus, ──
+    # Apr 2026 analysis). Reception's verbatim answers to the
+    # questions patients actually ask most often. Hard-coding these
+    # rather than letting the AI improvise gives consistency with
+    # how a human reception team would answer.
+    "walk_ins" => "We don't accept walk-ins, but I can usually offer a same-day or next-day appointment. " \
+                  "What treatment do you need? I'll check what's available.",
+
+    "consultation_cost" => "A consultation is approximately R850 (which may include x-rays, but " \
+                           "excludes 2D/3D scans). Final cost depends on what the dentist recommends.",
+
+    "filling_cost" => "Filling costs depend on the size and the type of restoration. " \
+                      "After Dr Chalita has examined you and taken x-rays, she'll give you " \
+                      "an exact quote before any work starts.",
+
+    "extraction_cost" => "A standard extraction is approximately R1,900, but the final cost depends on " \
+                         "the x-rays and the type of extraction needed. The dentist will give you a final " \
+                         "quote after the examination. For surgical extractions (impacted teeth or below " \
+                         "the gum line), we'd book you in for a consultation first so Dr Chalita can do a " \
+                         "CBCT scan and assess — most cases we can do in-house, which usually saves you " \
+                         "a lot vs an oral surgeon.",
+
+    # CORRECTED 30 Apr 2026: practice DOES perform surgical extractions, just
+    # needs a consultation first (CBCT scan to assess). Many patients come
+    # specifically for the cost saving vs an oral surgeon.
+    "surgical_extraction" => "Yes, we can usually help with surgical extractions — Dr Chalita has the " \
+                             "technology (CBCT scan) to assess and perform these in-house in most cases. " \
+                             "It's a popular option because oral surgeons are much more expensive. " \
+                             "We'd book you in for a consultation first so Dr Chalita can scan the area " \
+                             "and confirm she can proceed. If you have any X-rays already, please share " \
+                             "them so I can pass them on to her ahead of time.",
+
+    # CORRECTED 30 Apr 2026: never sedation on first visit. Children + mentally
+    # disabled patients always get a consultation first; sedation is only
+    # considered if actual dental work is needed and the patient can't
+    # tolerate the chair without it. Doctor decides during the consultation.
+    "sedation_kids" => "For young children — and patients with special needs — we always book a " \
+                       "consultation first, NOT a sedation appointment. Dr Chalita prefers to meet the " \
+                       "patient, do a checkup, and put them at ease in the chair without sedation. " \
+                       "Sedation is only considered later if actual dental work is needed and the " \
+                       "patient genuinely can't tolerate the procedure awake — and that's a decision " \
+                       "Dr Chalita makes after meeting them, not upfront. How old is the child? " \
+                       "I'll book the consultation slot.",
+
+    "aftercare_eating" => "Yes, you can eat as normal — the cement is light-cured so it sets immediately. " \
+                          "Just be careful not to bite your cheek or lip while you're still numb from the " \
+                          "anaesthetic. If you have any pain or sensitivity that doesn't settle within a few " \
+                          "days, please call us so we can check.",
+
+    "family_booking" => "Of course! How many family members would you like to book, and what does each one " \
+                        "need? Please share their full names so I can set up each appointment."
   }.freeze
 
   class Error < StandardError; end
