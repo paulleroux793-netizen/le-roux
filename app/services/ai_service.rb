@@ -49,18 +49,32 @@ class AiService
 
     "extraction_cost" => "A standard extraction is approximately R1,900, but the final cost depends on " \
                          "the x-rays and the type of extraction needed. The dentist will give you a final " \
-                         "quote after the examination. *Please note* — for surgical extractions (where the " \
-                         "tooth is impacted or below the gum), we refer you to an oral surgeon, as we don't " \
-                         "perform surgical extractions in-house.",
+                         "quote after the examination. For surgical extractions (impacted teeth or below " \
+                         "the gum line), we'd book you in for a consultation first so Dr Chalita can do a " \
+                         "CBCT scan and assess — most cases we can do in-house, which usually saves you " \
+                         "a lot vs an oral surgeon.",
 
-    "surgical_extraction" => "We don't perform surgical extractions in-house. If your doctor has referred you " \
-                             "for a surgical extraction (where the tooth is impacted or has to be cut out), " \
-                             "you'll need to see an oral surgeon. The doctor who referred you should be able " \
-                             "to refer you to a surgeon directly.",
+    # CORRECTED 30 Apr 2026: practice DOES perform surgical extractions, just
+    # needs a consultation first (CBCT scan to assess). Many patients come
+    # specifically for the cost saving vs an oral surgeon.
+    "surgical_extraction" => "Yes, we can usually help with surgical extractions — Dr Chalita has the " \
+                             "technology (CBCT scan) to assess and perform these in-house in most cases. " \
+                             "It's a popular option because oral surgeons are much more expensive. " \
+                             "We'd book you in for a consultation first so Dr Chalita can scan the area " \
+                             "and confirm she can proceed. If you have any X-rays already, please share " \
+                             "them so I can pass them on to her ahead of time.",
 
-    "sedation_kids" => "Yes — for young children's first dental visit we offer sedation to make the experience " \
-                       "comfortable. We typically book pediatric sedation appointments at specific times. " \
-                       "How old is the child? I'll check Dr Chalita's earliest available pediatric slot.",
+    # CORRECTED 30 Apr 2026: never sedation on first visit. Children + mentally
+    # disabled patients always get a consultation first; sedation is only
+    # considered if actual dental work is needed and the patient can't
+    # tolerate the chair without it. Doctor decides during the consultation.
+    "sedation_kids" => "For young children — and patients with special needs — we always book a " \
+                       "consultation first, NOT a sedation appointment. Dr Chalita prefers to meet the " \
+                       "patient, do a checkup, and put them at ease in the chair without sedation. " \
+                       "Sedation is only considered later if actual dental work is needed and the " \
+                       "patient genuinely can't tolerate the procedure awake — and that's a decision " \
+                       "Dr Chalita makes after meeting them, not upfront. How old is the child? " \
+                       "I'll book the consultation slot.",
 
     "aftercare_eating" => "Yes, you can eat as normal — the cement is light-cured so it sets immediately. " \
                           "Just be careful not to bite your cheek or lip while you're still numb from the " \
