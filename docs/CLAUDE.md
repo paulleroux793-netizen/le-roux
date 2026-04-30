@@ -15,7 +15,7 @@ Before making any changes:
 1. Read this `CLAUDE.md` file first (source of truth for behavior and safety).
 2. Read `ROADMAP.md` (source of truth for phases, tasks, and progress tracking).
 3. Read AI prompt files and datasets:
-   - `config/ai/claude_master_prompt.md`
+   - `app/services/prompt_builder.rb` (the canonical source of the system prompt — the previous reference to `config/ai/claude_master_prompt.md` is stale; that file does not exist)
    - `config/ai/afrikaans_language_dataset.json`
 4. Inspect the relevant parts of the codebase before making any changes.
 

@@ -2,7 +2,7 @@
 
 ## Current Status: 🚧 Phase 9.15 In Progress — 9.15.5–9.15.9 Complete
 
-**Completed**: Phases 1-9, 9.5, 9.7-9.12, 13, partial 9.14, 9.15.1–9.15.9, 18, 20
+**Completed**: Phases 1-9, 9.5, 9.7-9.12, 13, partial 9.14, 9.15.1–9.15.9, 9.19.1–9.19.2, 18, 20
 **Current Priority**: Phase 9.15.10 (E2E verification), then Phase 10
 **Deferred**: Phase 11 (Analytics), Phase 12 (Billing), Phases 14-17 (Security, Training, Deployment, remaining future enhancements)
 
@@ -743,6 +743,57 @@ Full production-grade hardening sprint covering PDF bot processing, audit trail,
 - [ ] Manually verify: conversation colors consistent, composer polished
 - [ ] Document voice gaps in README
 - [ ] Mark 9.15.10 complete only after full pass
+
+## Phase 9.19: Voice Channel Separation — Per-Channel Prompts and ElevenLabs TTS
+
+**Goal:** Diverge the voice agent's spoken style from WhatsApp's text style. Today the voice agent and the WhatsApp bot share one `PromptBuilder`, so phone patients hear WhatsApp-formatted answers (numbered lists, `*asterisks*`, "2-3 sentences max for WhatsApp") read aloud by the TTS engine. Polly literally pronounces "asterisk". The fix is per-channel format rules + a SA-English TTS voice (ElevenLabs Ava) for natural delivery, with Polly Joanna kept as a graceful fallback so calls never break.
+
+**Engineering rules followed throughout:**
+- Smallest safe diff at each step. WhatsApp behaviour is preserved byte-identical until the deliberate divergence in 9.19.3.
+- Three-PR sequence so each step is independently reversible.
+- Polly fallback wired in 9.19.2 means ElevenLabs failure (key revoked, API down, network unreachable) degrades voice quality instead of breaking the call.
+
+### 9.19.1: Channel-aware PromptBuilder ✅ COMPLETE
+- [x] Add `channel:` keyword parameter to `PromptBuilder.new` (default `:whatsapp`, accepts `:voice`)
+- [x] Thread `channel:` through `AiService.process_message`, `generate_response`, `build_system_prompt`
+- [x] `VoiceService.handle_gather` passes `channel: :voice`
+- [x] PR 1 invariant: `:whatsapp` and `:voice` produce **byte-identical** output (assertion will be removed in 9.19.3)
+- [x] Spec coverage: parameter normalisation, default value, byte-identical assertion, presence of WhatsApp markers in voice branch (intentional, flips in 9.19.3)
+- [x] Merged via fork PR #1
+
+### 9.19.2: ElevenLabs Ava TTS integration with Polly fallback ✅ COMPLETE
+- [x] `ElevenLabsService` — wraps ElevenLabs TTS API. Generates MP3 bytes, caches by `SHA256(text + voice_id + model_id)` in `Rails.cache` (Solid Cache, 30-day TTL). Cache key includes voice + model so swapping either invalidates audio automatically.
+- [x] `VoiceAudioController` — public `GET /voice/audio/:hash.mp3` serves cached MP3 bytes only. Hash format validated (`/[a-f0-9]{64}/`) to defend against path-traversal abuse.
+- [x] `VoiceService.play_or_say(node, text)` — generates ElevenLabs URL and emits TwiML `<Play>` if available, falls back to `<Say>` with Polly Joanna otherwise. Replaces five direct `g.say`/`r.say` call sites.
+- [x] `voice:warm_cache` rake task — pre-generates ElevenLabs audio for `GREETING`, `NO_SPEECH_REPLY`, `GOODBYE_REPLY` so first-call latency is low.
+- [x] `.env.example` documents `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` (Ava: `x8syuETaTA9JYwAbE2JM`), `ELEVENLABS_MODEL_ID` (`eleven_multilingual_v2` for EN + AF support).
+- [x] Spec coverage: success path, cache hit avoids API, POST body shape, xi-api-key header, 5xx + 401 + missing key + blank text all return nil (Polly fallback), voice/model/text changes invalidate cache hash, controller hash-format defence, `<Play>` vs `<Say>` branching in VoiceService.
+- [x] Merged via fork PR #2
+
+### 9.19.3: Voice-specific prompt content (next PR)
+The voice branch of `PromptBuilder` ships its own identity, personality, and format rules drafted from real reception phone-call transcripts (Cube ACR corpus, 468 audio recordings).
+- [ ] Produce `VOICE_AGENT_INTELLIGENCE.md` from the full transcript corpus — top patient questions verbatim, signature openers/closers, intent-gathering order, pricing phrases, tone words, conversion patterns, goodbye patterns
+- [ ] Voice format rules: no markdown, one question per turn, short conversational sentences, SA reception warmth ("shame", "lovely", "I'm just glad you're doing well"), spell-back of patient names, slot offers in spoken form ("half past nine in the morning")
+- [ ] Voice identity block: "voice receptionist" not "WhatsApp booking assistant"
+- [ ] Voice personality block: stripped of "WhatsApp" / "asterisks" / "numbered list" references
+- [ ] WhatsApp branch unchanged — byte-identical to current production
+- [ ] Update `prompt_builder_spec.rb`: replace the byte-identical assertion (which proves the diverge worked) and add format-specific assertions for both branches
+- [ ] End-to-end test on Twilio sandbox voice number: dial in, request a booking, verify the agent's spoken style matches reception's transcripts (no "asterisk" pronunciation, one question at a time, etc.)
+
+### 9.19.4: POPIA recording disclosure (separate PR)
+- [ ] Add recording disclosure to `VoiceService::GREETING`: "This call is being recorded for quality and your service."
+- [ ] Re-warm the cache so the new greeting is pre-generated as Ava audio
+- [ ] Sandbox test confirms patient hears the disclosure before the AI starts taking input
+
+### 9.19.5: Stress-test against the full WhatsApp + voice matrix
+- [ ] Run the 19-scenario verification battery from `WHATSAPP_FINAL_AUDIT_2026-04-24.md` against both channels: weekend rejection, public holiday rejection, walk-in handling, whitening flow, surgical-extraction redirect, emergency triage, after-hours booking, conflict-slot detection, etc.
+- [ ] Document any voice-specific divergences from WhatsApp behaviour and decide whether to preserve, fix, or accept
+
+### 9.19.6: Soft launch on after-hours forwarding rule
+- [ ] Provision SA local Twilio voice number under Le Roux Dental account (currently using Twilio sandbox)
+- [ ] Configure forwarding: practice-hours calls go to Michelle/Liska; after-hours calls go to the AI agent
+- [ ] Monitor call logs + ConfirmationLog flagged rate for 7 days
+- [ ] Decide on full cutover based on metrics
 
 ## Phase 10: Import Historical WhatsApp Chats
 
