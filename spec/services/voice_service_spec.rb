@@ -152,7 +152,10 @@ RSpec.describe VoiceService do
         confidence:    0.95
       )
 
-      expect(twiml).to include("Goodbye")
+      # Farewell TwiML uses GOODBYE_REPLY ("Thanks for calling…") — match
+      # on the warm-sign-off content rather than a literal "Goodbye" word
+      # so the spec survives future tone tweaks to GOODBYE_REPLY.
+      expect(twiml).to match(/Thanks for calling|lovely day|bye/i)
       expect(twiml).to include("<Hangup")
     end
 

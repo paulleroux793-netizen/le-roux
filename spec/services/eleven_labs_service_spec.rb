@@ -8,7 +8,9 @@ RSpec.describe ElevenLabsService do
   let(:text)     { "Hello, you've reached the practice." }
   let(:fake_mp3) { "FAKE_MP3_BYTES".b }
 
-  let(:tts_endpoint) { "https://api.elevenlabs.io/v1/text-to-speech/#{voice_id}" }
+  # Regex matches with or without the ?output_format=... query string,
+  # so the same stub works for ulaw_8000 (production) and any future format.
+  let(:tts_endpoint) { %r{https://api\.elevenlabs\.io/v1/text-to-speech/#{voice_id}} }
 
   before do
     stub_const(
