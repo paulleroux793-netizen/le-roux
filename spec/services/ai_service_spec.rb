@@ -162,5 +162,52 @@ RSpec.describe AiService do
     it "has answers for common questions" do
       expect(AiService::FAQ.keys).to include("hours", "location", "services", "payment")
     end
+
+    it "includes the reception-derived FAQ entries (walk-ins, costs, sedation, aftercare, family)" do
+      expect(AiService::FAQ.keys).to include(
+        "walk_ins",
+        "consultation_cost",
+        "filling_cost",
+        "extraction_cost",
+        "surgical_extraction",
+        "sedation_kids",
+        "aftercare_eating",
+        "family_booking"
+      )
+    end
+
+    it "walk_ins answer offers an alternative instead of refusing" do
+      expect(AiService::FAQ.fetch("walk_ins")).to include("don't accept walk-ins")
+      expect(AiService::FAQ.fetch("walk_ins")).to include("same-day or next-day")
+    end
+
+    it "extraction_cost answer mentions both the standard price AND the surgical caveat" do
+      txt = AiService::FAQ.fetch("extraction_cost")
+      expect(txt).to include("R1,900")
+      expect(txt).to include("oral surgeon")
+      expect(txt).to include("don't perform surgical extractions")
+    end
+
+    it "surgical_extraction answer refuses + refers out (defense in depth with prompt rule)" do
+      txt = AiService::FAQ.fetch("surgical_extraction")
+      expect(txt).to include("don't perform surgical extractions in-house")
+      expect(txt).to include("oral surgeon")
+    end
+
+    it "consultation_cost answer states approximate R850 with caveats" do
+      txt = AiService::FAQ.fetch("consultation_cost")
+      expect(txt).to include("R850")
+      expect(txt).to include("excludes 2D/3D scans")
+    end
+
+    it "aftercare_eating answer reassures the patient + warns about numb lip/cheek" do
+      txt = AiService::FAQ.fetch("aftercare_eating")
+      expect(txt).to include("light-cured")
+      expect(txt).to include("numb")
+    end
+
+    it "FAQ remains frozen after additions" do
+      expect(AiService::FAQ).to be_frozen
+    end
   end
 end

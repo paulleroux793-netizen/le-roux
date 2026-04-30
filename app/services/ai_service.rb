@@ -30,7 +30,45 @@ class AiService
     "parking" => "Free parking is available on the premises.",
     "services" => "We offer general dentistry, check-ups, cleanings, fillings, extractions, root canals, crowns, bridges, and cosmetic treatments. An examination is the best first step for any concern.",
     "emergency" => "For dental emergencies, please share your name, contact number and a short description of the issue. We're open *Monday to Friday, 8am–5pm* and we don't have dentists on duty outside those hours — we always prioritise emergencies and will book you in at the very first available slot the moment we reopen.",
-    "payment" => "We do not claim directly from medical aid. All patients pay at the practice, and we then provide a statement so you can claim back from your medical aid. We have card facilities at the practice and also accept cash."
+    "payment" => "We do not claim directly from medical aid. All patients pay at the practice, and we then provide a statement so you can claim back from your medical aid. We have card facilities at the practice and also accept cash.",
+
+    # ── Reception-derived FAQ entries (from Cube ACR call corpus, ──
+    # Apr 2026 analysis). Reception's verbatim answers to the
+    # questions patients actually ask most often. Hard-coding these
+    # rather than letting the AI improvise gives consistency with
+    # how a human reception team would answer.
+    "walk_ins" => "We don't accept walk-ins, but I can usually offer a same-day or next-day appointment. " \
+                  "What treatment do you need? I'll check what's available.",
+
+    "consultation_cost" => "A consultation is approximately R850 (which may include x-rays, but " \
+                           "excludes 2D/3D scans). Final cost depends on what the dentist recommends.",
+
+    "filling_cost" => "Filling costs depend on the size and the type of restoration. " \
+                      "After Dr Chalita has examined you and taken x-rays, she'll give you " \
+                      "an exact quote before any work starts.",
+
+    "extraction_cost" => "A standard extraction is approximately R1,900, but the final cost depends on " \
+                         "the x-rays and the type of extraction needed. The dentist will give you a final " \
+                         "quote after the examination. *Please note* — for surgical extractions (where the " \
+                         "tooth is impacted or below the gum), we refer you to an oral surgeon, as we don't " \
+                         "perform surgical extractions in-house.",
+
+    "surgical_extraction" => "We don't perform surgical extractions in-house. If your doctor has referred you " \
+                             "for a surgical extraction (where the tooth is impacted or has to be cut out), " \
+                             "you'll need to see an oral surgeon. The doctor who referred you should be able " \
+                             "to refer you to a surgeon directly.",
+
+    "sedation_kids" => "Yes — for young children's first dental visit we offer sedation to make the experience " \
+                       "comfortable. We typically book pediatric sedation appointments at specific times. " \
+                       "How old is the child? I'll check Dr Chalita's earliest available pediatric slot.",
+
+    "aftercare_eating" => "Yes, you can eat as normal — the cement is light-cured so it sets immediately. " \
+                          "Just be careful not to bite your cheek or lip while you're still numb from the " \
+                          "anaesthetic. If you have any pain or sensitivity that doesn't settle within a few " \
+                          "days, please call us so we can check.",
+
+    "family_booking" => "Of course! How many family members would you like to book, and what does each one " \
+                        "need? Please share their full names so I can set up each appointment."
   }.freeze
 
   class Error < StandardError; end
