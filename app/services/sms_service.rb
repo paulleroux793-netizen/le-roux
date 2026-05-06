@@ -37,6 +37,19 @@ class SmsService
       send_sms(patient.phone, body)
     end
 
+    # Internal alert: SMS to the practice's emergency_admin_phone (Paul)
+    # when the AI flags a conversation for human follow-up. Best-effort —
+    # failure does not block the primary flagging logic.
+    def send_flagged_alert(patient_name:, patient_phone:, reason:)
+      to = PracticeConfig.practice[:emergency_admin_phone]
+      return if to.blank?
+
+      body = "AI flagged: #{patient_name} (#{patient_phone}) needs reception. #{reason.to_s.truncate(100)}"
+      send_sms(to, body)
+    rescue StandardError => e
+      Rails.logger.warn("[SMS] flagged_alert failed: #{e.message}")
+    end
+
     private
 
     def practice_name

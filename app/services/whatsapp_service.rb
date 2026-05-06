@@ -941,10 +941,56 @@ class WhatsappService
     Rails.logger.warn("[WhatsApp] Confirmation SMS failed: #{e.message}")
   end
 
+  # Multi-channel staff alert when the AI flags a conversation for human
+  # follow-up. Channels are configured in practice_config.yml under
+  # reception_takeover.notify_channels — default is [sms, email].
+  # WhatsApp template channel is best-effort: succeeds when the production
+  # sender + flagged-alert template are approved (env var WHATSAPP_TPL_FLAGGED_ALERT
+  # set), silently no-ops otherwise so SMS/email always lands.
   def send_flagged_alert(patient, reason)
-    template_service&.send_flagged_alert(patient, reason)
-  rescue WhatsappTemplateService::Error => e
-    Rails.logger.warn("[WhatsApp] Flagged alert send failed: #{e.message}")
+    channels = Array(PracticeConfig.reception_takeover[:notify_channels])
+
+    # Channel 1 — WhatsApp template (best-effort; deferred until approved)
+    begin
+      template_service&.send_flagged_alert(patient, reason)
+    rescue WhatsappTemplateService::Error => e
+      Rails.logger.info("[StaffAlert] WhatsApp template skipped: #{e.message}")
+    end
+
+    # Channel 2 — SMS to Paul's emergency_admin_phone (always-on fallback)
+    if channels.include?("sms") || channels.include?(:sms)
+      SmsService.send_flagged_alert(
+        patient_name:  patient.full_name,
+        patient_phone: patient.phone,
+        reason:        reason
+      )
+    end
+
+    # Channel 3 — Email to practice info inbox
+    if channels.include?("email") || channels.include?(:email)
+      begin
+        StaffAlertMailer.flagged(
+          patient_name:  patient.full_name,
+          patient_phone: patient.phone,
+          reason:        reason,
+          conversation_url: conversation_dashboard_url(patient)
+        ).deliver_later
+      rescue StandardError => e
+        Rails.logger.warn("[StaffAlert] Email failed: #{e.message}")
+      end
+    end
+  end
+
+  # Best-effort: build the dashboard URL for the patient's most recent
+  # active WhatsApp conversation, or nil if none.
+  def conversation_dashboard_url(patient)
+    convo = patient.conversations.where(channel: "whatsapp", status: "active").order(updated_at: :desc).first
+    return nil unless convo
+
+    base = ENV.fetch("APP_BASE_URL", "https://le-roux-production.up.railway.app").delete_suffix("/")
+    "#{base}/conversations/#{convo.id}"
+  rescue StandardError
+    nil
   end
 
   # --- Helpers ---
