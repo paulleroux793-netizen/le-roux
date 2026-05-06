@@ -1,0 +1,360 @@
+# Dr Chalita le Roux Inc — Practice Configuration
+#
+# SINGLE SOURCE OF TRUTH for every value the AI receptionist quotes, every
+# wording it uses verbatim, and every policy parameter it follows. The
+# AI loads this file via PracticeConfig at boot and serves it for the life
+# of the process; restart Rails (or wait for cache TTL) after edits.
+#
+# Edit this file via Claude Code review → pull request → merge.
+# Do NOT add scattered constants elsewhere in the codebase. If a value
+# belongs to the practice rather than the platform, it lives here.
+#
+# Code-locked behavioural guardrails (e.g. no-past-booking, idempotency,
+# false-confirmation rewrite) stay in code — see CODE_LOCKED_GUARDRAILS.md
+# in the project root. This file is for facts, prices, hours, services,
+# wording, and policy parameters that may change with practice operations.
+#
+# Version history kept in git. Last full review: 2026-05-06 (v2.2).
+
+practice:
+  name: "Dr Chalita le Roux Inc"
+  doctor_name: "Dr Chalita le Roux"
+  doctor_qualifications: "BChD (cum laude), University of Pretoria"
+  hpcsa_number: "DP 0118702"
+  company_registration: "2022/698149/21"
+  phone_landline: "011 568 8285"
+  # Two-number Path B (locked 2026-05-06 by Paul):
+  # main_whatsapp = the existing personal/manual WhatsApp number that stays
+  # in WhatsApp Business app + web.whatsapp.com — reception keeps using
+  # the familiar tool here. AI activity is reported to this number via
+  # template/SMS so reception sees what the AI did without dashboard logins.
+  # ai_whatsapp = the NEW SA mobile number provisioned for the AI after-hours
+  # receptionist. Registered with Twilio (locked to API). Advertised on the
+  # website as "After-hours / Emergency WhatsApp line".
+  main_whatsapp: "071 884 3204"
+  ai_whatsapp: ""  # populated once new number is provisioned + approved by Meta
+  # Legacy alias — kept for backward compatibility while consolidation lands.
+  phone_whatsapp: "071 884 3204"
+  email: "info@drchalitaleroux.co.za"
+  emergency_admin_phone: "+27714475022"  # Paul (escalation contact)
+  memberships:
+    - "SAAAD (South African Academy of Aesthetic Dentistry)"
+
+address:
+  line1: "Unit 2, Amorosa Office Park"
+  line2: "Corner of Doreen Road & Lawrence Rd"
+  city: "Amorosa, Roodepoort, Johannesburg, 2040"
+  map_link: "https://maps.app.goo.gl/3iHKg7AMa8qRcfLf6"
+  directions: "From Hendrik Potgieter Rd: Turn onto Doreen Rd, we are on your left-hand side at the second robot. From CR Swart Rd: Turn onto Doreen Rd, we are on your right-hand side at the first robot."
+  parking: "Free parking is available on the premises."
+
+# Working hours per weekday. NO lunch break — practice works when patients
+# are booked, takes lunch organically when there are none. (Confirmed by
+# Paul in v2 review on 2026-05-06; previously the seed data hardcoded
+# 12:00-13:00 break and the booking logic blocked that hour.)
+working_hours:
+  monday:    { open: true,  start: "08:00", end: "17:00" }
+  tuesday:   { open: true,  start: "08:00", end: "17:00" }
+  wednesday: { open: true,  start: "08:00", end: "17:00" }
+  thursday:  { open: true,  start: "08:00", end: "17:00" }
+  friday:    { open: true,  start: "08:00", end: "17:00" }
+  saturday:  { open: false }
+  sunday:    { open: false }
+
+# SA public holidays — the practice is closed on each of these dates.
+# Booking attempts on these days are rejected with the holiday-closed message.
+# Add new dates here as future years are confirmed.
+public_holidays:
+  # 2026
+  - { date: "2026-01-01", name: "New Year's Day" }
+  - { date: "2026-03-21", name: "Human Rights Day" }
+  - { date: "2026-04-03", name: "Good Friday" }
+  - { date: "2026-04-06", name: "Family Day" }
+  - { date: "2026-04-27", name: "Freedom Day" }
+  - { date: "2026-05-01", name: "Workers' Day" }
+  - { date: "2026-06-16", name: "Youth Day" }
+  - { date: "2026-08-09", name: "National Women's Day" }
+  - { date: "2026-08-10", name: "Women's Day (Sunday substitute)" }
+  - { date: "2026-09-24", name: "Heritage Day" }
+  - { date: "2026-12-16", name: "Day of Reconciliation" }
+  - { date: "2026-12-25", name: "Christmas Day" }
+  - { date: "2026-12-26", name: "Day of Goodwill" }
+  # 2027
+  - { date: "2027-01-01", name: "New Year's Day" }
+  - { date: "2027-03-21", name: "Human Rights Day" }
+  - { date: "2027-03-22", name: "Human Rights Day (Sunday substitute)" }
+  - { date: "2027-03-26", name: "Good Friday" }
+  - { date: "2027-03-29", name: "Family Day" }
+  - { date: "2027-04-27", name: "Freedom Day" }
+  - { date: "2027-05-01", name: "Workers' Day" }
+  - { date: "2027-06-16", name: "Youth Day" }
+  - { date: "2027-08-09", name: "National Women's Day" }
+  - { date: "2027-09-24", name: "Heritage Day" }
+  - { date: "2027-12-16", name: "Day of Reconciliation" }
+  - { date: "2027-12-25", name: "Christmas Day" }
+  - { date: "2027-12-27", name: "Day of Goodwill (Sunday substitute)" }
+
+# Services with duration, pricing, and any policy notes.
+# The `key` field is the canonical identifier used in code (treatment matching,
+# appointment duration lookup, etc.).
+services:
+  - key: consultation
+    name: "Specific consultation"
+    duration_minutes: 30
+    approx_price: "R850"
+    includes_xrays: true
+    excludes_3d_scans: true
+    use_case: "Patient wants the doctor to look at something specific or advise on a particular concern."
+    quote_template: |
+      A consultation with Dr Chalita is approximately R850 and includes X-rays. Please note that 2D or 3D scans (panoramic / CBCT) are not included and would be quoted separately — these may be needed if you have implants, root canals, or where the doctor needs more detail to advise you properly. If cost is a concern for you, you're always welcome to ask about the cost of any additional scans before they're taken — we want you to feel completely comfortable with what's included.
+
+  - key: check_up
+    name: "General check-up"
+    duration_minutes: 45
+    approx_price: "R1,900"
+    approx_price_with_3d_scan: "up to R2,600"
+    includes_xrays: true
+    excludes_3d_scans: true
+    use_case: "Routine examination."
+    quote_template: |
+      A general check-up with Dr Chalita is approximately R1,900 and includes X-rays. If you have implants, root canals, or the doctor decides a 3D scan would help her advise you properly, the cost can go up to around R2,600. If cost is a concern, you're always welcome to ask about the cost of any additional scans before they're taken.
+
+  - key: cleaning
+    name: "Dental cleaning (oral hygiene)"
+    duration_minutes: 30
+    approx_price: "R1,250 – R1,350"
+    use_case: "Standard hygienist cleaning appointment."
+    quote_template: |
+      A dental cleaning with us is approximately R1,250 to R1,350.
+
+  - key: cosmetic_consultation
+    name: "Cosmetic consultation"
+    duration_minutes: 45
+    approx_price: "R1,900"
+    approx_price_with_3d_scan: "up to R2,600"
+    use_case: "Patient enquiring about veneers, smile makeover, or other cosmetic work."
+    quote_template: |
+      A cosmetic consultation is approximately R1,900 and includes X-rays. If you have implants, root canals, or the doctor decides a 3D scan would help her advise you properly, the cost can go up to around R2,600. If cost is a concern, you're always welcome to ask about the cost of any additional scans before they're taken.
+
+  - key: filling
+    name: "Filling / restorative / resin bonding / resin veneers"
+    duration_minutes: 30
+    approx_price: null  # quote depends on size & type
+    requires_examination_first: true
+    quote_template: |
+      The cost of a filling, resin bonding or resin veneer depends on the size and type of work needed. We'd start with an examination so the dentist can assess the area and advise on the most suitable treatment and cost.
+
+  - key: extraction
+    name: "Extraction (simple OR surgical)"
+    duration_minutes: 30
+    approx_price: "from R1,500"
+    requires_consultation_first: true
+    quote_template: |
+      Extractions normally start from approximately R1,500, but the price varies depending on whether it's a child or adult, the specific tooth, and whether it's a simple or surgical extraction. The best step is to come for a consultation with Dr Chalita first — she can assess the tooth, distinguish what type of extraction is needed, and walk you through the cost and treatment plan before anything is done.
+
+  - key: aligner_consultation
+    name: "Aligner consultation + assessment (NOT braces)"
+    duration_minutes: 45
+    approx_price: "R5,000"
+    use_case: "Patient asking about braces or aligners. The practice does not offer traditional braces."
+    quote_template: |
+      We don't offer traditional braces, but we do aligners — which work like invisible braces. The whole consultation and assessment package for aligners is approximately R5,000, and Dr Chalita can walk you through the treatment plan and costs based on your specific needs.
+
+  - key: whitening
+    name: "Teeth whitening (Biolase laser)"
+    duration_minutes: 90
+    approx_price: "R7,800 total"
+    deposit_required: "R2,000"
+    deposit_balance: "R5,800"
+    pending_until_proof_of_payment: true
+    working_hours_only: true  # never after-hours
+    aliases: [whitening, "teeth whitening", biolase, "laser whitening", bleach, bleaching, bleiking, tandebleiking]
+    full_info_message:
+      en: |
+        *Biolase Laser Teeth Whitening* 🌿
+
+        Our Biolase laser teeth whitening is a comfortable, in-chair procedure designed to safely brighten your smile while protecting your enamel and gums.
+
+        *The appointment includes:*
+        • A professional dental cleaning
+        • Application of a medical-grade whitening gel
+        • Activation with the Biolase laser for enhanced, even results
+
+        The treatment takes approximately *90 minutes*, and most patients notice a visibly brighter smile immediately after the session.
+
+        *Cost:* R7,800 for the full whitening treatment.
+
+        *To secure your booking* we require a *R2,000 deposit* up front (we book 90 minutes of the diary for you). The remaining R5,800 is settled on the day.
+
+        *Banking details:*
+        Bank: Investec Bank Limited
+        Branch: 100 Grayston Drive, Sandton
+        Branch code: 58 01 05
+        Account type: Current Account
+        Account name: Dr Chalita Le Roux Inc
+        Account number: 10013494325
+        Company No: 2022/698149/21
+        Reference: Your full name
+
+        Once you've sent proof of payment, I'll secure your slot. Please share your preferred date and time (Monday to Friday, 8am–5pm) and I'll pencil you in while we wait for the deposit.
+
+        Any questions — just ask! 😊
+      af: |
+        *Biolase Laser Tandebleiking* 🌿
+
+        Ons Biolase laser tandebleiking is 'n gemaklike in-stoel prosedure wat jou glimlag veilig verhelder terwyl dit jou emalj en gom beskerm.
+
+        *Die afspraak sluit in:*
+        • 'n Professionele tand-skoonmaak
+        • Aanbring van 'n mediese graad bleikgel
+        • Aktivering met die Biolase laser vir beter, eweredige resultate
+
+        Die behandeling neem ongeveer *90 minute*, en die meeste pasiënte sien 'n sigbaar helderder glimlag onmiddellik na die sessie.
+
+        *Koste:* R7,800 vir die volle bleikingsbehandeling.
+
+        *Om jou afspraak te bevestig* benodig ons 'n *R2,000 deposito* vooruit (ons bespreek 90 minute van die dagboek vir jou). Die oorblywende R5,800 is betaalbaar op die dag.
+
+        *Bankbesonderhede:*
+        Bank: Investec Bank Limited
+        Tak: 100 Grayston Drive, Sandton
+        Takkode: 58 01 05
+        Rekeningtipe: Lopende Rekening
+        Rekeningnaam: Dr Chalita Le Roux Inc
+        Rekeningnommer: 10013494325
+        Maatskappy No: 2022/698149/21
+        Verwysing: Jou volle naam
+
+        Sodra jy bewys van betaling gestuur het, sal ek jou gleuf vasmaak. Stuur asseblief jou voorkeurdatum en -tyd (Maandag tot Vrydag, 8vm–5nm) en ek sal dit vir jou reserveer terwyl ons wag vir die deposito.
+
+        Enige vrae — laat weet gerus! 😊
+
+# Default appointment duration when treatment isn't matched to a service above.
+default_appointment_duration_minutes: 30
+
+# Banking details for whitening deposit + any other EFT payments.
+banking:
+  bank: "Investec Bank Limited"
+  branch: "100 Grayston Drive, Sandton"
+  branch_code: "58 01 05"
+  account_type: "Current Account"
+  account_name: "Dr Chalita Le Roux Inc"
+  account_number: "10013494325"
+  reference: "Patient's full name"
+
+# Payment methods accepted at the practice.
+payment:
+  methods:
+    - "Card (at the practice)"
+    - "Cash (at the practice)"
+    - "EFT (for whitening deposit)"
+  medical_aid_policy: |
+    We do not claim directly from medical aid. All patients pay at the practice, and we then provide a statement so you can claim back from your medical aid. We have card facilities at the practice and also accept cash.
+
+# FAQs the AI quotes verbatim. `dynamic_hours` is computed from working_hours
+# at runtime since the practice may eventually adjust hours per weekday.
+faq:
+  hours: dynamic_hours
+  location: "Our practice is located at the practice address (see §address). Google Maps and directions are sent on request and after every booking confirmation."
+  parking: "Free parking is available on the premises."
+  services: "We offer general dentistry, check-ups, cleanings, fillings, extractions, root canals, crowns, bridges, and cosmetic treatments. An examination is always the first step for any concern."
+  emergency: "For dental emergencies, share your name, contact number and a short description. We're open Monday to Friday 8am–5pm and we don't have dentists on duty outside those hours — we always prioritise emergencies and will book you into the very first available slot."
+
+# AI's voice when quoting prices generally (without a specific service named).
+pricing_guidance:
+  general_price_ask: |
+    It can be difficult to give exact pricing without the dentist first having a look, as it depends on your specific needs on the day.
+  price_sensitive: |
+    I understand. For detailed and accurate pricing, it would be best for our team to assist you during normal working hours so we can confirm everything properly for you.
+  always_include_empowerment: |
+    You're always welcome to ask before the dentist proceeds with anything on the day, so you're fully comfortable with what's included and any additional costs.
+
+# Emergency triage flow + after-hours behaviour.
+emergency_policy:
+  acknowledgement: "I'm so sorry you're dealing with that. Let me get you in as soon as possible."
+  triage_question: "How severe is the pain — is there swelling, bleeding, or trauma to the tooth?"
+  declined_slot_fallback: "Understood. Once we open during working hours, our reception will check whether we can move you up earlier and reach out to you."
+  followups_after_booking:
+    - "If the pain becomes unbearable before then, please message me — we'll do whatever we can to fit you in sooner."
+    - "If you find an earlier appointment elsewhere, please let us know so we can release your slot for someone else."
+    - "If a slot opens up earlier, our reception will let you know as soon as we're back in the office."
+  # Auto-monitoring of cancellations + emergency-fill is NOT YET BUILT.
+  # The third follow-up is intentionally framed as reception-led so the AI
+  # doesn't promise something the system can't auto-deliver. To be revisited.
+  auto_fill_on_cancellation: false
+
+# After-hours = outside working_hours. Practice still accepts bookings
+# (status = pending_confirmation) for future Mon–Fri 08:00–17:00 slots.
+after_hours_behaviour:
+  accept_future_bookings: true
+  reject_today_bookings: true   # can't confirm in time for same-day after-hours
+  pending_confirmation_status: true
+  prefix_replies_with_closed_notice: false  # take the booking, don't lead with "we're closed"
+  share_practice_phone: false   # landline not monitored after hours
+
+# Booking format + behaviour rules.
+format_rules:
+  booking_buffer_minutes: 30   # never offer a slot < 30 min from now (travel + intake forms)
+  always_lead_with_first_morning_slot: "08:00"   # lead with 8 AM unless patient asks for later
+  surface_today_open_slots: true   # show today's openings even if patient asked about a future date
+  morning_afternoon_pair_only: true   # offer ONE morning + ONE afternoon, never two from same half-day
+  morning_cutoff: "12:00"
+  afternoon_start: "13:30"
+
+# WhatsApp + voice receptionist personality.
+personality:
+  whatsapp:
+    tone: "Warm, friendly, slightly energetic, reassuring. Professional but approachable — like a trusted friend at a dental office."
+    max_sentences_per_response: 3
+    bold_marker: "asterisks"
+    emoji_per_message: 1
+  voice:
+    tone: "Warm, conversational, slightly energetic. SA warmth (\"shame, hope you're feeling better\"). One question per turn."
+    no_markdown: true
+    sign_off_warmly: true
+
+# Greetings — POPIA consent folded in. Sent only on the patient's first
+# message in a new conversation (24h-window reuse prevents repetition).
+greetings:
+  popia_line: "Kindly note, per the POPIA Act: by engaging with us on WhatsApp, you give us consent to store your messages so we can serve you and process your personal data."
+  working_hours: |
+    Hello and welcome to Dr Chalita le Roux Incorporated. Thank you for messaging us. How may we assist you today?
+  after_hours: |
+    Hello and welcome to Dr Chalita le Roux Incorporated. Our practice is currently closed, but I can still help with appointment information and the earliest available booking options. How may we assist you today?
+
+# Path B: AI is the AFTER-HOURS receptionist on a separate WhatsApp number.
+# During business hours, reception handles WhatsApp manually on the main
+# line (071 884 3204) via web.whatsapp.com — AI is OFF. After business
+# hours / weekends / public holidays, AI takes over fully on the AI line.
+ai_mode:
+  # When false, the AI does NOT auto-reply during business hours
+  # (Mon–Fri 08:00–17:00). Inbound messages still land in the dashboard
+  # so reception can monitor + reply manually if they choose. Flip to
+  # true if you ever want 24/7 AI coverage.
+  active_during_business_hours: false
+
+  # When AI processes any meaningful event (booking, whitening lead,
+  # emergency, escalation flag), notify the main WhatsApp line so
+  # reception sees the activity in web.whatsapp.com without logging
+  # into the dashboard. Channels are best-effort; SMS to the
+  # emergency_admin_phone is the always-on fallback.
+  report_to_main_line: true
+
+# Reception takeover detection — when reception sends a manual reply via the
+# dashboard, AI pauses for this many hours on that conversation.
+reception_takeover:
+  ai_pause_hours: 4
+  notify_channels: [sms, email]   # WhatsApp template added once production sender + flagged_alert template are approved
+
+# Confirmation + reminder policy (LAUNCH SCOPE — manual phone for now).
+confirmations_and_reminders:
+  send_booking_acknowledgement: true        # immediately after booking
+  send_24h_reminder: false                  # deferred — manual phone for now
+  send_1h_reminder: false                   # deferred
+  send_day_before_confirm_request: false    # deferred — manual phone
+
+# Removed in v2 — kept here as a comment so future readers know these are
+# intentional non-features:
+# - Announcements (time-limited messages) — not needed
+# - Admin WhatsApp override — Paul edits this file via Claude Code only,
+#   no live-prompt-injection mechanism

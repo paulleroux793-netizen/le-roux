@@ -38,4 +38,23 @@ class Conversation < ApplicationRecord
   def close!
     update!(status: "closed", ended_at: Time.current)
   end
+
+  # ── Reception takeover (AI standby) ────────────────────────────────────
+  # When reception sends a manual WhatsApp reply via the dashboard, the AI
+  # must stop responding to that conversation for the configured pause
+  # window so it doesn't contradict reception's nuanced human reply.
+  # See CODE_LOCKED_GUARDRAILS §8.2.
+
+  def ai_paused?
+    ai_paused_until.present? && ai_paused_until > Time.current
+  end
+
+  def pause_ai!(duration: nil)
+    duration ||= PracticeConfig.ai_pause_hours.hours
+    update!(ai_paused_until: Time.current + duration)
+  end
+
+  def resume_ai!
+    update!(ai_paused_until: nil)
+  end
 end

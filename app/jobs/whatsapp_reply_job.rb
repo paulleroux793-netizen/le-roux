@@ -11,8 +11,10 @@ class WhatsappReplyJob < ApplicationJob
       media_attachments: media_attachments
     )
 
-    # Send the AI response back via Twilio REST API
-    send_reply(from, result[:response])
+    # handle_incoming returns nil when the conversation is in reception-takeover
+    # standby (AI paused for X hours after a human reply). In that case we
+    # intentionally send no reply — reception is dealing with this conversation.
+    send_reply(from, result&.dig(:response))
   rescue StandardError => e
     Rails.logger.error("[WhatsappReplyJob] Error processing message from #{from}: #{e.message}\n#{e.backtrace.first(5).join("\n")}")
     send_reply(from, "I'm sorry, something went wrong on our end. Please try again or call us directly.")

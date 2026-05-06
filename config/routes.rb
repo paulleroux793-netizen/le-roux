@@ -38,6 +38,7 @@ Rails.application.routes.draw do
     member do
       post :reply
       patch :update_tags
+      patch :resume_ai
     end
   end
   get "search", to: "search#index"

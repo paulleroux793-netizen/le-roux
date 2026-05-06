@@ -1,0 +1,18 @@
+Patient query needs a manual response
+=====================================
+
+The AI receptionist has flagged a WhatsApp conversation for human follow-up.
+
+  Patient: <%= @patient_name %>
+  Phone:   <%= @patient_phone %>
+  Reason:  <%= @reason %>
+
+<% if @conversation_url.present? %>
+Open in dashboard: <%= @conversation_url %>
+<% end %>
+
+Replying via the dashboard automatically pauses the AI for 4 hours on this
+conversation so it does not contradict your reply.
+
+--
+Sent by the Le Roux Dental AI Receptionist · <%= PracticeConfig.practice[:name] %>

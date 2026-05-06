@@ -34,10 +34,43 @@ class WhatsappService
   end
 
   # Main entry point: handle an incoming WhatsApp message.
-  # Returns { response:, intent:, entities: }
+  # Returns { response:, intent:, entities: }, OR nil if the conversation is
+  # currently in reception-takeover standby (AI paused for X hours after a
+  # human reply). When paused we still persist the inbound message and tag
+  # the conversation needs_review so reception sees there's a fresh inbound;
+  # no AI reply is generated.
   def handle_incoming(from:, message:, twilio_params: {}, media_attachments: [])
     patient = find_or_create_patient(from)
     conversation = find_or_create_conversation(patient)
+
+    # Reception takeover: if AI is on standby, log the inbound and bail.
+    # See CODE_LOCKED_GUARDRAILS §8.2.
+    if conversation.ai_paused?
+      Rails.logger.info(
+        "[WhatsApp] AI paused on conversation ##{conversation.id} until " \
+        "#{conversation.ai_paused_until.iso8601} — saving inbound, skipping AI."
+      )
+      conversation.add_message(role: "user", content: message, timestamp: Time.current)
+      tag_needs_review(conversation)
+      return nil
+    end
+
+    # Path B (after-hours-only AI): during business hours, the AI does not
+    # auto-reply. Reception handles the dashboard manually. We still persist
+    # the inbound + tag the conversation so reception sees the message.
+    # Outside business hours (incl. weekends + public holidays), AI takes
+    # over fully. Configured via ai_mode in practice_config.yml.
+    if !PracticeConfig.ai_active_during_business_hours? && currently_within_working_hours?
+      Rails.logger.info(
+        "[WhatsApp] AI off during business hours (Path B) — saving inbound on " \
+        "conversation ##{conversation.id} for reception to handle manually."
+      )
+      conversation.add_message(role: "user", content: message, timestamp: Time.current)
+      tag_needs_review(conversation)
+      # Notify reception via SMS/email so they know there's a fresh inbound.
+      send_business_hours_inbound_alert(patient, conversation, message)
+      return nil
+    end
 
     # Detect and persist language from the first message
 
@@ -202,6 +235,19 @@ class WhatsappService
     UNCERTAINTY_PATTERNS.any? { |re| re.match?(txt) }
   end
 
+  # Tag a conversation needs_review without the staff-alert side effect.
+  # Used for the reception-takeover paused path where the patient has just
+  # sent an inbound message but the AI is on standby — reception already
+  # owns the conversation, so we just want a visible flag in the dashboard.
+  def tag_needs_review(conversation)
+    return unless conversation
+    tags = Array(conversation.tags || [])
+    return if tags.include?("needs_review")
+    conversation.update(tags: (tags + ["needs_review"]).uniq)
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] tag_needs_review failed: #{e.class}: #{e.message}")
+  end
+
   def flag_conversation_for_staff_review(conversation, patient, original_response:)
     return unless conversation
     tags = Array(conversation.tags || [])
@@ -338,39 +384,9 @@ class WhatsappService
             "Andersins, stuur my jou voorkeurdatum en -tyd (binne werksure) " \
             "en ek kry jou bespreek."
   }.freeze
-  # South African public holidays. Bookings on these dates are rejected.
-  # Includes statutory substitutes per Public Holidays Act 36 of 1994:
-  # when a holiday falls on a Sunday, the following Monday is also a holiday.
-  PUBLIC_HOLIDAYS_SA = [
-    # 2026
-    "2026-01-01", # New Year's Day
-    "2026-03-21", # Human Rights Day
-    "2026-04-03", # Good Friday
-    "2026-04-06", # Family Day
-    "2026-04-27", # Freedom Day
-    "2026-05-01", # Workers' Day
-    "2026-06-16", # Youth Day
-    "2026-08-09", # National Women's Day
-    "2026-08-10", # National Women's Day (Sunday substitute)
-    "2026-09-24", # Heritage Day
-    "2026-12-16", # Day of Reconciliation
-    "2026-12-25", # Christmas Day
-    "2026-12-26", # Day of Goodwill
-    # 2027
-    "2027-01-01", # New Year's Day
-    "2027-03-21", # Human Rights Day
-    "2027-03-22", # Human Rights Day (Sunday substitute)
-    "2027-03-26", # Good Friday
-    "2027-03-29", # Family Day
-    "2027-04-27", # Freedom Day
-    "2027-05-01", # Workers' Day
-    "2027-06-16", # Youth Day
-    "2027-08-09", # National Women's Day
-    "2027-09-24", # Heritage Day
-    "2027-12-16", # Day of Reconciliation
-    "2027-12-25", # Christmas Day
-    "2027-12-27"  # Day of Goodwill (Sunday substitute)
-  ].map { |s| Date.parse(s) }.freeze
+  # SA public holidays + statutory substitutes are now sourced from
+  # config/practice_config.yml via PracticeConfig.public_holiday_dates.
+  # Add new dates by editing the YAML — no Ruby change required.
 
   PUBLIC_HOLIDAY_BLOCKED = {
     "en" => "Unfortunately we're closed on that day. We're open *Monday to Friday, " \
@@ -381,102 +397,30 @@ class WhatsappService
             "dag probeer? Ek bespreek graag die volgende beskikbare werksdag."
   }.freeze
 
-  PRACTICE_ADDRESS = "Unit 2, Amorosa Office Park, Corner of Doreen Road & Lawrence Rd, Amorosa, Roodepoort, Johannesburg, 2040".freeze
+  # Address / map / directions sourced from PracticeConfig (single source of
+  # truth). External callers (e.g. ConfirmationService) reference these
+  # constants — keep them as delegators so we don't need to update every
+  # touchpoint at once.
+  PRACTICE_ADDRESS    = PracticeConfig.full_address
+  PRACTICE_MAP_LINK   = PracticeConfig.map_link
+  PRACTICE_DIRECTIONS = PracticeConfig.directions
 
-  PRACTICE_MAP_LINK = "https://maps.app.goo.gl/3iHKg7AMa8qRcfLf6".freeze
-
-  PRACTICE_DIRECTIONS = "From Hendrik Potgieter Rd: Turn onto Doreen Rd, we are on your left-hand side at the second robot. From CR Swart Rd: Turn onto Doreen Rd, we are on your right-hand side at the first robot.".freeze
-
-  # Phrases that indicate the AI's free-text reply is *claiming* a
-  # confirmed booking. If we see any of these but didn't actually
-  # persist an Appointment, we must rewrite the reply — otherwise the
-  # bot lies to the patient. Kept deliberately broad; false positives
-  # here just mean we replace a vague AI message with a clearer one.
-  # Canvas Section 9: Appointment durations by treatment type
-  APPOINTMENT_DURATIONS = {
-    "check-up"              => 45.minutes,
-    "check up"               => 45.minutes,
-    "checkup"                => 45.minutes,
-    "examination"            => 45.minutes,
-    "cosmetic consultation"  => 45.minutes,
-    "cosmetic"               => 45.minutes,
-    "whitening"              => 90.minutes,
-    "teeth whitening"        => 90.minutes,
-    "laser whitening"        => 90.minutes,
-    "bleaching"              => 90.minutes,
-    "biolase"                => 90.minutes
-  }.freeze
-  DEFAULT_DURATION = 30.minutes
+  # Appointment duration mapping is now in config/practice_config.yml.
+  # PracticeConfig.duration_for(treatment) handles alias matching and the
+  # default fallback. See duration_for_treatment further down.
 
   RESCHEDULE_REJECTED = {
     "en" => "Sorry — that slot isn't available or falls outside our working hours. Would you like to try a different day or time?",
     "af" => "Jammer — daardie tyd is nie beskikbaar nie of val buite ons werksure. Wil jy 'n ander dag of tyd probeer?"
   }.freeze
-  # Teeth-whitening standard message. Deterministic full-info reply the moment
-  # a patient mentions whitening — avoids the AI misquoting price, duration, or
-  # deposit requirement. 90-minute Biolase appointment, R7,800 total, R2,000
-  # deposit secures the slot (because we book 90 min out of the diary).
+  # Whitening deterministic info message (EN + AF) is now sourced from
+  # config/practice_config.yml under services[whitening].full_info_message.
+  # Read via PracticeConfig.whitening[:full_info_message][lang.to_sym].
+  # Use whitening_info(lang) helper below — it falls back to EN if the
+  # configured language is missing.
   WHITENING_INFO = {
-    "en" => <<~MSG.strip,
-      *Biolase Laser Teeth Whitening* 🌿
-
-      Our Biolase laser teeth whitening is a comfortable, in-chair procedure designed to safely brighten your smile while protecting your enamel and gums.
-
-      *The appointment includes:*
-      • A professional dental cleaning
-      • Application of a medical-grade whitening gel
-      • Activation with the Biolase laser for enhanced, even results
-
-      The treatment takes approximately *90 minutes*, and most patients notice a visibly brighter smile immediately after the session.
-
-      *Cost:* R7,800 for the full whitening treatment.
-
-      *To secure your booking* we require a *R2,000 deposit* up front (we book 90 minutes of the diary for you). The remaining R5,800 is settled on the day.
-
-      *Banking details:*
-      Bank: Investec Bank Limited
-      Branch: 100 Grayston Drive, Sandton
-      Branch code: 58 01 05
-      Account type: Current Account
-      Account name: Dr Chalita Le Roux Inc
-      Account number: 10013494325
-      Company No: 2022/698149/21
-      Reference: Your full name
-
-      Once you've sent proof of payment, I'll secure your slot. Please share your preferred date and time (Monday to Friday, 8am–5pm) and I'll pencil you in while we wait for the deposit.
-
-      Any questions — just ask! 😊
-    MSG
-    "af" => <<~MSG.strip
-      *Biolase Laser Tandebleiking* 🌿
-
-      Ons Biolase laser tandebleiking is 'n gemaklike in-stoel prosedure wat jou glimlag veilig verhelder terwyl dit jou emalj en gom beskerm.
-
-      *Die afspraak sluit in:*
-      • 'n Professionele tand-skoonmaak
-      • Aanbring van 'n mediese graad bleikgel
-      • Aktivering met die Biolase laser vir beter, eweredige resultate
-
-      Die behandeling neem ongeveer *90 minute*, en die meeste pasiënte sien 'n sigbaar helderder glimlag onmiddellik na die sessie.
-
-      *Koste:* R7,800 vir die volle bleikingsbehandeling.
-
-      *Om jou afspraak te bevestig* benodig ons 'n *R2,000 deposito* vooruit (ons bespreek 90 minute van die dagboek vir jou). Die oorblywende R5,800 is betaalbaar op die dag.
-
-      *Bankbesonderhede:*
-      Bank: Investec Bank Limited
-      Tak: 100 Grayston Drive, Sandton
-      Takkode: 58 01 05
-      Rekeningtipe: Lopende Rekening
-      Rekeningnaam: Dr Chalita Le Roux Inc
-      Rekeningnommer: 10013494325
-      Maatskappy No: 2022/698149/21
-      Verwysing: Jou volle naam
-
-      Sodra jy bewys van betaling gestuur het, sal ek jou gleuf vasmaak. Stuur asseblief jou voorkeurdatum en -tyd (Maandag tot Vrydag, 8vm–5nm) en ek sal dit vir jou reserveer terwyl ons wag vir die deposito.
-
-      Enige vrae — laat weet gerus! 😊
-    MSG
+    "en" => PracticeConfig.whitening.dig(:full_info_message, :en).to_s.strip,
+    "af" => PracticeConfig.whitening.dig(:full_info_message, :af).to_s.strip
   }.freeze
 
 
@@ -600,8 +544,18 @@ class WhatsappService
     end_time = start_time + duration
     reason = treatment&.capitalize || "Consultation"
 
-    unless start_time > Time.current
-      Rails.logger.info("[WhatsApp] Booking rejected: slot is in the past (#{start_time})")
+    # 30-minute booking buffer (configurable in practice_config.yml).
+    # Patients need travel time + intake form completion; booking "right now"
+    # cascades into the practice running late for the rest of the day.
+    # See CODE_LOCKED_GUARDRAILS §1.7. Staff bookings via the dashboard
+    # bypass this rule — reception can squeeze in walk-ins.
+    buffer = PracticeConfig.booking_buffer_minutes.minutes
+    earliest_bookable = Time.current + buffer
+    if start_time <= earliest_bookable
+      Rails.logger.info(
+        "[WhatsApp] Booking rejected: within #{PracticeConfig.booking_buffer_minutes}-min buffer " \
+        "(start=#{start_time}, earliest=#{earliest_bookable})"
+      )
       return nil
     end
     if public_holiday?(start_time.to_date)
@@ -660,6 +614,17 @@ class WhatsappService
     send_confirmation_template(patient, appointment, after_hours: after_hours, language: language)
     send_confirmation_email(appointment)
     send_confirmation_sms(appointment)
+
+    # Path B: report after-hours bookings to the main WhatsApp line so
+    # reception sees the activity in web.whatsapp.com without logging
+    # into the dashboard. Only fires for AI-driven bookings (this method);
+    # staff dashboard bookings already happen with reception in the loop.
+    summary = "AI booked #{patient.full_name} for #{reason} on " \
+              "#{appointment.start_time.strftime('%a %-d %b at %H:%M')}" +
+              (after_hours ? " (pending confirmation — booked after hours)" : "") +
+              (is_whitening ? " (awaiting R2,000 deposit)" : "")
+    report_to_main_line("BOOKING", patient: patient, summary: summary)
+
     appointment
   rescue StandardError => e
     Rails.logger.error("[WhatsApp] Booking failed: #{e.class}: #{e.message}")
@@ -673,7 +638,7 @@ class WhatsappService
   # or any South African public holiday.
   def public_holiday?(date)
     return true if date.wday == 0 || date.wday == 6
-    PUBLIC_HOLIDAYS_SA.include?(date)
+    PracticeConfig.public_holiday_dates.include?(date)
   end
   def slot_within_working_hours?(start_time, end_time)
     schedule = DoctorSchedule.for_day(start_time.wday)
@@ -788,6 +753,13 @@ class WhatsappService
     end
 
     send_reschedule_template(patient, appointment)
+
+    # Path B: report rescheduled bookings to the main line.
+    report_to_main_line(
+      "RESCHEDULE",
+      patient: patient,
+      summary: "AI rescheduled #{patient.full_name}'s appointment to #{appointment.start_time.strftime('%a %-d %b at %H:%M')}"
+    )
   rescue StandardError => e
     Rails.logger.error("[WhatsApp] Reschedule failed: #{e.message}")
   end
@@ -818,6 +790,14 @@ class WhatsappService
     end
 
     send_cancellation_template(patient, appointment)
+
+    # Path B: report cancellations to the main line so reception can
+    # consider whether to fill the freed slot from the waiting list.
+    report_to_main_line(
+      "CANCEL",
+      patient: patient,
+      summary: "AI cancelled #{patient.full_name}'s appointment on #{appointment.start_time.strftime('%a %-d %b at %H:%M')} — reason: #{reason_category}"
+    )
   rescue StandardError => e
     Rails.logger.error("[WhatsApp] Cancellation failed: #{e.message}")
   end
@@ -1004,10 +984,93 @@ class WhatsappService
     Rails.logger.warn("[WhatsApp] Confirmation SMS failed: #{e.message}")
   end
 
+  # Multi-channel staff alert when the AI flags a conversation for human
+  # follow-up. Channels are configured in practice_config.yml under
+  # reception_takeover.notify_channels — default is [sms, email].
+  # WhatsApp template channel is best-effort: succeeds when the production
+  # sender + flagged-alert template are approved (env var WHATSAPP_TPL_FLAGGED_ALERT
+  # set), silently no-ops otherwise so SMS/email always lands.
   def send_flagged_alert(patient, reason)
-    template_service&.send_flagged_alert(patient, reason)
-  rescue WhatsappTemplateService::Error => e
-    Rails.logger.warn("[WhatsApp] Flagged alert send failed: #{e.message}")
+    channels = Array(PracticeConfig.reception_takeover[:notify_channels])
+
+    # Channel 1 — WhatsApp template (best-effort; deferred until approved)
+    begin
+      template_service&.send_flagged_alert(patient, reason)
+    rescue WhatsappTemplateService::Error => e
+      Rails.logger.info("[StaffAlert] WhatsApp template skipped: #{e.message}")
+    end
+
+    # Channel 2 — SMS to Paul's emergency_admin_phone (always-on fallback)
+    if channels.include?("sms") || channels.include?(:sms)
+      SmsService.send_flagged_alert(
+        patient_name:  patient.full_name,
+        patient_phone: patient.phone,
+        reason:        reason
+      )
+    end
+
+    # Channel 3 — Email to practice info inbox
+    if channels.include?("email") || channels.include?(:email)
+      begin
+        StaffAlertMailer.flagged(
+          patient_name:  patient.full_name,
+          patient_phone: patient.phone,
+          reason:        reason,
+          conversation_url: conversation_dashboard_url(patient)
+        ).deliver_later
+      rescue StandardError => e
+        Rails.logger.warn("[StaffAlert] Email failed: #{e.message}")
+      end
+    end
+  end
+
+  # Path B: during business hours, AI is off and reception handles the
+  # dashboard. Send a lightweight SMS so reception knows there's a new
+  # inbound message to deal with. Email is intentionally NOT used here —
+  # they'll see plenty of these and email would be noise. WhatsApp template
+  # to the main line is the longer-term plan once approved.
+  def send_business_hours_inbound_alert(patient, conversation, message)
+    return unless PracticeConfig.report_to_main_line?
+
+    SmsService.send_flagged_alert(
+      patient_name:  patient.full_name,
+      patient_phone: patient.phone,
+      reason:        "New WhatsApp inbound during business hours: #{message.to_s.truncate(80)}"
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[BusinessHoursAlert] Failed: #{e.message}")
+  end
+
+  # Path B: after the AI has acted on an after-hours message (booked an
+  # appointment, flagged for review, handled an emergency), summarise the
+  # event to the main WhatsApp line so reception sees what happened
+  # without logging into the dashboard. Best-effort — failure here does
+  # not block the patient interaction.
+  def report_to_main_line(event_type, patient:, summary:)
+    return unless PracticeConfig.report_to_main_line?
+    return if PracticeConfig.main_whatsapp.blank?
+
+    # Always send via SMS to emergency_admin_phone — reliable + works today.
+    # WhatsApp template to main_whatsapp added once template + sender approved.
+    SmsService.send_flagged_alert(
+      patient_name:  patient.full_name,
+      patient_phone: patient.phone,
+      reason:        "[#{event_type}] #{summary}"
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[MainLineReport] Failed: #{e.message}")
+  end
+
+  # Best-effort: build the dashboard URL for the patient's most recent
+  # active WhatsApp conversation, or nil if none.
+  def conversation_dashboard_url(patient)
+    convo = patient.conversations.where(channel: "whatsapp", status: "active").order(updated_at: :desc).first
+    return nil unless convo
+
+    base = ENV.fetch("APP_BASE_URL", "https://le-roux-production.up.railway.app").delete_suffix("/")
+    "#{base}/conversations/#{convo.id}"
+  rescue StandardError
+    nil
   end
 
   # --- Helpers ---
@@ -1034,14 +1097,23 @@ class WhatsappService
   end
 
   def duration_for_treatment(treatment)
-    return DEFAULT_DURATION if treatment.blank?
-
-    key = treatment.downcase.strip
-    APPOINTMENT_DURATIONS[key] || DEFAULT_DURATION
+    PracticeConfig.duration_for(treatment).minutes
   end
 
   def normalize_phone(phone)
     phone.gsub(/\s+/, "").then { |p| p.start_with?("+") ? p : "+#{p}" }
+  end
+
+  # True when the current moment falls inside the practice's working
+  # hours per DoctorSchedule. Used by build_local_result to decide
+  # whether the urgent fast path applies (after-hours only) or whether
+  # the AI should handle the message and propose a real slot.
+  def currently_within_working_hours?
+    schedule = DoctorSchedule.for_day(Time.current.wday)
+    return false unless schedule
+    schedule.working?(Time.current)
+  rescue StandardError
+    false
   end
 
   def extract_cancellation_reason(result)
@@ -1118,7 +1190,15 @@ class WhatsappService
     # Only use fast path for urgent/emergency (always immediate)
     # Don't use for book/reschedule/cancel (need multi-turn with AI)
     lang = conversation&.language || "en"
-    if message.downcase.match?(/\b(pain|urgent|emergency|swollen|bleeding|pyn|noodgeval|geswel|bloeding)\b/)
+
+    # Urgent fast path: per Paul's v2 emergency policy (PRACTICE_CONFIG_DRAFT §9),
+    # the AI MUST always try to book the earliest available slot for emergency
+    # patients. The canned URGENT_FAST_PATH text only collects contact details
+    # without offering a real slot, so we reserve it for after-hours where no
+    # dentist is on duty. During working hours we fall through to the AI so it
+    # can read availability_context_block and propose a real slot.
+    urgent_match = message.downcase.match?(/\b(pain|urgent|emergency|swollen|bleeding|pyn|noodgeval|geswel|bloeding)\b/)
+    if urgent_match && !currently_within_working_hours?
       return {
         response: URGENT_FAST_PATH[lang] || URGENT_FAST_PATH["en"],
         intent: "urgent",
@@ -1269,7 +1349,7 @@ class WhatsappService
   # Find the next working day (up to 14 days ahead) where the requested
   # time string ("14:00") is available for `duration` minutes without
   # conflicting with existing appointments.
-  def next_available_date_for_time(time_str, duration = DEFAULT_DURATION)
+  def next_available_date_for_time(time_str, duration = PracticeConfig.default_appointment_duration_minutes.minutes)
     date = Date.current
     14.times do
       date = date.next_day

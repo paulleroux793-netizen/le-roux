@@ -14,23 +14,35 @@ class AiService
   }.freeze
   DEFAULT_MODEL = "claude-sonnet-4-6".freeze
 
+  # Practice data is now sourced from PracticeConfig (config/practice_config.yml)
+  # — single source of truth. Constants below are computed at class load
+  # so existing callers that reference AiService::PRICING / ::FAQ continue
+  # to work unchanged.
+
   PRICING = {
-    "consultation" => "approximately R850 (may include X-rays, excludes 2D/3D scans)",
-    "check_up" => "approximately R1,600",
-    "cleaning" => "approximately R1,500"
+    "consultation" => begin
+      s = PracticeConfig.service(:consultation)
+      "approximately #{s[:approx_price]} (includes X-rays, excludes 2D/3D scans)"
+    end,
+    "check_up" => begin
+      s = PracticeConfig.service(:check_up)
+      base = "approximately #{s[:approx_price]}"
+      s[:approx_price_with_3d_scan].present? ? "#{base} (up to #{s[:approx_price_with_3d_scan]} with 3D scan)" : base
+    end,
+    "cleaning" => "approximately #{PracticeConfig.service(:cleaning)[:approx_price]}"
   }.freeze
 
-  PRACTICE_ADDRESS = "Unit 2, Amorosa Office Park, Corner of Doreen Road & Lawrence Rd, Amorosa, Roodepoort, Johannesburg, 2040".freeze
-  PRACTICE_MAP_LINK = "https://maps.app.goo.gl/3iHKg7AMa8qRcfLf6".freeze
-  PRACTICE_DIRECTIONS = "From Hendrik Potgieter Rd: Turn onto Doreen Rd, we are on your left-hand side at the second robot. From CR Swart Rd: Turn onto Doreen Rd, we are on your right-hand side at the first robot.".freeze
+  PRACTICE_ADDRESS    = PracticeConfig.full_address
+  PRACTICE_MAP_LINK   = PracticeConfig.map_link
+  PRACTICE_DIRECTIONS = PracticeConfig.directions
 
   FAQ = {
     "hours" => nil, # Dynamic — use AiService.dynamic_hours instead
     "location" => "Our practice is located at: #{PRACTICE_ADDRESS}\nGoogle Maps: #{PRACTICE_MAP_LINK}\nDirections: #{PRACTICE_DIRECTIONS}",
-    "parking" => "Free parking is available on the premises.",
-    "services" => "We offer general dentistry, check-ups, cleanings, fillings, extractions, root canals, crowns, bridges, and cosmetic treatments. An examination is the best first step for any concern.",
-    "emergency" => "For dental emergencies, please share your name, contact number and a short description of the issue. We're open *Monday to Friday, 8am–5pm* and we don't have dentists on duty outside those hours — we always prioritise emergencies and will book you in at the very first available slot the moment we reopen.",
-    "payment" => "We do not claim directly from medical aid. All patients pay at the practice, and we then provide a statement so you can claim back from your medical aid. We have card facilities at the practice and also accept cash."
+    "parking" => PracticeConfig.faq[:parking],
+    "services" => PracticeConfig.faq[:services],
+    "emergency" => PracticeConfig.faq[:emergency],
+    "payment" => PracticeConfig.medical_aid_policy
   }.freeze
 
   class Error < StandardError; end
