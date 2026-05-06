@@ -600,8 +600,18 @@ class WhatsappService
     end_time = start_time + duration
     reason = treatment&.capitalize || "Consultation"
 
-    unless start_time > Time.current
-      Rails.logger.info("[WhatsApp] Booking rejected: slot is in the past (#{start_time})")
+    # 30-minute booking buffer (configurable in practice_config.yml).
+    # Patients need travel time + intake form completion; booking "right now"
+    # cascades into the practice running late for the rest of the day.
+    # See CODE_LOCKED_GUARDRAILS §1.7. Staff bookings via the dashboard
+    # bypass this rule — reception can squeeze in walk-ins.
+    buffer = PracticeConfig.booking_buffer_minutes.minutes
+    earliest_bookable = Time.current + buffer
+    if start_time <= earliest_bookable
+      Rails.logger.info(
+        "[WhatsApp] Booking rejected: within #{PracticeConfig.booking_buffer_minutes}-min buffer " \
+        "(start=#{start_time}, earliest=#{earliest_bookable})"
+      )
       return nil
     end
     if public_holiday?(start_time.to_date)

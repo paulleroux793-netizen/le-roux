@@ -1,19 +1,16 @@
 class SmsService
   class Error < StandardError; end
 
-  PRACTICE_ADDRESS = "Unit 2, Amorosa Office Park, Corner of Doreen Rd & Lawrence Rd, Amorosa, Johannesburg, 2040".freeze
-  MAP_LINK = "https://www.google.com/maps/place/Dr+Chalita+Johnson+le+Roux/@-26.0958593,27.8679389,15z".freeze
-
   class << self
     def send_confirmation(appointment)
       patient = appointment.patient
       time_str = appointment.start_time.strftime("%A %-d %B at %H:%M")
       arrive = (appointment.start_time - 15.minutes).strftime("%H:%M")
 
-      body = "Dr Chalita le Roux — Appointment confirmed for #{time_str}. " \
+      body = "#{practice_name} — Appointment confirmed for #{time_str}. " \
              "Please arrive at #{arrive}. " \
-             "Location: #{PRACTICE_ADDRESS}. " \
-             "Map: #{MAP_LINK}"
+             "Location: #{PracticeConfig.full_address}. " \
+             "Map: #{PracticeConfig.map_link}"
 
       send_sms(patient.phone, body)
     end
@@ -23,9 +20,9 @@ class SmsService
       time_str = appointment.start_time.strftime("%H:%M")
 
       body = "Reminder: You have an appointment tomorrow at #{time_str} " \
-             "with Dr Chalita le Roux. " \
+             "with #{practice_name}. " \
              "Reply YES to confirm or call us to reschedule. " \
-             "Location: #{PRACTICE_ADDRESS}"
+             "Location: #{PracticeConfig.full_address}"
 
       send_sms(patient.phone, body)
     end
@@ -34,13 +31,17 @@ class SmsService
       patient = appointment.patient
       date_str = appointment.start_time.strftime("%A %-d %B")
 
-      body = "Dr Chalita le Roux — Your appointment on #{date_str} " \
+      body = "#{practice_name} — Your appointment on #{date_str} " \
              "has been cancelled. Contact us to rebook."
 
       send_sms(patient.phone, body)
     end
 
     private
+
+    def practice_name
+      PracticeConfig.practice[:doctor_name] || "Dr Chalita le Roux"
+    end
 
     def send_sms(to_phone, body)
       return unless twilio_configured?

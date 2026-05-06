@@ -1,15 +1,18 @@
 # Dr Le Roux's working hours
-# Monday-Friday: 08:00 - 17:00, lunch break 12:00 - 13:00
+# Monday-Friday: 08:00 - 17:00, no fixed lunch break (practice books through
+# lunch when patients are scheduled and breaks organically when there are none)
 # Saturday & Sunday: closed
+#
+# Confirmed by Paul in the v2 practice config review (2026-05-06).
 
 schedules = [
-  { day_of_week: 0, active: false },                                                                    # Sunday
-  { day_of_week: 1, start_time: "08:00", end_time: "17:00", break_start: "12:00", break_end: "13:00" }, # Monday
-  { day_of_week: 2, start_time: "08:00", end_time: "17:00", break_start: "12:00", break_end: "13:00" }, # Tuesday
-  { day_of_week: 3, start_time: "08:00", end_time: "17:00", break_start: "12:00", break_end: "13:00" }, # Wednesday
-  { day_of_week: 4, start_time: "08:00", end_time: "17:00", break_start: "12:00", break_end: "13:00" }, # Thursday
-  { day_of_week: 5, start_time: "08:00", end_time: "17:00", break_start: "12:00", break_end: "13:00" }, # Friday
-  { day_of_week: 6, active: false }                                                                      # Saturday
+  { day_of_week: 0, active: false },                                            # Sunday
+  { day_of_week: 1, start_time: "08:00", end_time: "17:00" },                   # Monday
+  { day_of_week: 2, start_time: "08:00", end_time: "17:00" },                   # Tuesday
+  { day_of_week: 3, start_time: "08:00", end_time: "17:00" },                   # Wednesday
+  { day_of_week: 4, start_time: "08:00", end_time: "17:00" },                   # Thursday
+  { day_of_week: 5, start_time: "08:00", end_time: "17:00" },                   # Friday
+  { day_of_week: 6, active: false }                                              # Saturday
 ]
 
 schedules.each do |attrs|
