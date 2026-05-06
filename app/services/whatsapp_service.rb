@@ -34,10 +34,26 @@ class WhatsappService
   end
 
   # Main entry point: handle an incoming WhatsApp message.
-  # Returns { response:, intent:, entities: }
+  # Returns { response:, intent:, entities: }, OR nil if the conversation is
+  # currently in reception-takeover standby (AI paused for X hours after a
+  # human reply). When paused we still persist the inbound message and tag
+  # the conversation needs_review so reception sees there's a fresh inbound;
+  # no AI reply is generated.
   def handle_incoming(from:, message:, twilio_params: {}, media_attachments: [])
     patient = find_or_create_patient(from)
     conversation = find_or_create_conversation(patient)
+
+    # Reception takeover: if AI is on standby, log the inbound and bail.
+    # See CODE_LOCKED_GUARDRAILS §8.2.
+    if conversation.ai_paused?
+      Rails.logger.info(
+        "[WhatsApp] AI paused on conversation ##{conversation.id} until " \
+        "#{conversation.ai_paused_until.iso8601} — saving inbound, skipping AI."
+      )
+      conversation.add_message(role: "user", content: message, timestamp: Time.current)
+      tag_needs_review(conversation)
+      return nil
+    end
 
     # Detect and persist language from the first message
 
@@ -200,6 +216,19 @@ class WhatsappService
   def response_signals_uncertainty?(response)
     txt = response.to_s
     UNCERTAINTY_PATTERNS.any? { |re| re.match?(txt) }
+  end
+
+  # Tag a conversation needs_review without the staff-alert side effect.
+  # Used for the reception-takeover paused path where the patient has just
+  # sent an inbound message but the AI is on standby — reception already
+  # owns the conversation, so we just want a visible flag in the dashboard.
+  def tag_needs_review(conversation)
+    return unless conversation
+    tags = Array(conversation.tags || [])
+    return if tags.include?("needs_review")
+    conversation.update(tags: (tags + ["needs_review"]).uniq)
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] tag_needs_review failed: #{e.class}: #{e.message}")
   end
 
   def flag_conversation_for_staff_review(conversation, patient, original_response:)

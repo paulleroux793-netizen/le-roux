@@ -71,22 +71,53 @@ class ConversationsController < ApplicationController
     WhatsappTemplateService.new.send_text(conversation.patient.phone, body)
     conversation.add_message(role: "assistant", content: body, timestamp: Time.current)
     conversation.update!(status: "active") if conversation.status == "closed"
+
+    # Reception takeover: pause AI for the configured window (default 4 hours)
+    # so it does not contradict the human reply on the next inbound message.
+    # See CODE_LOCKED_GUARDRAILS §8.2 and PracticeConfig.ai_pause_hours.
+    conversation.pause_ai!
+
     AuditService.log(
       action: "conversation.replied",
-      summary: "Sent manual reply to #{conversation.patient.full_name} via WhatsApp",
+      summary: "Sent manual reply to #{conversation.patient.full_name} via WhatsApp (AI paused #{PracticeConfig.ai_pause_hours}h)",
       resource: conversation,
-      details: { patient_phone: conversation.patient.phone, body: body.truncate(120) },
+      details: {
+        patient_phone: conversation.patient.phone,
+        body: body.truncate(120),
+        ai_paused_until: conversation.ai_paused_until.iso8601
+      },
       performed_by: audit_performer,
       ip_address: request.remote_ip
     )
     expire_conversation_caches!
 
     redirect_to conversation_path(conversation),
-      notice: "Reply sent to #{conversation.patient.full_name}.",
+      notice: "Reply sent to #{conversation.patient.full_name}. AI paused for #{PracticeConfig.ai_pause_hours} hours.",
       status: :see_other
   rescue WhatsappTemplateService::Error => e
     redirect_back fallback_location: conversation_path(params[:id]),
       alert: "Send failed: #{e.message}", status: :see_other
+  end
+
+  # PATCH /conversations/:id/resume_ai
+  #
+  # Reception clears the AI standby pause on a conversation, e.g. when the
+  # human-to-human exchange is concluded and the AI can take over again.
+  def resume_ai
+    conversation = Conversation.find(params[:id])
+    conversation.resume_ai!
+    AuditService.log(
+      action: "conversation.ai_resumed",
+      summary: "Re-enabled AI on #{conversation.patient.full_name}'s conversation",
+      resource: conversation,
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    expire_conversation_caches!
+
+    redirect_back fallback_location: conversation_path(conversation),
+      notice: "AI re-enabled on this conversation.",
+      status: :see_other
   end
 
   # PATCH /conversations/:id/update_tags
