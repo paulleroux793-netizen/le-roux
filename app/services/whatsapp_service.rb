@@ -1024,6 +1024,18 @@ class WhatsappService
     phone.gsub(/\s+/, "").then { |p| p.start_with?("+") ? p : "+#{p}" }
   end
 
+  # True when the current moment falls inside the practice's working
+  # hours per DoctorSchedule. Used by build_local_result to decide
+  # whether the urgent fast path applies (after-hours only) or whether
+  # the AI should handle the message and propose a real slot.
+  def currently_within_working_hours?
+    schedule = DoctorSchedule.for_day(Time.current.wday)
+    return false unless schedule
+    schedule.working?(Time.current)
+  rescue StandardError
+    false
+  end
+
   def extract_cancellation_reason(result)
     # Try to infer reason from the conversation context
     message = result[:response]&.downcase || ""
@@ -1098,7 +1110,15 @@ class WhatsappService
     # Only use fast path for urgent/emergency (always immediate)
     # Don't use for book/reschedule/cancel (need multi-turn with AI)
     lang = conversation&.language || "en"
-    if message.downcase.match?(/\b(pain|urgent|emergency|swollen|bleeding|pyn|noodgeval|geswel|bloeding)\b/)
+
+    # Urgent fast path: per Paul's v2 emergency policy (PRACTICE_CONFIG_DRAFT §9),
+    # the AI MUST always try to book the earliest available slot for emergency
+    # patients. The canned URGENT_FAST_PATH text only collects contact details
+    # without offering a real slot, so we reserve it for after-hours where no
+    # dentist is on duty. During working hours we fall through to the AI so it
+    # can read availability_context_block and propose a real slot.
+    urgent_match = message.downcase.match?(/\b(pain|urgent|emergency|swollen|bleeding|pyn|noodgeval|geswel|bloeding)\b/)
+    if urgent_match && !currently_within_working_hours?
       return {
         response: URGENT_FAST_PATH[lang] || URGENT_FAST_PATH["en"],
         intent: "urgent",
