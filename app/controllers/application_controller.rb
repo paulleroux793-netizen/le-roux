@@ -1,6 +1,26 @@
 class ApplicationController < ActionController::Base
   include InertiaRails::Controller
 
+  # Minimum-viable auth: HTTP basic auth on the dashboard.
+  # The dashboard exposes patient PII so it MUST NOT be publicly browsable.
+  # This is a stop-gap until Devise + per-user roles land in a follow-up PR;
+  # until then a single shared password gates the whole dashboard.
+  #
+  # Webhook controllers extend ActionController::API directly (NOT this
+  # class) so Twilio inbounds bypass the basic-auth check and continue to
+  # be authenticated by X-Twilio-Signature only.
+  #
+  # Configure via Railway env:
+  #   DASHBOARD_USERNAME (e.g. "reception")
+  #   DASHBOARD_PASSWORD (a strong shared password)
+  # Skipping the env vars (e.g. in dev/test) leaves the dashboard open —
+  # production deploys SHOULD set both before going live.
+  http_basic_authenticate_with(
+    name:     ENV["DASHBOARD_USERNAME"].to_s,
+    password: ENV["DASHBOARD_PASSWORD"].to_s,
+    if:       -> { ENV["DASHBOARD_USERNAME"].present? && ENV["DASHBOARD_PASSWORD"].present? }
+  )
+
   # Phase 9.6 sub-area #6 — shared Inertia props.
   #
   # Exposes the unread notification count to every Inertia page so
