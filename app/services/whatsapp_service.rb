@@ -55,6 +55,23 @@ class WhatsappService
       return nil
     end
 
+    # Path B (after-hours-only AI): during business hours, the AI does not
+    # auto-reply. Reception handles the dashboard manually. We still persist
+    # the inbound + tag the conversation so reception sees the message.
+    # Outside business hours (incl. weekends + public holidays), AI takes
+    # over fully. Configured via ai_mode in practice_config.yml.
+    if !PracticeConfig.ai_active_during_business_hours? && currently_within_working_hours?
+      Rails.logger.info(
+        "[WhatsApp] AI off during business hours (Path B) — saving inbound on " \
+        "conversation ##{conversation.id} for reception to handle manually."
+      )
+      conversation.add_message(role: "user", content: message, timestamp: Time.current)
+      tag_needs_review(conversation)
+      # Notify reception via SMS/email so they know there's a fresh inbound.
+      send_business_hours_inbound_alert(patient, conversation, message)
+      return nil
+    end
+
     # Detect and persist language from the first message
 
     # If the patient sent media (image/PDF) and has a pending_confirmation
@@ -597,6 +614,17 @@ class WhatsappService
     send_confirmation_template(patient, appointment, after_hours: after_hours, language: language)
     send_confirmation_email(appointment)
     send_confirmation_sms(appointment)
+
+    # Path B: report after-hours bookings to the main WhatsApp line so
+    # reception sees the activity in web.whatsapp.com without logging
+    # into the dashboard. Only fires for AI-driven bookings (this method);
+    # staff dashboard bookings already happen with reception in the loop.
+    summary = "AI booked #{patient.full_name} for #{reason} on " \
+              "#{appointment.start_time.strftime('%a %-d %b at %H:%M')}" +
+              (after_hours ? " (pending confirmation — booked after hours)" : "") +
+              (is_whitening ? " (awaiting R2,000 deposit)" : "")
+    report_to_main_line("BOOKING", patient: patient, summary: summary)
+
     appointment
   rescue StandardError => e
     Rails.logger.error("[WhatsApp] Booking failed: #{e.class}: #{e.message}")
@@ -725,6 +753,13 @@ class WhatsappService
     end
 
     send_reschedule_template(patient, appointment)
+
+    # Path B: report rescheduled bookings to the main line.
+    report_to_main_line(
+      "RESCHEDULE",
+      patient: patient,
+      summary: "AI rescheduled #{patient.full_name}'s appointment to #{appointment.start_time.strftime('%a %-d %b at %H:%M')}"
+    )
   rescue StandardError => e
     Rails.logger.error("[WhatsApp] Reschedule failed: #{e.message}")
   end
@@ -755,6 +790,14 @@ class WhatsappService
     end
 
     send_cancellation_template(patient, appointment)
+
+    # Path B: report cancellations to the main line so reception can
+    # consider whether to fill the freed slot from the waiting list.
+    report_to_main_line(
+      "CANCEL",
+      patient: patient,
+      summary: "AI cancelled #{patient.full_name}'s appointment on #{appointment.start_time.strftime('%a %-d %b at %H:%M')} — reason: #{reason_category}"
+    )
   rescue StandardError => e
     Rails.logger.error("[WhatsApp] Cancellation failed: #{e.message}")
   end
@@ -979,6 +1022,43 @@ class WhatsappService
         Rails.logger.warn("[StaffAlert] Email failed: #{e.message}")
       end
     end
+  end
+
+  # Path B: during business hours, AI is off and reception handles the
+  # dashboard. Send a lightweight SMS so reception knows there's a new
+  # inbound message to deal with. Email is intentionally NOT used here —
+  # they'll see plenty of these and email would be noise. WhatsApp template
+  # to the main line is the longer-term plan once approved.
+  def send_business_hours_inbound_alert(patient, conversation, message)
+    return unless PracticeConfig.report_to_main_line?
+
+    SmsService.send_flagged_alert(
+      patient_name:  patient.full_name,
+      patient_phone: patient.phone,
+      reason:        "New WhatsApp inbound during business hours: #{message.to_s.truncate(80)}"
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[BusinessHoursAlert] Failed: #{e.message}")
+  end
+
+  # Path B: after the AI has acted on an after-hours message (booked an
+  # appointment, flagged for review, handled an emergency), summarise the
+  # event to the main WhatsApp line so reception sees what happened
+  # without logging into the dashboard. Best-effort — failure here does
+  # not block the patient interaction.
+  def report_to_main_line(event_type, patient:, summary:)
+    return unless PracticeConfig.report_to_main_line?
+    return if PracticeConfig.main_whatsapp.blank?
+
+    # Always send via SMS to emergency_admin_phone — reliable + works today.
+    # WhatsApp template to main_whatsapp added once template + sender approved.
+    SmsService.send_flagged_alert(
+      patient_name:  patient.full_name,
+      patient_phone: patient.phone,
+      reason:        "[#{event_type}] #{summary}"
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[MainLineReport] Failed: #{e.message}")
   end
 
   # Best-effort: build the dashboard URL for the patient's most recent

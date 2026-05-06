@@ -23,6 +23,17 @@ practice:
   hpcsa_number: "DP 0118702"
   company_registration: "2022/698149/21"
   phone_landline: "011 568 8285"
+  # Two-number Path B (locked 2026-05-06 by Paul):
+  # main_whatsapp = the existing personal/manual WhatsApp number that stays
+  # in WhatsApp Business app + web.whatsapp.com — reception keeps using
+  # the familiar tool here. AI activity is reported to this number via
+  # template/SMS so reception sees what the AI did without dashboard logins.
+  # ai_whatsapp = the NEW SA mobile number provisioned for the AI after-hours
+  # receptionist. Registered with Twilio (locked to API). Advertised on the
+  # website as "After-hours / Emergency WhatsApp line".
+  main_whatsapp: "071 884 3204"
+  ai_whatsapp: ""  # populated once new number is provisioned + approved by Meta
+  # Legacy alias — kept for backward compatibility while consolidation lands.
   phone_whatsapp: "071 884 3204"
   email: "info@drchalitaleroux.co.za"
   emergency_admin_phone: "+27714475022"  # Paul (escalation contact)
@@ -310,6 +321,24 @@ greetings:
     Hello and welcome to Dr Chalita le Roux Incorporated. Thank you for messaging us. How may we assist you today?
   after_hours: |
     Hello and welcome to Dr Chalita le Roux Incorporated. Our practice is currently closed, but I can still help with appointment information and the earliest available booking options. How may we assist you today?
+
+# Path B: AI is the AFTER-HOURS receptionist on a separate WhatsApp number.
+# During business hours, reception handles WhatsApp manually on the main
+# line (071 884 3204) via web.whatsapp.com — AI is OFF. After business
+# hours / weekends / public holidays, AI takes over fully on the AI line.
+ai_mode:
+  # When false, the AI does NOT auto-reply during business hours
+  # (Mon–Fri 08:00–17:00). Inbound messages still land in the dashboard
+  # so reception can monitor + reply manually if they choose. Flip to
+  # true if you ever want 24/7 AI coverage.
+  active_during_business_hours: false
+
+  # When AI processes any meaningful event (booking, whitening lead,
+  # emergency, escalation flag), notify the main WhatsApp line so
+  # reception sees the activity in web.whatsapp.com without logging
+  # into the dashboard. Channels are best-effort; SMS to the
+  # emergency_admin_phone is the always-on fallback.
+  report_to_main_line: true
 
 # Reception takeover detection — when reception sends a manual reply via the
 # dashboard, AI pauses for this many hours on that conversation.

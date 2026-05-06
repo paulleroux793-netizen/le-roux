@@ -30,7 +30,7 @@ class PracticeConfig
       default_appointment_duration_minutes banking payment faq
       pricing_guidance emergency_policy after_hours_behaviour
       format_rules personality greetings reception_takeover
-      confirmations_and_reminders
+      confirmations_and_reminders ai_mode
     ].each do |key|
       define_method(key) { instance.public_send(key) }
     end
@@ -47,6 +47,10 @@ class PracticeConfig
     def medical_aid_policy      = instance.medical_aid_policy
     def booking_buffer_minutes  = instance.booking_buffer_minutes
     def ai_pause_hours          = instance.ai_pause_hours
+    def ai_active_during_business_hours? = instance.ai_active_during_business_hours?
+    def report_to_main_line?    = instance.report_to_main_line?
+    def main_whatsapp           = instance.main_whatsapp
+    def ai_whatsapp             = instance.ai_whatsapp
   end
 
   attr_reader :data
@@ -78,6 +82,7 @@ class PracticeConfig
   def greetings                         = @data[:greetings]
   def reception_takeover                = @data[:reception_takeover]
   def confirmations_and_reminders       = @data[:confirmations_and_reminders]
+  def ai_mode                           = @data[:ai_mode] || {}
 
   # ── Service lookup ────────────────────────────────────────────────────
 
@@ -135,6 +140,18 @@ class PracticeConfig
 
   def booking_buffer_minutes = format_rules[:booking_buffer_minutes].to_i
   def ai_pause_hours         = reception_takeover[:ai_pause_hours].to_i
+
+  # ── AI mode (Path B — after-hours-only by default) ───────────────────
+  def ai_active_during_business_hours?
+    ai_mode.fetch(:active_during_business_hours, false) == true
+  end
+
+  def report_to_main_line?
+    ai_mode.fetch(:report_to_main_line, false) == true
+  end
+
+  def main_whatsapp = practice[:main_whatsapp].to_s
+  def ai_whatsapp   = practice[:ai_whatsapp].to_s
 
   private
 
