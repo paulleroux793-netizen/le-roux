@@ -2,6 +2,15 @@ class AppointmentReminder24hJob < ApplicationJob
   queue_as :default
 
   def perform
+    # Per the v2 practice config (2026-05-06): the practice handles
+    # day-before confirmations manually via phone. WhatsApp reminders are
+    # deferred. The job runs but no-ops while the flag is off; flip the
+    # flag in config/practice_config.yml and redeploy to re-enable.
+    unless PracticeConfig.confirmations_and_reminders[:send_24h_reminder]
+      Rails.logger.info("[Reminder24h] Skipped — send_24h_reminder is disabled in practice_config.yml")
+      return
+    end
+
     tomorrow     = Date.tomorrow
     appointments = Appointment
       .where(status: [ :scheduled, :confirmed ])

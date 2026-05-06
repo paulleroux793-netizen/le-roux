@@ -7,6 +7,14 @@ class AppointmentReminder1hJob < ApplicationJob
   # ever falls in two consecutive hourly windows — even with clock drift or retry —
   # so patients never receive duplicate 1h reminders.
   def perform
+    # Per the v2 practice config (2026-05-06): hour-before reminders are
+    # deferred for launch — practice handles same-day reminders manually.
+    # Flip send_1h_reminder in practice_config.yml + redeploy to re-enable.
+    unless PracticeConfig.confirmations_and_reminders[:send_1h_reminder]
+      Rails.logger.info("[Reminder1h] Skipped — send_1h_reminder is disabled in practice_config.yml")
+      return
+    end
+
     window_start = 45.minutes.from_now
     window_end   = 75.minutes.from_now
 

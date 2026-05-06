@@ -158,35 +158,65 @@ services:
     pending_until_proof_of_payment: true
     working_hours_only: true  # never after-hours
     aliases: [whitening, "teeth whitening", biolase, "laser whitening", bleach, bleaching, bleiking, tandebleiking]
-    full_info_message: |
-      *Biolase Laser Teeth Whitening* 🌿
+    full_info_message:
+      en: |
+        *Biolase Laser Teeth Whitening* 🌿
 
-      Our Biolase laser teeth whitening is a comfortable, in-chair procedure designed to safely brighten your smile while protecting your enamel and gums.
+        Our Biolase laser teeth whitening is a comfortable, in-chair procedure designed to safely brighten your smile while protecting your enamel and gums.
 
-      *The appointment includes:*
-      • A professional dental cleaning
-      • Application of a medical-grade whitening gel
-      • Activation with the Biolase laser for enhanced, even results
+        *The appointment includes:*
+        • A professional dental cleaning
+        • Application of a medical-grade whitening gel
+        • Activation with the Biolase laser for enhanced, even results
 
-      The treatment takes approximately *90 minutes*, and most patients notice a visibly brighter smile immediately after the session.
+        The treatment takes approximately *90 minutes*, and most patients notice a visibly brighter smile immediately after the session.
 
-      *Cost:* R7,800 for the full whitening treatment.
+        *Cost:* R7,800 for the full whitening treatment.
 
-      *To secure your booking* we require a *R2,000 deposit* up front (we book 90 minutes of the diary for you). The remaining R5,800 is settled on the day.
+        *To secure your booking* we require a *R2,000 deposit* up front (we book 90 minutes of the diary for you). The remaining R5,800 is settled on the day.
 
-      *Banking details:*
-      Bank: Investec Bank Limited
-      Branch: 100 Grayston Drive, Sandton
-      Branch code: 58 01 05
-      Account type: Current Account
-      Account name: Dr Chalita Le Roux Inc
-      Account number: 10013494325
-      Company No: 2022/698149/21
-      Reference: Your full name
+        *Banking details:*
+        Bank: Investec Bank Limited
+        Branch: 100 Grayston Drive, Sandton
+        Branch code: 58 01 05
+        Account type: Current Account
+        Account name: Dr Chalita Le Roux Inc
+        Account number: 10013494325
+        Company No: 2022/698149/21
+        Reference: Your full name
 
-      Once you've sent proof of payment, I'll secure your slot. Please share your preferred date and time (Monday to Friday, 8am–5pm) and I'll pencil you in while we wait for the deposit.
+        Once you've sent proof of payment, I'll secure your slot. Please share your preferred date and time (Monday to Friday, 8am–5pm) and I'll pencil you in while we wait for the deposit.
 
-      Any questions — just ask! 😊
+        Any questions — just ask! 😊
+      af: |
+        *Biolase Laser Tandebleiking* 🌿
+
+        Ons Biolase laser tandebleiking is 'n gemaklike in-stoel prosedure wat jou glimlag veilig verhelder terwyl dit jou emalj en gom beskerm.
+
+        *Die afspraak sluit in:*
+        • 'n Professionele tand-skoonmaak
+        • Aanbring van 'n mediese graad bleikgel
+        • Aktivering met die Biolase laser vir beter, eweredige resultate
+
+        Die behandeling neem ongeveer *90 minute*, en die meeste pasiënte sien 'n sigbaar helderder glimlag onmiddellik na die sessie.
+
+        *Koste:* R7,800 vir die volle bleikingsbehandeling.
+
+        *Om jou afspraak te bevestig* benodig ons 'n *R2,000 deposito* vooruit (ons bespreek 90 minute van die dagboek vir jou). Die oorblywende R5,800 is betaalbaar op die dag.
+
+        *Bankbesonderhede:*
+        Bank: Investec Bank Limited
+        Tak: 100 Grayston Drive, Sandton
+        Takkode: 58 01 05
+        Rekeningtipe: Lopende Rekening
+        Rekeningnaam: Dr Chalita Le Roux Inc
+        Rekeningnommer: 10013494325
+        Maatskappy No: 2022/698149/21
+        Verwysing: Jou volle naam
+
+        Sodra jy bewys van betaling gestuur het, sal ek jou gleuf vasmaak. Stuur asseblief jou voorkeurdatum en -tyd (Maandag tot Vrydag, 8vm–5nm) en ek sal dit vir jou reserveer terwyl ons wag vir die deposito.
+
+        Enige vrae — laat weet gerus! 😊
 
 # Default appointment duration when treatment isn't matched to a service above.
 default_appointment_duration_minutes: 30

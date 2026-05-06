@@ -78,10 +78,16 @@ class PromptBuilder
       - If the patient's language is unclear, ask briefly: "Would you prefer English or Afrikaans?" / "Verkies jy Engels of Afrikaans?"
       #{@language == "af" ? afrikaans_style_guide : ""}
 
-      ## Opening Message
-      #{after_hours ? 'Use this opening when the conversation starts:
-      "Hello and welcome to Dr Chalita le Roux Incorporated. Our practice is currently closed, but I can still help with appointment information and the earliest available booking options. How may we assist you today?"' : 'Use this opening when the conversation starts:
-      "Hello and welcome to Dr Chalita le Roux Incorporated. Thank you for messaging us. How may we assist you today?"'}
+      ## Opening Message (FIRST INBOUND ON A NEW CONVERSATION)
+      Use this exact opening on the FIRST inbound message of a new conversation
+      (24h window reuse means this is sent only when a fresh conversation thread starts):
+
+      "#{after_hours ? PracticeConfig.greetings[:after_hours].to_s.strip : PracticeConfig.greetings[:working_hours].to_s.strip}
+
+      #{PracticeConfig.greetings[:popia_line].to_s.strip}"
+
+      Note: the POPIA notice is appended to the greeting on the patient's FIRST
+      message only. Do NOT prepend it to every reply throughout the conversation.
 
       ############################################################
       ## AFTER-HOURS BOOKING RULE (NON-NEGOTIABLE — PERMANENT)
