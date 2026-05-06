@@ -1,9 +1,15 @@
 class PromptBuilder
-  PRICING = AiService::PRICING
-  PRACTICE_ADDRESS = AiService::PRACTICE_ADDRESS
-  PRACTICE_MAP_LINK = AiService::PRACTICE_MAP_LINK
-  PRACTICE_DIRECTIONS = AiService::PRACTICE_DIRECTIONS
-  FAQ = AiService::FAQ
+  # Practice data is now sourced from PracticeConfig (config/practice_config.yml)
+  # — single source of truth. Constants here are computed once at class load
+  # so existing heredoc references like #{PRACTICE_ADDRESS} continue to work.
+  # Editing the YAML + redeploying picks up the new values; the production
+  # process restarts on every Railway deploy so no cache concerns.
+  PRACTICE_ADDRESS    = PracticeConfig.full_address
+  PRACTICE_MAP_LINK   = PracticeConfig.map_link
+  PRACTICE_DIRECTIONS = PracticeConfig.directions
+  FAQ = PracticeConfig.faq.transform_keys(&:to_s).each_with_object({}) do |(k, v), h|
+    h[k] = v.to_s == "dynamic_hours" ? nil : v
+  end.freeze
 
   # Channels recognised by the prompt builder. The voice branch ships its
   # own identity, personality, and format rules so spoken replies don't
@@ -189,12 +195,14 @@ class PromptBuilder
       ############################################################
       ## SERVICE-TO-APPOINTMENT MAPPING
       ############################################################
-      - Pain or emergency → urgent dental assessment
+      - Pain or emergency → urgent dental assessment (offer earliest slot, see Emergency Triage below)
       - General check-up → examination or check-up (45 min)
       - Cosmetic enquiry → cosmetic consultation (45 min)
       - Teeth cleaning → oral hygiene or cleaning appointment (30 min)
       - Teeth whitening / Biolase → laser whitening (90 min, R7,800, requires R2,000 deposit to secure booking)
-      - Fillings or repair → examination for restorative treatment (30 min)
+      - Fillings or restorative or resin bonding or resin veneers → examination first (30 min) — quote depends on size & type
+      - ANY extraction (simple or surgical) → consultation first (30 min). NEVER quote extraction pricing upfront. If patient pushes for a number, say it starts from approximately R1,500 but varies (child vs adult, simple vs surgical, which tooth) and the right step is a consultation so Dr Chalita can assess and advise.
+      - Aligners (NOT braces) → aligner consultation + assessment (45 min, ~R5,000). Practice does NOT offer traditional braces. If patient asks for braces, redirect to aligners ("like invisible braces").
       - Unsure → general examination first (30 min)
 
       If the patient asks for a treatment that normally requires an examination first:
@@ -209,27 +217,23 @@ class PromptBuilder
       Core rule: NEVER give detailed or fixed pricing. Always frame as approximate and dependent on consultation.
 
       When patients ask for pricing:
-      "It can be difficult to give exact pricing without the dentist first having a look, as it depends on your specific needs on the day."
+      "#{PracticeConfig.pricing_guidance[:general_price_ask].to_s.strip}"
 
       Allowed approximate guidance ONLY when appropriate:
-      - Consultation: approximately R850 (may include X-rays, excludes 2D/3D scans such as panoramic scans)
-      - General check-up: approximately R1,600
-      - Dental cleaning: approximately R1,500
-
-      Always include: "The exact cost can vary depending on what is needed on the day, including your dental condition and whether any additional scans are required."
+      #{pricing_block}
 
       Patient empowerment (VERY IMPORTANT — always mention):
-      "You are always welcome to ask before the dentist proceeds with anything on the day, so you are fully comfortable with what is included and any additional costs."
+      "#{PracticeConfig.pricing_guidance[:always_include_empowerment].to_s.strip}"
 
       Price-sensitive patients:
-      "I understand. For detailed and accurate pricing, it would be best for our team to assist you during normal working hours so we can confirm everything properly for you."
+      "#{PracticeConfig.pricing_guidance[:price_sensitive].to_s.strip}"
 
       Do NOT elaborate beyond these ranges. Do NOT break down pricing further. Do NOT guess. Do NOT engage in price comparison discussions.
 
       ############################################################
       ## PAYMENT AND MEDICAL AID
       ############################################################
-      "We do not claim directly from medical aid. All patients pay at the practice, and we then provide a statement so you can claim back from your medical aid. We have card facilities at the practice and also accept cash."
+      "#{PracticeConfig.medical_aid_policy}"
       - For new patients: ALWAYS send this
       - For existing patients: only send if they ask about payment or medical aid
 
@@ -425,6 +429,20 @@ class PromptBuilder
       WRONG (never say this): "Saturdays 8am-12pm" ← WE ARE CLOSED ON SATURDAYS
       CORRECT: "We're open #{active_days.split(', ').first} to #{active_days.split(', ').last} #{start_h}–#{end_h}. We're closed on weekends."
     HOURS
+  end
+
+  # Builds the "Allowed approximate guidance" block used in the PRICING
+  # GUIDANCE section. Reads each priced service from PracticeConfig so
+  # changing a price in config/practice_config.yml propagates to the AI
+  # without code edits. Only services with an approx_price are listed.
+  def pricing_block
+    services = PracticeConfig.services.select { |s| s[:approx_price].present? }
+    services.map do |s|
+      base = "- #{s[:name]}: approximately #{s[:approx_price]}"
+      base += " (up to #{s[:approx_price_with_3d_scan]} with 3D scan)" if s[:approx_price_with_3d_scan].present?
+      base += " — includes X-rays, excludes 2D/3D scans" if s[:includes_xrays] && s[:excludes_3d_scans]
+      base
+    end.join("\n      ")
   end
 
   def afrikaans_style_guide

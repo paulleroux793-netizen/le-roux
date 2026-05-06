@@ -152,9 +152,24 @@ RSpec.describe AiService do
   end
 
   describe "PRICING" do
-    it "knows consultation and cleaning prices" do
-      expect(AiService::PRICING["consultation"]).to eq("approximately R850 (may include X-rays, excludes 2D/3D scans)")
-      expect(AiService::PRICING["cleaning"]).to eq("approximately R1,500")
+    # Prices now sourced from config/practice_config.yml via PracticeConfig.
+    # These assertions confirm the wiring is intact; if a price changes in
+    # the YAML, update the expectation here too.
+    it "sources consultation pricing from PracticeConfig" do
+      expected_price = PracticeConfig.service(:consultation)[:approx_price]
+      expect(AiService::PRICING["consultation"]).to include(expected_price)
+      expect(AiService::PRICING["consultation"]).to include("includes X-rays")
+    end
+
+    it "sources cleaning pricing from PracticeConfig" do
+      expected_price = PracticeConfig.service(:cleaning)[:approx_price]
+      expect(AiService::PRICING["cleaning"]).to include(expected_price)
+    end
+
+    it "sources check-up pricing from PracticeConfig with the 3D-scan caveat" do
+      expected_price = PracticeConfig.service(:check_up)[:approx_price]
+      expect(AiService::PRICING["check_up"]).to include(expected_price)
+      expect(AiService::PRICING["check_up"]).to include("3D scan")
     end
   end
 
