@@ -32,7 +32,11 @@ practice:
   # receptionist. Registered with Twilio (locked to API). Advertised on the
   # website as "After-hours / Emergency WhatsApp line".
   main_whatsapp: "071 884 3204"
-  ai_whatsapp: ""  # populated once new number is provisioned + approved by Meta
+  # New AI receptionist line provisioned + RICA'd by Paul on 2026-05-07.
+  # Awaiting Twilio Sender registration + Meta review (3-5 business days).
+  # Until that lands, the existing Twilio sandbox number (+1 415 523 8886)
+  # remains the test surface — TWILIO_WHATSAPP_NUMBER env var still points at sandbox.
+  ai_whatsapp: "+27837109131"
   # Legacy alias — kept for backward compatibility while consolidation lands.
   phone_whatsapp: "071 884 3204"
   email: "info@drchalitaleroux.co.za"
@@ -331,7 +335,12 @@ ai_mode:
   # (Mon–Fri 08:00–17:00). Inbound messages still land in the dashboard
   # so reception can monitor + reply manually if they choose. Flip to
   # true if you ever want 24/7 AI coverage.
-  active_during_business_hours: false
+  #
+  # 2026-05-07: Temporarily TRUE (24/7) during initial verification of the
+  # new ai_whatsapp line. Paul wants to confirm bookings work end-to-end on
+  # the new number before flipping back to Path B (after-hours-only).
+  # Switch back to `false` once verified.
+  active_during_business_hours: true
 
   # When AI processes any meaningful event (booking, whitening lead,
   # emergency, escalation flag), notify the main WhatsApp line so
