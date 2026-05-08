@@ -334,12 +334,15 @@ ai_mode:
   # When false, the AI does NOT auto-reply during business hours
   # (Mon–Fri 08:00–17:00). Inbound messages still land in the dashboard
   # so reception can monitor + reply manually if they choose. Flip to
-  # true if you ever want 24/7 AI coverage.
+  # true for 24/7 AI coverage.
   #
-  # 2026-05-07: Temporarily TRUE (24/7) during initial verification of the
-  # new ai_whatsapp line. Paul wants to confirm bookings work end-to-end on
-  # the new number before flipping back to Path B (after-hours-only).
-  # Switch back to `false` once verified.
+  # 2026-05-07: Set to TRUE (24/7) permanently. Paul's revised launch plan:
+  # the new +27 83 710 9131 line is the AI's dedicated 24/7 channel,
+  # marketed publicly. The existing 071 884 3204 line stays in
+  # web.whatsapp.com for reception's manual contact with existing patients.
+  # The two numbers cleanly separate "AI 24/7" from "personal/reception".
+  # The after-hours-only gate is preserved in code in case it's ever needed
+  # again, just turned off via this flag.
   active_during_business_hours: true
 
   # When AI processes any meaningful event (booking, whitening lead,
