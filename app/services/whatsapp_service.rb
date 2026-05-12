@@ -40,6 +40,12 @@ class WhatsappService
   # the conversation needs_review so reception sees there's a fresh inbound;
   # no AI reply is generated.
   def handle_incoming(from:, message:, twilio_params: {}, media_attachments: [])
+    # Remember which sender the patient messaged. Subsequent outbound from this
+    # service instance (booking confirmations, flagged alerts) uses the same
+    # number so sandbox traffic stays on sandbox (free for testing) and
+    # production traffic stays on production.
+    @inbound_to = twilio_params["To"] || twilio_params[:To]
+
     patient = find_or_create_patient(from)
     conversation = find_or_create_conversation(patient)
 
@@ -1377,7 +1383,7 @@ class WhatsappService
 
   def template_service
     @templates ||= begin
-      WhatsappTemplateService.new
+      WhatsappTemplateService.new(from_number: @inbound_to)
     rescue StandardError
       # Template service may fail if Twilio creds aren't set (dev/test)
       nil

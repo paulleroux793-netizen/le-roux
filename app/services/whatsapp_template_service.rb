@@ -15,12 +15,21 @@ class WhatsappTemplateService
 
   class Error < StandardError; end
 
-  def initialize
+  # Constructed with an optional `from_number` so reply paths can match the
+  # sender the patient originally messaged (sandbox stays on sandbox; the
+  # production line replies from itself). System-initiated sends (reminders,
+  # mailer-driven alerts) omit `from_number` and fall back to the env var.
+  #
+  # Normalizes the `whatsapp:` prefix so callers can pass either format —
+  # this also defends against the env-double-prefix bug that crashed
+  # outbound on 2026-05-12.
+  def initialize(from_number: nil)
     @client = Twilio::REST::Client.new(
       ENV.fetch("TWILIO_ACCOUNT_SID"),
       ENV.fetch("TWILIO_AUTH_TOKEN")
     )
-    @from = "whatsapp:#{ENV.fetch('TWILIO_WHATSAPP_NUMBER')}"
+    raw = (from_number || ENV.fetch("TWILIO_WHATSAPP_NUMBER")).to_s
+    @from = raw.start_with?("whatsapp:") ? raw : "whatsapp:#{raw}"
   end
 
   # Send appointment confirmation after booking
