@@ -1286,10 +1286,44 @@ class WhatsappService
     }
   end
 
+  # Detects messages that are clearly NOT from a patient seeking treatment —
+  # sales reps, suppliers, recruiters, banking, equipment vendors. These
+  # should bypass all patient-side fast paths (whitening info dump, urgent
+  # triage, etc.) and go straight to the AI, which has explicit prompt
+  # instructions to recognise + hand off to reception with an uncertainty
+  # phrase that triggers the multi-channel staff alert.
+  #
+  # Audit 2026-05-12 caught this: a sales rep mentioning "whitening
+  # equipment" got the R7,800 whitening info dump because the regex caught
+  # the keyword without context. This gate prevents that.
+  NON_PATIENT_INDICATORS = /
+    \b(sales\s*(rep|representative|call|person)|
+       supplier|distribution|distributor|distributing|
+       wholesaler|vendor|
+       recruiter|recruitment|
+       calling\s+from|writing\s+from|reaching\s+out\s+from|
+       drop\s+off\s+(samples?|supplies|equipment|products?|stock)|
+       bring\s+(by|in)\s+samples?|
+       schedule\s+a\s+meeting|set\s+up\s+a\s+(call|meeting)|
+       (equipment|sample|products?)\s+(lineup|range|catalog(ue)?)|
+       partnership|collaboration|
+       banking|insurance\s+(rep|company)|
+       pharmaceutical|pharma\s+(distribution|rep))\b
+  /xi
+
+  def non_patient_context?(message)
+    NON_PATIENT_INDICATORS.match?(message.to_s)
+  end
+
   def build_local_result(message:, conversation:)
     # Only use fast path for urgent/emergency (always immediate)
     # Don't use for book/reschedule/cancel (need multi-turn with AI)
     lang = conversation&.language || "en"
+
+    # Non-patient bypass — if the message reads like a supplier / sales rep /
+    # recruiter, skip all fast paths. AI handles the handoff via the prompt's
+    # NON-PATIENT INTERACTIONS section.
+    return nil if non_patient_context?(message)
 
     # Urgent fast path: per Paul's v2 emergency policy (PRACTICE_CONFIG_DRAFT §9),
     # the AI MUST always try to book the earliest available slot for emergency
