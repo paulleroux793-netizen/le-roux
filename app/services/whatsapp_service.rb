@@ -39,12 +39,39 @@ class WhatsappService
   # human reply). When paused we still persist the inbound message and tag
   # the conversation needs_review so reception sees there's a fresh inbound;
   # no AI reply is generated.
+  # Normalises common WhatsApp shorthand BEFORE downstream AI classification.
+  # The classifier was missing "tmrw" / "tmr" / "tomoz" → tomorrow which led
+  # to date entity extraction silently failing on casual messages.
+  # Conservative list — only normalises unambiguous shortcuts; doesn't touch
+  # full English/Afrikaans words.
+  CASUAL_NORMALISATIONS = {
+    /\btmrw\b/i  => "tomorrow",
+    /\btmr\b/i   => "tomorrow",
+    /\btomoz\b/i => "tomorrow",
+    /\bnxt\b/i   => "next",
+    /\bcleanin'?\b/i => "cleaning",
+    /\bbookin'?\b/i  => "booking",
+    /\bappt\b/i  => "appointment"
+  }.freeze
+
+  def normalize_casual_language(text)
+    return text if text.blank?
+    out = text.dup
+    CASUAL_NORMALISATIONS.each { |re, sub| out.gsub!(re, sub) }
+    out
+  end
+
   def handle_incoming(from:, message:, twilio_params: {}, media_attachments: [])
     # Remember which sender the patient messaged. Subsequent outbound from this
     # service instance (booking confirmations, flagged alerts) uses the same
     # number so sandbox traffic stays on sandbox (free for testing) and
     # production traffic stays on production.
     @inbound_to = twilio_params["To"] || twilio_params[:To]
+
+    # Normalise casual shorthand so the classifier reliably extracts dates
+    # like "tmrw 9am" → "tomorrow 9am". The original text is still preserved
+    # in twilio_params["Body"] for auditing if needed.
+    message = normalize_casual_language(message)
 
     patient = find_or_create_patient(from)
     conversation = find_or_create_conversation(patient)
@@ -224,7 +251,13 @@ class WhatsappService
     /\b(our team|the practice|someone from the practice|the team) (will|can|comes?|gets?) (come back|back|follow up|get back|reach out)\b/i,
     /\b(come|comes?|get|gets?) back to you personally\b/i,
     /\bfollow up (with you )?as soon as the practice opens\b/i,
-    /cannot answer that (query|question)/i
+    /cannot answer that (query|question)/i,
+    # Non-patient handoff phrasings (suppliers, sales reps, recruiters)
+    /\bpass(ing)? this (on|along)\b/i,
+    /\b(reception|admin|practice) team\s+(will|can|comes?|gets?)\b/i,
+    /\b(i'?m|i am) (the|a) booking assistant\b/i,
+    /\b(not able|unable) to help with (supplier|sales|delivery|meeting|partnership)/i,
+    /\bI'?ll have (our|the) team get back/i
   ].freeze
 
   def verify_response_is_actionable(result, patient, conversation)
@@ -403,6 +436,18 @@ class WhatsappService
             "dag probeer? Ek bespreek graag die volgende beskikbare werksdag."
   }.freeze
 
+  # Fired when the requested slot itself is outside business hours (not just
+  # the message arrival time). The practice is never open at 06:00 or 18:00,
+  # so booking those slots is hard-rejected. See attempt_booking.
+  OUTSIDE_WORKING_HOURS_BLOCKED = {
+    "en" => "Sorry — that time is outside our working hours. We're open " \
+            "*Monday to Friday, 8am–5pm*. Could you pick a time within those hours? " \
+            "I'm happy to suggest the next available slot.",
+    "af" => "Jammer — daardie tyd is buite ons werksure. Ons is oop " \
+            "*Maandag tot Vrydag, 8vm–5nm*. Kan jy 'n tyd binne werksure kies? " \
+            "Ek stel graag die volgende beskikbare gleuf voor."
+  }.freeze
+
   # Address / map / directions sourced from PracticeConfig (single source of
   # truth). External callers (e.g. ConfirmationService) reference these
   # constants — keep them as delegators so we don't need to update every
@@ -490,6 +535,12 @@ class WhatsappService
       result[:response] = PUBLIC_HOLIDAY_BLOCKED[lang] || PUBLIC_HOLIDAY_BLOCKED["en"]
       return
     end
+    # Slot itself is outside working hours (e.g. 06:00 or 18:00). Hard-reject.
+    # See attempt_booking — distinct from message-arrived-after-hours.
+    if booking_result == :outside_working_hours
+      result[:response] = OUTSIDE_WORKING_HOURS_BLOCKED[lang] || OUTSIDE_WORKING_HOURS_BLOCKED["en"]
+      return
+    end
 
     if booking_result.is_a?(Appointment)
       # Confirmation was already sent via send_booking_confirmation_message.
@@ -569,15 +620,36 @@ class WhatsappService
       return :public_holiday
     end
 
-    after_hours = !slot_within_working_hours?(start_time, end_time)
-    if after_hours && start_time.to_date == Date.current
-      # After hours + same day = blocked (can't confirm in time)
+    # Two distinct after-hours checks (separated 2026-05-12 per stress-test
+    # audit — the previous code conflated these and accepted future-dated
+    # slots outside working hours as pending_confirmation, leading to bookings
+    # at 18:00 and 06:00 being confirmed when the practice isn't open then):
+    #
+    #   slot_outside_hours    = the requested slot is NEVER a valid slot
+    #                           (e.g. 18:00 on a Friday, 06:00 on Tuesday).
+    #                           → REJECT unconditionally.
+    #
+    #   message_arrived_after_hours = the patient messaged us outside business
+    #                           hours but is asking for a slot WITHIN business
+    #                           hours. Booking is held as pending_confirmation
+    #                           until reception verifies + confirms in the morning.
+    slot_outside_hours = !slot_within_working_hours?(start_time, end_time)
+    if slot_outside_hours
+      Rails.logger.info("[WhatsApp] Booking rejected: slot outside working hours (#{start_time})")
+      return :outside_working_hours
+    end
+
+    message_arrived_after_hours = !currently_within_working_hours?
+    if message_arrived_after_hours && start_time.to_date == Date.current
+      # Message at e.g. 19:00 today asking for 8am today (already passed) —
+      # historically captured the case where the patient wants TODAY but
+      # we received the message too late to confirm. Practical effect: rejection.
       Rails.logger.info("[WhatsApp] Booking rejected: after hours for today (#{start_time})")
       return :after_hours_today
     end
 
-    if after_hours
-      Rails.logger.info("[WhatsApp] After-hours booking for future date — pending confirmation (#{start_time})")
+    if message_arrived_after_hours
+      Rails.logger.info("[WhatsApp] Message arrived after-hours for future slot — pending confirmation (#{start_time})")
     end
 
     if slot_conflicts_locally?(start_time, end_time)
@@ -589,7 +661,7 @@ class WhatsappService
     # lands, the appointment is :pending_confirmation — the diary slot is
     # held but staff verify payment before the patient is "locked in".
     is_whitening = treatment.to_s.downcase.match?(/whitening|biolase|bleiking|tandebleiking|bleach/)
-    base_status = if after_hours
+    base_status = if message_arrived_after_hours
                     :pending_confirmation
                   elsif is_whitening
                     :pending_confirmation
@@ -617,7 +689,7 @@ class WhatsappService
     )
 
     # sync_to_google_calendar(appointment, patient, reason) # Disabled 2026-04-24: local DB is source of truth, Google mirror no longer used
-    send_confirmation_template(patient, appointment, after_hours: after_hours, language: language)
+    send_confirmation_template(patient, appointment, after_hours: message_arrived_after_hours, language: language)
     send_confirmation_email(appointment)
     send_confirmation_sms(appointment)
 
@@ -627,7 +699,7 @@ class WhatsappService
     # staff dashboard bookings already happen with reception in the loop.
     summary = "AI booked #{patient.full_name} for #{reason} on " \
               "#{appointment.start_time.strftime('%a %-d %b at %H:%M')}" +
-              (after_hours ? " (pending confirmation — booked after hours)" : "") +
+              (message_arrived_after_hours ? " (pending confirmation — booked after hours)" : "") +
               (is_whitening ? " (awaiting R2,000 deposit)" : "")
     report_to_main_line("BOOKING", patient: patient, summary: summary)
 
@@ -912,11 +984,33 @@ class WhatsappService
   # details and practice directions. Uses the free-form `send_text`
   # method since the patient is within the 24-hour service window.
   # Bilingual: responds in Afrikaans when language == "af".
+  AFRIKAANS_DAYS   = %w[Sondag Maandag Dinsdag Woensdag Donderdag Vrydag Saterdag].freeze
+  AFRIKAANS_MONTHS = %w[Januarie Februarie Maart April Mei Junie Julie Augustus September Oktober November Desember].freeze
+
+  def localized_day_name(time, language)
+    language == "af" ? AFRIKAANS_DAYS[time.wday] : time.strftime("%A")
+  end
+
+  def localized_date(time, language)
+    if language == "af"
+      "#{time.day} #{AFRIKAANS_MONTHS[time.month - 1]} #{time.year}"
+    else
+      time.strftime("%-d %B %Y")
+    end
+  end
+
   def send_booking_confirmation_message(patient, appointment, after_hours: false, language: "en")
-    day_name  = appointment.start_time.strftime("%A")
-    date_str  = appointment.start_time.strftime("%-d %B %Y")
+    day_name  = localized_day_name(appointment.start_time, language)
+    date_str  = localized_date(appointment.start_time, language)
     time_str  = appointment.start_time.strftime("%H:%M")
-    is_new = patient.auto_created_placeholder_profile?
+    # Treat as a new patient whenever this is their FIRST appointment
+    # (regardless of whether the AI managed to extract their name yet).
+    # Previously this checked Patient#auto_created_placeholder_profile? which
+    # flipped to false the moment the AI extracted any name — meaning
+    # "name=Test, new patient" got the returning-patient confirmation message
+    # without the medical-aid + arrive-10-min-early addons. Stress test
+    # audit 2026-05-12.
+    is_new = patient.appointments.where.not(id: appointment.id).none?
 
     body = if language == "af"
       after_hours_notice = after_hours ?
