@@ -41,6 +41,7 @@ class PracticeConfig
     def aliases_for(key)     = instance.aliases_for(key)
     def duration_for(treatment) = instance.duration_for(treatment)
     def public_holiday?(date)   = instance.public_holiday?(date)
+    def public_holiday_dates    = instance.public_holiday_dates
     def full_address            = instance.full_address
     def map_link                = instance.map_link
     def directions              = instance.directions
