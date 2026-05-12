@@ -1,6 +1,10 @@
 class ConversationsController < ApplicationController
   def index
-    page_data = dev_page_cache("conversations", "index", params[:channel], params[:status], params[:source], params[:tag]) do
+    # WhatsApp-Web-style 2-column layout: sidebar list + selected thread on the
+    # right. The optional ?selected_id= param hydrates the full thread alongside
+    # the list so the SPA doesn't need a second round-trip when you click a row.
+    selected_id = params[:selected_id].presence
+    page_data = dev_page_cache("conversations", "index", params[:channel], params[:status], params[:source], params[:tag], selected_id) do
       conversations = Conversation.includes(:patient).order(updated_at: :desc)
       conversations = conversations.by_channel(params[:channel]) if params[:channel].present?
       conversations = conversations.where(status: params[:status]) if params[:status].present?
@@ -10,8 +14,13 @@ class ConversationsController < ApplicationController
       # Collect all unique tags across conversations for autocomplete
       all_tags = Conversation.where.not(tags: []).pluck(:tags).flatten.uniq.sort
 
+      selected = if selected_id
+        Conversation.includes(:patient).find_by(id: selected_id)
+      end
+
       {
         conversations: conversations.limit(100).map { |c| conversation_props(c) },
+        selected_conversation: selected ? detailed_conversation_props(selected) : nil,
         all_tags: all_tags,
         filters: { channel: params[:channel], status: params[:status], source: params[:source], tag: params[:tag] }
       }
