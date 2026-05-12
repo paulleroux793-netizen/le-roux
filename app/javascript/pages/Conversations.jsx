@@ -1,19 +1,29 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import {
-  MessageSquare, Search, Upload,
-  ChevronLeft, ChevronRight, Clock, X as XIcon,
+  MessageSquare, Search, Upload, Send, Phone, Tag,
+  Plus, X as XIcon, ExternalLink, MoreVertical,
 } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { useLanguage } from '../lib/LanguageContext'
 
-const PAGE_SIZE = 10
+// WhatsApp Web-style 2-column conversations view:
+//   left  → searchable list of threads (sidebar)
+//   right → message bubbles + reply composer for the selected thread
+//
+// The Rails controller hydrates both the list AND the selected thread in
+// one request — when you click a row we use Inertia partial reload with
+// preserveScroll so only the right pane swaps.
 
-export default function Conversations({ conversations = [], filters, all_tags = [] }) {
+export default function Conversations({
+  conversations = [],
+  selected_conversation = null,
+  filters,
+  all_tags = [],
+}) {
   const { t, language } = useLanguage()
   const [query, setQuery] = useState('')
-  const [page, setPage] = useState(0)
   const [importOpen, setImportOpen] = useState(false)
 
   const filtered = useMemo(() => {
@@ -26,131 +36,109 @@ export default function Conversations({ conversations = [], filters, all_tags = 
     )
   }, [conversations, query])
 
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const pageItems = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-
   const handleFilter = (key, value) => {
-    router.get('/conversations', { ...filters, [key]: value || undefined }, { preserveState: true })
+    router.get(
+      '/conversations',
+      { ...filters, [key]: value || undefined, selected_id: selected_conversation?.id || undefined },
+      { preserveState: true, preserveScroll: true }
+    )
+  }
+
+  const openConversation = (c) => {
+    router.get(
+      '/conversations',
+      { ...filters, selected_id: c.id },
+      { preserveState: true, preserveScroll: true }
+    )
   }
 
   return (
     <DashboardLayout>
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <span className="inline-flex items-center rounded-full border border-brand-accent bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-primary">
-            {t('conv_badge')}
-          </span>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-brand-ink">{t('conv_title')}</h1>
-          <p className="mt-2 text-sm leading-6 text-brand-muted">{t('conv_subtitle')}</p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setImportOpen(true)}
-          className="inline-flex items-center gap-2 rounded-2xl bg-brand-primary px-4 py-2.5 text-sm font-medium text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark"
-        >
-          <Upload size={15} />
-          {t('conv_import')}
-        </button>
-      </div>
+      <div className="flex h-[calc(100vh-120px)] overflow-hidden rounded-xl border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
 
-      {/* Toolbar */}
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-brand-accent/75 bg-white p-3 shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(0) }}
-            placeholder={t('conv_search')}
-            className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 pl-9 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
-          />
-        </div>
-
-        <FilterPill
-          value={filters?.source || ''}
-          onChange={(v) => handleFilter('source', v)}
-          options={[
-            { value: '', label: t('conv_all_sources') },
-            { value: 'live', label: t('conv_live') },
-            { value: 'import', label: t('conv_imported') },
-          ]}
-        />
-        <FilterPill
-          value={filters?.channel || ''}
-          onChange={(v) => handleFilter('channel', v)}
-          options={[
-            { value: '', label: t('conv_all_channels') },
-            { value: 'whatsapp', label: t('conv_whatsapp') },
-            { value: 'voice', label: t('conv_voice') },
-          ]}
-        />
-        {all_tags.length > 0 && (
-          <FilterPill
-            value={filters?.tag || ''}
-            onChange={(v) => handleFilter('tag', v)}
-            options={[
-              { value: '', label: t('conv_all_tags') },
-              ...all_tags.map((tag) => ({ value: tag, label: tag })),
-            ]}
-          />
-        )}
-      </div>
-
-      {/* Row list */}
-      <div className="overflow-hidden rounded-xl border border-brand-accent/75 bg-white shadow-[0_24px_60px_-46px_rgba(57,60,77,0.35)]">
-        <div className="flex items-center gap-3 border-b border-brand-accent/60 bg-brand-surface/25 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
-          <span className="w-9" />
-          <span className="flex-1">{t('conv_col_customer')}</span>
-          <span className="hidden md:block w-[38%]">{t('conv_col_topic')}</span>
-          <span className="w-28 text-right">{t('conv_col_when')}</span>
-          <span className="w-20" />
-        </div>
-
-        {pageItems.length === 0 ? (
-          <div className="px-6 py-16 text-center">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-surface">
-              <MessageSquare size={18} className="text-brand-primary" />
-            </div>
-            <p className="text-sm text-brand-muted">{t('conv_no_match')}</p>
+        {/* ── LEFT: sidebar (conversation list) ───────────────────────── */}
+        <aside className="flex w-[360px] flex-shrink-0 flex-col border-r border-brand-accent/60 bg-[#f0f2f5]">
+          {/* Sidebar header */}
+          <div className="flex items-center justify-between gap-2 bg-[#f0f2f5] px-4 py-3 border-b border-brand-accent/40">
+            <h1 className="text-base font-semibold text-brand-ink">{t('conv_title')}</h1>
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="rounded-full p-2 text-brand-muted hover:bg-brand-accent/30 hover:text-brand-primary transition-colors"
+              title={t('conv_import')}
+              aria-label={t('conv_import')}
+            >
+              <Upload size={16} />
+            </button>
           </div>
-        ) : (
-          <ul className="divide-y divide-brand-accent/35">
-            {pageItems.map((c) => (
-              <ConversationRow key={c.id} conv={c} t={t} language={language} />
-            ))}
+
+          {/* Search */}
+          <div className="bg-white px-3 py-2 border-b border-brand-accent/30">
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('conv_search')}
+                className="w-full rounded-lg bg-[#f0f2f5] py-2 pl-9 pr-3 text-sm text-brand-ink placeholder:text-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+              />
+            </div>
+          </div>
+
+          {/* Filters row */}
+          <div className="flex items-center gap-1.5 border-b border-brand-accent/30 bg-white px-3 py-2 overflow-x-auto">
+            <MiniFilter
+              value={filters?.channel || ''}
+              onChange={(v) => handleFilter('channel', v)}
+              options={[
+                { value: '', label: t('conv_all_channels') },
+                { value: 'whatsapp', label: 'WhatsApp' },
+                { value: 'voice', label: 'Voice' },
+              ]}
+            />
+            <MiniFilter
+              value={filters?.tag || ''}
+              onChange={(v) => handleFilter('tag', v)}
+              options={[
+                { value: '', label: 'All tags' },
+                ...all_tags.map((tag) => ({ value: tag, label: tag })),
+              ]}
+            />
+          </div>
+
+          {/* Conversation list */}
+          <ul className="flex-1 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <li className="px-6 py-16 text-center text-sm text-brand-muted">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-brand-accent/30">
+                  <MessageSquare size={18} className="text-brand-primary" />
+                </div>
+                {t('conv_no_match')}
+              </li>
+            ) : (
+              filtered.map((c) => (
+                <SidebarRow
+                  key={c.id}
+                  conv={c}
+                  active={selected_conversation?.id === c.id}
+                  onClick={() => openConversation(c)}
+                  language={language}
+                  t={t}
+                />
+              ))
+            )}
           </ul>
-        )}
+        </aside>
 
-        {filtered.length > 0 && (
-          <div className="flex items-center justify-between border-t border-brand-accent/60 px-5 py-3 text-xs text-brand-muted">
-            <span>
-              {t('conv_showing')} {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} {t('rem_of')} {filtered.length}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={page === 0}
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                className="rounded-xl p-1.5 hover:bg-brand-surface/45 disabled:opacity-40 disabled:hover:bg-transparent"
-                aria-label="Previous page"
-              >
-                <ChevronLeft size={14} />
-              </button>
-              <span className="px-2">
-                {page + 1} / {pageCount}
-              </span>
-              <button
-                type="button"
-                disabled={page + 1 >= pageCount}
-                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                className="rounded-xl p-1.5 hover:bg-brand-surface/45 disabled:opacity-40 disabled:hover:bg-transparent"
-                aria-label="Next page"
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* ── RIGHT: chat thread ──────────────────────────────────────── */}
+        <main className="flex flex-1 flex-col bg-[#efeae2]">
+          {selected_conversation ? (
+            <ChatPane conv={selected_conversation} />
+          ) : (
+            <EmptyChatState t={t} />
+          )}
+        </main>
       </div>
 
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} t={t} />
@@ -158,91 +146,221 @@ export default function Conversations({ conversations = [], filters, all_tags = 
   )
 }
 
-function ConversationRow({ conv, t, language }) {
-  const openConversation = () => {
-    router.visit(`/conversations/${conv.id}`)
-  }
-
-  const snippet = conv.topic || conv.last_message || '—'
-  const relative = formatRelative(conv.updated_at, t, language)
+// ──────────────────────────────────────────────────────────────────────
+// Sidebar row — WhatsApp-style conversation card
+// ──────────────────────────────────────────────────────────────────────
+function SidebarRow({ conv, active, onClick, language, t }) {
+  const relative = formatShortTime(conv.updated_at, language)
+  const preview = conv.last_message || conv.topic || `(${conv.message_count || 0} ${t('conv_msgs') || 'messages'})`
+  const isFlagged = (conv.tags || []).includes('needs_review')
 
   return (
-    <li
-      onClick={openConversation}
-      className="group flex cursor-pointer items-center gap-3 px-5 py-3.5 transition-colors hover:bg-brand-surface/25"
-    >
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
-        conv.channel === 'whatsapp' ? 'bg-brand-success/10 text-brand-success' : 'bg-brand-primary/10 text-brand-primary'
-      }`}>
-        <MessageSquare size={16} />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-medium text-brand-ink group-hover:text-brand-primary">
-            {conv.patient_name}
-          </p>
-          {conv.source === 'import' && (
-            <span className="rounded-full bg-brand-surface px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-primary">
-              {t('conv_imported')}
-            </span>
-          )}
-          {conv.tags?.slice(0, 2).map((tag) => (
-            <span key={tag} className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-medium text-sky-600 border border-sky-100">
-              {tag}
-            </span>
-          ))}
-          {conv.tags?.length > 2 && (
-            <span className="text-[10px] text-brand-muted">+{conv.tags.length - 2}</span>
-          )}
+    <li>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`w-full text-left flex items-center gap-3 px-3 py-2.5 border-b border-brand-accent/20 transition-colors ${
+          active ? 'bg-[#e7f3ec]' : 'hover:bg-[#f5f6f6]'
+        }`}
+      >
+        <div className="flex-shrink-0 w-11 h-11 rounded-full bg-brand-primary/15 flex items-center justify-center text-brand-primary text-sm font-semibold">
+          {initials(conv.patient_name)}
         </div>
-        <p className="mt-0.5 truncate text-[11px] text-brand-muted">{conv.patient_phone}</p>
-      </div>
-
-      <div className="hidden md:block w-[38%] min-w-0">
-        {conv.topic && (
-          <p className="truncate text-xs font-medium text-brand-primary">{conv.topic}</p>
-        )}
-        {conv.last_message && (
-          <p className="mt-0.5 truncate text-xs text-brand-muted">{conv.last_message}</p>
-        )}
-        {!conv.topic && !conv.last_message && (
-          <p className="text-xs text-brand-muted/70">{t('conv_no_messages')}</p>
-        )}
-      </div>
-      <div className="max-w-[40%] truncate text-xs text-brand-muted md:hidden">
-        {snippet}
-      </div>
-
-      <div className="w-28 text-right flex-shrink-0">
-        <span className="inline-flex items-center gap-1 text-[11px] text-brand-muted">
-          <Clock size={10} />
-          {relative}
-        </span>
-      </div>
-
-      <div className="w-20 flex flex-col items-end gap-1 flex-shrink-0">
-        <span className="text-[11px] text-brand-muted">{conv.message_count} {t('conv_msgs')}</span>
-        {conv.language && (
-          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-            conv.language === 'af'
-              ? 'bg-emerald-50 text-emerald-700'
-              : 'bg-gray-100 text-gray-500'
-          }`}>
-            {conv.language.toUpperCase()}
-          </span>
-        )}
-      </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-sm font-medium text-brand-ink">
+              {conv.patient_name || conv.patient_phone}
+            </p>
+            <span className="flex-shrink-0 text-[11px] text-brand-muted">{relative}</span>
+          </div>
+          <div className="flex items-center justify-between gap-2 mt-0.5">
+            <p className="truncate text-xs text-brand-muted">{preview}</p>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {isFlagged && (
+                <span
+                  className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700"
+                  title="Needs reception review"
+                >
+                  Flag
+                </span>
+              )}
+              {conv.language === 'af' && (
+                <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  AF
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </button>
     </li>
   )
 }
 
-function FilterPill({ value, onChange, options }) {
+// ──────────────────────────────────────────────────────────────────────
+// Chat pane (right side) — header, scrolling bubble feed, composer
+// ──────────────────────────────────────────────────────────────────────
+function ChatPane({ conv }) {
+  const [body, setBody] = useState('')
+  const [sending, setSending] = useState(false)
+  const scrollRef = useRef(null)
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [conv.id, conv.messages?.length])
+
+  const canReply = conv.channel === 'whatsapp'
+
+  const handleSend = (e) => {
+    e?.preventDefault?.()
+    const trimmed = body.trim()
+    if (!trimmed) return
+    setSending(true)
+    router.post(`/conversations/${conv.id}/reply`, { body: trimmed }, {
+      preserveScroll: true,
+      onSuccess: () => { setBody(''); toast.success('Reply sent — AI paused 4 hrs on this conversation') },
+      onError:   () => toast.error('Could not send reply'),
+      onFinish:  () => setSending(false),
+    })
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend(e)
+    }
+  }
+
+  return (
+    <>
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b border-brand-accent/30 bg-[#f0f2f5] px-4 py-3">
+        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-brand-primary/15 flex items-center justify-center text-brand-primary text-sm font-semibold">
+          {initials(conv.patient_name)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-brand-ink">
+            {conv.patient_name || conv.patient_phone}
+          </p>
+          <p className="truncate text-[11px] text-brand-muted">
+            <Phone size={10} className="inline mr-1" />
+            {conv.patient_phone}
+            {conv.language && (
+              <span className="ml-2 text-brand-primary/70">{conv.language === 'af' ? 'Afrikaans' : 'English'}</span>
+            )}
+          </p>
+        </div>
+        {conv.patient_id && (
+          <a
+            href={`/patients/${conv.patient_id}`}
+            className="inline-flex items-center gap-1 rounded-full border border-brand-primary/20 bg-white/60 px-2.5 py-1 text-[11px] font-semibold text-brand-primary hover:bg-brand-primary/10 transition-colors"
+          >
+            <ExternalLink size={10} /> Patient
+          </a>
+        )}
+      </div>
+
+      {/* Bubble feed */}
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto px-4 py-5 space-y-2 bg-[#efeae2]"
+        style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%22 height=%22100%22 fill=%22%23efeae2%22/></svg>')" }}
+      >
+        {conv.messages?.length > 0 ? (
+          conv.messages.map((m, i) => <Bubble key={i} msg={m} />)
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-brand-muted">
+            No messages yet
+          </div>
+        )}
+      </div>
+
+      {/* Composer */}
+      {canReply ? (
+        <form
+          onSubmit={handleSend}
+          className="flex items-end gap-2 border-t border-brand-accent/30 bg-[#f0f2f5] px-3 py-2"
+        >
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={sending}
+            placeholder="Type a message"
+            rows={1}
+            className="flex-1 resize-none max-h-28 min-h-[42px] rounded-lg border-0 bg-white px-3 py-2.5 text-sm text-brand-ink placeholder:text-brand-muted focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+          />
+          <button
+            type="submit"
+            disabled={sending || !body.trim()}
+            className="h-10 w-10 rounded-full bg-brand-primary text-white flex items-center justify-center hover:bg-brand-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+            aria-label="Send"
+          >
+            {sending ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            ) : (
+              <Send size={16} />
+            )}
+          </button>
+        </form>
+      ) : (
+        <div className="border-t border-brand-accent/30 bg-amber-50 px-4 py-3 text-xs text-amber-700">
+          Replies are only supported on WhatsApp conversations.
+        </div>
+      )}
+    </>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Bubble — message in chat feed
+// ──────────────────────────────────────────────────────────────────────
+function Bubble({ msg }) {
+  const isClinic = msg.role === 'assistant'
+  return (
+    <div className={`flex ${isClinic ? 'justify-end' : 'justify-start'}`}>
+      <div
+        className={`max-w-[70%] rounded-lg px-3 py-2 shadow-sm ${
+          isClinic
+            ? 'bg-[#d9fdd3] text-brand-ink rounded-tr-sm'
+            : 'bg-white text-brand-ink rounded-tl-sm'
+        }`}
+      >
+        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+        {msg.timestamp && (
+          <p className="text-[10px] mt-0.5 text-brand-muted text-right">
+            {formatTime(msg.timestamp)}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function EmptyChatState({ t }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center text-center px-8">
+      <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white shadow">
+        <MessageSquare size={32} className="text-brand-primary" />
+      </div>
+      <h2 className="text-lg font-semibold text-brand-ink">Select a conversation</h2>
+      <p className="mt-1 max-w-xs text-sm text-brand-muted">
+        Pick a chat on the left to read messages and reply on behalf of the practice.
+      </p>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Mini filter pill (used in sidebar)
+// ──────────────────────────────────────────────────────────────────────
+function MiniFilter({ value, onChange, options }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-xs font-medium text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
+      className="rounded-full bg-[#f0f2f5] border border-brand-accent/40 px-2.5 py-1 text-[11px] font-medium text-brand-ink hover:bg-brand-accent/20 focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
@@ -251,6 +369,9 @@ function FilterPill({ value, onChange, options }) {
   )
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Import modal (kept compatible with original Conversations page)
+// ──────────────────────────────────────────────────────────────────────
 function ImportModal({ open, onClose, t }) {
   const [file, setFile] = useState(null)
   const [ownerName, setOwnerName] = useState('Dr Le Roux')
@@ -259,95 +380,47 @@ function ImportModal({ open, onClose, t }) {
 
   if (!open) return null
 
-  const isTxt = file && /\.txt$/i.test(file.name)
-  const isZip = file && /\.zip$/i.test(file.name)
-
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!file) {
-      toast.error(t('conv_import_choose'))
-      return
-    }
-    const formData = new FormData()
-    formData.append('file', file)
-    if (isTxt || isZip) {
-      formData.append('owner_name', ownerName)
-      formData.append('patient_phone', patientPhone)
-    }
+    if (!file) return
     setSubmitting(true)
-    router.post('/conversations/import', formData, {
+    const fd = new FormData()
+    fd.append('file', file)
+    if (ownerName.trim()) fd.append('owner_name', ownerName.trim())
+    if (patientPhone.trim()) fd.append('patient_phone', patientPhone.trim())
+    router.post('/conversations/import', fd, {
       forceFormData: true,
-      onSuccess: () => { onClose(); setFile(null); setPatientPhone('') },
-      onError:   () => toast.error(t('conv_import_error')),
-      onFinish:  () => setSubmitting(false),
+      onFinish: () => { setSubmitting(false); onClose() },
     })
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-ink/30 p-4 backdrop-blur-[4px]">
-      <div className="w-full max-w-md rounded-xl border border-brand-accent/80 bg-white shadow-[0_38px_90px_-55px_rgba(57,60,77,0.5)]">
-        <div className="flex items-center justify-between border-b border-brand-accent/70 bg-gradient-to-br from-brand-surface/45 via-white to-white px-5 py-4">
-          <h2 className="text-sm font-semibold text-brand-ink">{t('conv_import_title')}</h2>
-          <button type="button" onClick={onClose} className="rounded-xl p-1 text-brand-muted transition-colors hover:bg-brand-surface/45 hover:text-brand-ink">
-            <XIcon size={16} />
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+      <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-brand-ink">Import conversations</h2>
+          <button onClick={onClose} className="text-brand-muted hover:text-brand-ink"><XIcon size={18} /></button>
         </div>
-
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-brand-muted">
-              {t('conv_import_file_label')}
-            </label>
-            <input
-              type="file"
-              accept=".json,.txt,.zip"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="block w-full text-xs text-brand-muted file:mr-3 file:rounded-2xl file:border-0 file:bg-brand-surface file:px-3 file:py-2 file:text-xs file:font-semibold file:text-brand-primary hover:file:bg-brand-accent"
-            />
-            <p className="mt-1.5 text-[11px] text-brand-muted">
-              {t('conv_import_file_hint')} <code>phone</code>, <code>name</code>, <code>messages[]</code>.
-            </p>
+            <label className="block text-xs font-medium text-brand-muted mb-1">File (.json, .txt, .zip)</label>
+            <input type="file" accept=".json,.txt,.zip" onChange={(e) => setFile(e.target.files[0])}
+              className="w-full text-xs file:mr-2 file:rounded file:border-0 file:bg-brand-primary file:text-white file:px-3 file:py-1.5 file:text-xs file:font-medium" />
           </div>
-
-          {(isTxt || isZip) && (
-            <>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-brand-muted">
-                  {t('conv_import_owner_label')}
-                </label>
-                <input
-                  type="text"
-                  value={ownerName}
-                  onChange={(e) => setOwnerName(e.target.value)}
-                  className="w-full rounded-2xl border border-brand-accent/80 px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-brand-muted">
-                  {t('conv_import_phone_label')}
-                </label>
-                <input
-                  type="tel"
-                  value={patientPhone}
-                  onChange={(e) => setPatientPhone(e.target.value)}
-                  required
-                  className="w-full rounded-2xl border border-brand-accent/80 px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
-                />
-              </div>
-            </>
-          )}
-
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="rounded-2xl px-3 py-2 text-xs font-medium text-brand-muted hover:bg-brand-surface/45">
-              {t('conv_import_cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={submitting || !file}
-              className="inline-flex items-center gap-2 rounded-2xl bg-brand-primary px-4 py-2 text-xs font-medium text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] hover:bg-brand-primary-dark disabled:opacity-50"
-            >
-              <Upload size={13} />
-              {submitting ? t('conv_import_importing') : t('conv_import_btn')}
+          <div>
+            <label className="block text-xs font-medium text-brand-muted mb-1">Owner name</label>
+            <input type="text" value={ownerName} onChange={(e) => setOwnerName(e.target.value)}
+              className="w-full text-sm rounded-lg border border-brand-accent/60 px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-brand-muted mb-1">Patient phone (optional, for chats where the owner exported alone)</label>
+            <input type="text" value={patientPhone} onChange={(e) => setPatientPhone(e.target.value)} placeholder="+27..."
+              className="w-full text-sm rounded-lg border border-brand-accent/60 px-3 py-2" />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button type="button" onClick={onClose} className="px-3 py-2 text-sm text-brand-muted hover:text-brand-ink">Cancel</button>
+            <button type="submit" disabled={!file || submitting} className="px-3 py-2 text-sm rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-40">
+              {submitting ? 'Importing…' : 'Import'}
             </button>
           </div>
         </form>
@@ -356,17 +429,39 @@ function ImportModal({ open, onClose, t }) {
   )
 }
 
-function formatRelative(iso, t, language) {
-  if (!iso) return '—'
+// ──────────────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────────────
+function initials(name = '') {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() || '')
+    .join('') || '·'
+}
+
+function formatTime(iso) {
+  try {
+    const d = new Date(iso)
+    return d.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return ''
+  }
+}
+
+function formatShortTime(iso, language) {
+  if (!iso) return ''
   const locale = language === 'af' ? 'af-ZA' : 'en-ZA'
   const d = new Date(iso)
-  const diffMs = Date.now() - d.getTime()
-  const mins = Math.round(diffMs / 60000)
-  if (mins < 1) return t('conv_just_now')
-  if (mins < 60) return `${mins}${t('conv_m_ago')}`
-  const hrs = Math.round(mins / 60)
-  if (hrs < 24) return `${hrs}${t('conv_h_ago')}`
-  const days = Math.round(hrs / 24)
-  if (days < 7) return `${days}${t('conv_d_ago')}`
+  const now = new Date()
+  const sameDay = d.toDateString() === now.toDateString()
+  if (sameDay) {
+    return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+  }
+  const diffDays = Math.round((now - d) / (1000 * 60 * 60 * 24))
+  if (diffDays < 7) {
+    return d.toLocaleDateString(locale, { weekday: 'short' })
+  }
   return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
 }
