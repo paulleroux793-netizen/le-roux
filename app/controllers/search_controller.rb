@@ -23,16 +23,45 @@ class SearchController < ApplicationController
 
     render json: {
       query: q,
-      patients:      search_patients(q),
-      appointments:  search_appointments(q),
-      conversations: search_conversations(q)
+      patients:        search_patients(q),
+      appointments:    search_appointments(q),
+      conversations:   search_conversations(q),
+      invoices:        search_invoices(q),
+      estimates:       search_estimates(q),
+      procedure_codes: search_procedure_codes(q)
     }
   end
 
   private
 
   def empty_payload(q)
-    { query: q, patients: [], appointments: [], conversations: [] }
+    { query: q, patients: [], appointments: [], conversations: [], invoices: [], estimates: [], procedure_codes: [] }
+  end
+
+  # Invoices — by invoice number or patient name.
+  def search_invoices(q)
+    pattern = "%#{sanitize_like(q)}%"
+    Invoice.eager_load(:patient)
+      .where("invoices.invoice_number ILIKE :p OR patients.first_name ILIKE :p OR patients.last_name ILIKE :p OR (patients.first_name || ' ' || patients.last_name) ILIKE :p", p: pattern)
+      .order(created_at: :desc).limit(RESULT_LIMIT)
+      .map { |i| { id: i.id, number: i.invoice_number, patient_name: i.patient.full_name, total: i.total, status: i.status, url: "/invoices/#{i.id}" } }
+  end
+
+  # Estimates — by estimate number or patient name.
+  def search_estimates(q)
+    pattern = "%#{sanitize_like(q)}%"
+    Estimate.eager_load(:patient)
+      .where("estimates.estimate_number ILIKE :p OR patients.first_name ILIKE :p OR patients.last_name ILIKE :p OR (patients.first_name || ' ' || patients.last_name) ILIKE :p", p: pattern)
+      .order(created_at: :desc).limit(RESULT_LIMIT)
+      .map { |e| { id: e.id, number: e.estimate_number, patient_name: e.patient.full_name, total: e.total, status: e.status, url: "/estimates/#{e.id}" } }
+  end
+
+  # Procedure codes — by code or description.
+  def search_procedure_codes(q)
+    pattern = "%#{sanitize_like(q)}%"
+    ProcedureCode.where("code ILIKE :p OR description ILIKE :p", p: pattern)
+      .order(:code).limit(RESULT_LIMIT)
+      .map { |c| { id: c.id, code: c.code, description: c.description, url: "/procedure-codes" } }
   end
 
   # Patients — match against name, phone, email. ILIKE keeps the

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
-import { Search, User, Calendar, MessageSquare, Loader2 } from 'lucide-react'
+import { Search, User, Calendar, MessageSquare, Loader2, Receipt, FileText, Stethoscope } from 'lucide-react'
 
 // ── Global navbar search ────────────────────────────────────────────
 // Phase 9.6 sub-area #5 — Functional Global Search.
@@ -28,15 +28,33 @@ export default function GlobalSearch() {
 
   const containerRef = useRef(null)
   const abortRef     = useRef(null)
+  const inputRef     = useRef(null)
 
   // Flat ordered list of results (for keyboard navigation).
   const flatResults = results
     ? [
-        ...(results.patients      || []).map((r) => ({ ...r, _kind: 'patient' })),
-        ...(results.appointments  || []).map((r) => ({ ...r, _kind: 'appointment' })),
-        ...(results.conversations || []).map((r) => ({ ...r, _kind: 'conversation' })),
+        ...(results.patients        || []).map((r) => ({ ...r, _kind: 'patient' })),
+        ...(results.appointments    || []).map((r) => ({ ...r, _kind: 'appointment' })),
+        ...(results.conversations   || []).map((r) => ({ ...r, _kind: 'conversation' })),
+        ...(results.invoices        || []).map((r) => ({ ...r, _kind: 'invoice' })),
+        ...(results.estimates       || []).map((r) => ({ ...r, _kind: 'estimate' })),
+        ...(results.procedure_codes || []).map((r) => ({ ...r, _kind: 'procedure_code' })),
       ]
     : []
+
+  // "/" focuses the search from anywhere (unless already typing in a field).
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      const tag = document.activeElement?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return
+      e.preventDefault()
+      inputRef.current?.focus()
+      setOpen(true)
+    }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [])
 
   // Debounced fetch — abort the previous request whenever the query
   // changes so we never race a stale response back into state.
@@ -125,10 +143,11 @@ export default function GlobalSearch() {
         />
         <input
           type="text"
+          ref={inputRef}
           role="combobox"
           aria-expanded={showDropdown}
           aria-controls="global-search-listbox"
-          placeholder="Search patients, appointments, conversations…"
+          placeholder="Search patients, invoices, estimates, codes…  ( / )"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}
@@ -217,6 +236,56 @@ export default function GlobalSearch() {
                       <p className="text-xs text-brand-muted">
                         {new Date(c.updated_at).toLocaleDateString('en-ZA')}
                       </p>
+                    </div>
+                  </Row>
+                )}
+              />
+              <ResultSection
+                label="Invoices"
+                icon={Receipt}
+                items={results.invoices}
+                flatStart={(results.patients || []).length + (results.appointments || []).length + (results.conversations || []).length}
+                activeIdx={activeIdx}
+                onSelect={navigate}
+                render={(i, isActive) => (
+                  <Row active={isActive}>
+                    <IconBubble icon={Receipt} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-brand-ink">{i.number} <span className="font-normal text-brand-muted">· {i.patient_name}</span></p>
+                      <p className="text-xs text-brand-muted">R{(i.total || 0).toFixed(2)} · {i.status}</p>
+                    </div>
+                  </Row>
+                )}
+              />
+              <ResultSection
+                label="Estimates"
+                icon={FileText}
+                items={results.estimates}
+                flatStart={(results.patients || []).length + (results.appointments || []).length + (results.conversations || []).length + (results.invoices || []).length}
+                activeIdx={activeIdx}
+                onSelect={navigate}
+                render={(e, isActive) => (
+                  <Row active={isActive}>
+                    <IconBubble icon={FileText} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-brand-ink">{e.number} <span className="font-normal text-brand-muted">· {e.patient_name}</span></p>
+                      <p className="text-xs text-brand-muted">R{(e.total || 0).toFixed(2)} · {e.status}</p>
+                    </div>
+                  </Row>
+                )}
+              />
+              <ResultSection
+                label="Procedure codes"
+                icon={Stethoscope}
+                items={results.procedure_codes}
+                flatStart={(results.patients || []).length + (results.appointments || []).length + (results.conversations || []).length + (results.invoices || []).length + (results.estimates || []).length}
+                activeIdx={activeIdx}
+                onSelect={navigate}
+                render={(pc, isActive) => (
+                  <Row active={isActive}>
+                    <IconBubble icon={Stethoscope} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-brand-ink"><span className="font-mono">{pc.code}</span> <span className="font-normal text-brand-muted">· {pc.description}</span></p>
                     </div>
                   </Row>
                 )}
