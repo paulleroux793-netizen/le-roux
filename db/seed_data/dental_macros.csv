@@ -1,0 +1,171 @@
+access_code,name,laboratory,tariff_code,quantity,more_info,position
+BRIDGE 3,3 UNIT BRIDGE,N,8447,1,Provisional crown retainer,1
+BRIDGE 3,3 UNIT BRIDGE,N,8145,1,Local anaesthesia- report per quadrant,2
+BRIDGE 3,3 UNIT BRIDGE,N,8443,1,Crown retainer – ceramic,3
+BRIDGE 3,3 UNIT BRIDGE,N,8398,1,Core build-up with pins,4
+BRIDGE 3,3 UNIT BRIDGE,N,8109,4,Infection control/barrier techniques,5
+BRIDGE 3,3 UNIT BRIDGE,N,8110,2,Sterilized instrumentation,6
+BRIDGE 3,3 UNIT BRIDGE,N,8145,1,Local anaesthesia- report per quadrant,7
+BRIDGE 3,3 UNIT BRIDGE,N,8107,4,Intraoral radiograph/image– periapical,8
+BRIDGE 3,3 UNIT BRIDGE,N,8447,1,Provisional crown retainer,9
+BRIDGE 3,3 UNIT BRIDGE,N,8419,1,Provisional pontic,10
+BRIDGE 3,3 UNIT BRIDGE,N,8443,1,Crown retainer – ceramic,11
+BRIDGE 3,3 UNIT BRIDGE,N,8415,1,Pontic – ceramic,12
+BRIDGE 3,3 UNIT BRIDGE,N,8560,3,Cost of ceramic block,13
+BRIDGE 3,3 UNIT BRIDGE,N,8570,3,Fabrication of computer generated ceramic restor,14
+BRIDGE 3,3 UNIT BRIDGE,N,8146,2,Resin bonding for restorations,15
+BRIDGE 3,3 UNIT BRIDGE,N,8398,1,Core build-up with pins,16
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8109,4,Infection control/barrier techniques,1
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8110,2,Sterilized instrumentation,2
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8117,1,Diagnostic models,3
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8107,4,Intraoral radiograph/image– periapical,4
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8273,1,"Impression to repair or modify a denture, or oth",5
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8304,1,Isolation of tooth/teeth – per arch,6
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8546,2,Implant/abutment supported-porcelain/ ceramic cr,7
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8415,1,Pontic – ceramic,8
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8525,3,Fabrication of computer generated ceramic implan,9
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8560,3,Cost of ceramic block,10
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8670,2,Implant screw access closure,11
+IP BRIDGE,3 UNIT IMPLANT BRIDGE,N,8600,2,Cost of implant components,12
+ALIGNER 2,ALIGNER TREATMENT,N,B02,1,ALIGNER SUBSEQUENT,1
+ALIGNER 2,ALIGNER TREATMENT,N,8109,8,Infection control/barrier techniques,2
+ALIGNER 2,ALIGNER TREATMENT,N,8110,4,Sterilized instrumentation,3
+ALIGNER 2,ALIGNER TREATMENT,N,8159,1,Prophylaxis (scaling and polishing) – complete d,4
+ALIGNER 2,ALIGNER TREATMENT,N,8162,1,Topical application of fluoride – adult,5
+ALIGNER 2,ALIGNER TREATMENT,N,8104,1,Extensive oral examination – condition focused c,6
+ALIGNER 2,ALIGNER TREATMENT,N,8304,1,Isolation of tooth/teeth – per arch,7
+ALIGNER 1,ALIGNERS INITIAL,N,8109,2,Infection control/barrier techniques,1
+ALIGNER 1,ALIGNERS INITIAL,N,8110,1,Sterilized instrumentation,2
+ALIGNER 1,ALIGNERS INITIAL,N,8304,1,Isolation of tooth/teeth – per arch,3
+ALIGNER 1,ALIGNERS INITIAL,N,8117,1,Diagnostic models,4
+ALIGNER 1,ALIGNERS INITIAL,N,8121,8,Diagnostic photograph/image,5
+ALIGNER 1,ALIGNERS INITIAL,N,B01,1,ALIGNER TREATMENT PLAN,6
+ALIGNER 1,ALIGNERS INITIAL,N,8104,1,Extensive oral examination – condition focused c,7
+ANT RCT,ANTERIOR RCT,N,8338,1,"Root canal therapy, interiors and premo- lars -",1
+ANT RCT,ANTERIOR RCT,N,8329,1,"Root canal therapy, anteriors and premo- lars -",2
+ANT RCT,ANTERIOR RCT,N,8109,2,Infection control/barrier techniques,3
+ANT RCT,ANTERIOR RCT,N,8110,1,Sterilized instrumentation,4
+ANT RCT,ANTERIOR RCT,N,8107,5,Intraoral radiograph/image– periapical,5
+ANT RCT,ANTERIOR RCT,N,8398,1,Core build-up with pins,6
+ANT RCT,ANTERIOR RCT,N,8145,1,Local anaesthesia- report per quadrant,7
+ANT RCT,ANTERIOR RCT,N,8304,1,Isolation of tooth/teeth – per arch,8
+ANT RCT,ANTERIOR RCT,N,8306,1,Cost of MTA,9
+ANT RCT,ANTERIOR RCT,N,8639,2,Endodontic instruments per patient per completed,10
+BITE PLAT,BITE PLATE,N,8104,1,Extensive oral examination – condition focused c,1
+BITE PLAT,BITE PLATE,N,8169,1,Occlusal guard,2
+BITE PLAT,BITE PLATE,N,8109,2,Infection control/barrier techniques,3
+BITE PLAT,BITE PLATE,N,8110,1,Sterilized instrumentation,4
+BITE PLAT,BITE PLATE,N,9301,1,Casting and trimming of model in plaster (yellow,5
+BITE PLAT,BITE PLATE,N,9327,1,"Infection control per impression, denture (wax o",6
+BITE PLAT,BITE PLATE,N,9330,1,Delivery / Collection fee per completed procedur,7
+BITE PLAT,BITE PLATE,N,9571,1,Basic charge which includes acrylic base,8
+BITE PLAT,BITE PLATE,N,9779,1,Dual laminate material,9
+C/U & CL,CHECK UP AND CLEANING,N,8109,2,Infection control/barrier techniques,1
+C/U & CL,CHECK UP AND CLEANING,N,8110,1,Sterilized instrumentation,2
+C/U & CL,CHECK UP AND CLEANING,N,8101,1,Oral examination – general dental practitioner.,3
+C/U & CL,CHECK UP AND CLEANING,N,8115,1,Panoramic radiograph,4
+C/U & CL,CHECK UP AND CLEANING,N,8112,2,Intraoral radiograph/image – bitewing,5
+C/U & CL,CHECK UP AND CLEANING,N,8159,1,Prophylaxis (scaling and polishing) – complete d,6
+C/U & CL,CHECK UP AND CLEANING,N,8162,1,Topical application of fluoride – adult,7
+CROWN,CROWN,N,8109,2,Infection control/barrier techniques,1
+CROWN,CROWN,N,8110,1,Sterilized instrumentation,2
+CROWN,CROWN,N,8145,1,Local anaesthesia- report per quadrant,3
+CROWN,CROWN,N,8304,1,Isolation of tooth/teeth – per arch,4
+CROWN,CROWN,N,8107,1,Intraoral radiograph/image– periapical,5
+CROWN,CROWN,N,8409,1,Crown – ceramic,6
+CROWN,CROWN,N,8560,1,Cost of ceramic block,7
+CROWN,CROWN,N,8570,1,Fabrication of computer generated ceramic restor,8
+CROWN,CROWN,N,8146,1,Resin bonding for restorations,9
+ERCT,EMERGENCY ROOT CANAL TREATMENT,N,8104,1,Extensive oral examination – condition focused c,1
+ERCT,EMERGENCY ROOT CANAL TREATMENT,N,8132,1,Pulp removal (pulpectomy),2
+ERCT,EMERGENCY ROOT CANAL TREATMENT,N,8109,2,Infection control/barrier techniques,3
+ERCT,EMERGENCY ROOT CANAL TREATMENT,N,8110,1,Sterilized instrumentation,4
+ERCT,EMERGENCY ROOT CANAL TREATMENT,N,8145,1,Local anaesthesia- report per quadrant,5
+ERCT,EMERGENCY ROOT CANAL TREATMENT,N,8107,2,Intraoral radiograph/image– periapical,6
+ERCT,EMERGENCY ROOT CANAL TREATMENT,N,8197,1,CBCT capture and interpretation with limited fie,7
+ERCT,EMERGENCY ROOT CANAL TREATMENT,N,8165,1,Sedative filling,8
+C/U,FULL CHECK UP,N,8109,2,Infection control/barrier techniques,1
+C/U,FULL CHECK UP,N,8110,1,Sterilized instrumentation,2
+C/U,FULL CHECK UP,N,8101,1,Oral examination – general dental practitioner.,3
+C/U,FULL CHECK UP,N,8112,2,Intraoral radiograph/image – bitewing,4
+C/U,FULL CHECK UP,N,8115,1,Panoramic radiograph,5
+F DENTURE,FULL DENTURES,N,8231,1,Complete dentures – maxillary and mandibular,1
+F DENTURE,FULL DENTURES,N,8109,8,Infection control/barrier techniques,2
+F DENTURE,FULL DENTURES,N,8110,4,Sterilized instrumentation,3
+F DENTURE,FULL DENTURES,N,8104,1,Extensive oral examination – condition focused c,4
+F DENTURE,FULL DENTURES,N,8099,1,Dental laboratory service,5
+F DENTURE,FULL DENTURES,N,8273,2,"Impression to repair or modify a denture, or oth",6
+IP CROWN,IMPLANT CROWN,N,8109,2,Infection control/barrier techniques,1
+IP CROWN,IMPLANT CROWN,N,8110,1,Sterilized instrumentation,2
+IP CROWN,IMPLANT CROWN,N,8304,1,Isolation of tooth/teeth – per arch,3
+IP CROWN,IMPLANT CROWN,N,8145,1,Local anaesthesia- report per quadrant,4
+IP CROWN,IMPLANT CROWN,N,8107,2,Intraoral radiograph/image– periapical,5
+IP CROWN,IMPLANT CROWN,N,8560,1,Cost of ceramic block,6
+IP CROWN,IMPLANT CROWN,N,8570,1,Fabrication of computer generated ceramic restor,7
+IP CROWN,IMPLANT CROWN,N,8536,1,Implant/abutment supported crownporcelain/ ceram,8
+IP CROWN,IMPLANT CROWN,N,8600,1,Cost of implant components,9
+IP CROWN,IMPLANT CROWN,N,8670,1,Implant screw access closure,10
+IP EXPOSE,IMPLANT EXPOSURE,N,8109,2,Infection control/barrier techniques,1
+IP EXPOSE,IMPLANT EXPOSURE,N,8110,1,Sterilized instrumentation,2
+IP EXPOSE,IMPLANT EXPOSURE,N,8107,2,Intraoral radiograph/image– periapical,3
+IP EXPOSE,IMPLANT EXPOSURE,N,8145,1,Local anaesthesia- report per quadrant,4
+IP EXPOSE,IMPLANT EXPOSURE,N,8304,1,Isolation of tooth/teeth – per arch,5
+IP EXPOSE,IMPLANT EXPOSURE,N,9190,1,Surgical exposure of endosseus implant – first p,6
+IP EXPOSE,IMPLANT EXPOSURE,N,9189,1,Cost of other implant components.,7
+IP EXPOSE,IMPLANT EXPOSURE,N,8220,1,Cost of Suture Material,8
+IP PLACE,IMPLANT PLACEMENT,N,8109,2,Infection control/barrier techniques,1
+IP PLACE,IMPLANT PLACEMENT,N,8110,1,Sterilized instrumentation,2
+IP PLACE,IMPLANT PLACEMENT,N,8145,1,Local anaesthesia- report per quadrant,3
+IP PLACE,IMPLANT PLACEMENT,N,8107,4,Intraoral radiograph/image– periapical,4
+IP PLACE,IMPLANT PLACEMENT,N,8304,1,Isolation of tooth/teeth – per arch,5
+IP PLACE,IMPLANT PLACEMENT,N,9187,1,Cost of endosteal implant body,6
+IP PLACE,IMPLANT PLACEMENT,N,9183,1,Surgical placement of endosseus implant – first,7
+IP PLACE,IMPLANT PLACEMENT,N,9189,1,Cost of other implant components.,8
+IP PLACE,IMPLANT PLACEMENT,N,8220,1,Cost of Suture Material,9
+IP PLACE,IMPLANT PLACEMENT,N,9190,1,Surgical exposure of endosseus implant – first p,10
+IP PLACE,IMPLANT PLACEMENT,N,8767,1,Bone regeneration/repair procedure - at a single,11
+IP PLACE,IMPLANT PLACEMENT,N,8770,1,Cost of bone regenerative/repair material,12
+IP PLAN,IMPLANT PLANNING,N,8109,2,Infection control/barrier techniques,1
+IP PLAN,IMPLANT PLANNING,N,8110,1,Sterilized instrumentation,2
+IP PLAN,IMPLANT PLANNING,N,8107,1,Intraoral radiograph/image– periapical,3
+IP PLAN,IMPLANT PLANNING,N,8304,1,Isolation of tooth/teeth – per arch,4
+IP PLAN,IMPLANT PLANNING,N,8197,1,CBCT capture and interpretation with limited fie,5
+IP PLAN,IMPLANT PLANNING,N,8117,1,Diagnostic models,6
+IP PLAN,IMPLANT PLANNING,N,8104,1,Extensive oral examination – condition focused c,7
+IP PLAN,IMPLANT PLANNING,N,8602,1,Computer Generated Surgical Guide,8
+POST RCT,POSTERIOR RCT,N,8339,1,"Root canal therapy, molars - first canal.",1
+POST RCT,POSTERIOR RCT,N,8340,3,"Root canal therapy, molars - each additiona",2
+POST RCT,POSTERIOR RCT,N,8109,2,Infection control/barrier techniques,3
+POST RCT,POSTERIOR RCT,N,8110,1,Sterilized instrumentation,4
+POST RCT,POSTERIOR RCT,N,8145,1,Local anaesthesia- report per quadrant,5
+POST RCT,POSTERIOR RCT,N,8107,5,Intraoral radiograph/image– periapical,6
+POST RCT,POSTERIOR RCT,N,8398,1,Core build-up with pins,7
+POST RCT,POSTERIOR RCT,N,8304,1,Isolation of tooth/teeth – per arch,8
+POST RCT,POSTERIOR RCT,N,8306,1,Cost of MTA,9
+POST RCT,POSTERIOR RCT,N,8639,3,Endodontic instruments per patient per completed,10
+PROPHY,PROPHY,N,8109,2,Infection control/barrier techniques,1
+PROPHY,PROPHY,N,8110,1,Sterilized instrumentation,2
+PROPHY,PROPHY,N,8104,1,Extensive oral examination – condition focused c,3
+PROPHY,PROPHY,N,8159,1,Prophylaxis (scaling and polishing) – complete d,4
+PROPHY,PROPHY,N,8162,1,Topical application of fluoride – adult,5
+RECEMENT,RECEMENT CROWN,N,8109,2,Infection control/barrier techniques,1
+RECEMENT,RECEMENT CROWN,N,8110,1,Sterilized instrumentation,2
+RECEMENT,RECEMENT CROWN,N,8104,1,Extensive oral examination – condition focused c,3
+RECEMENT,RECEMENT CROWN,N,8107,2,Intraoral radiograph/image– periapical,4
+RECEMENT,RECEMENT CROWN,N,8304,1,Isolation of tooth/teeth – per arch,5
+RECEMENT,RECEMENT CROWN,N,8133,1,Recement inlay/onlay/crown,6
+RECEMENT,RECEMENT CROWN,N,8146,1,Resin bonding for restorations,7
+VENEER,VENEER,N,8109,2,Infection control/barrier techniques,1
+VENEER,VENEER,N,8110,1,Sterilized instrumentation,2
+VENEER,VENEER,N,8145,1,Local anaesthesia- report per quadrant,3
+VENEER,VENEER,N,8304,1,Isolation of tooth/teeth – per arch,4
+VENEER,VENEER,N,8107,1,Intraoral radiograph/image– periapical,5
+VENEER,VENEER,N,8552,1,Veneer ceramic – indirect,6
+VENEER,VENEER,N,8560,1,Cost of ceramic block,7
+VENEER,VENEER,N,8570,1,Fabrication of computer generated ceramic restor,8
+VENEER,VENEER,N,8146,1,Resin bonding for restorations,9
+WHITENING,WHITENING,N,8109,2,Infection control/barrier techniques,1
+WHITENING,WHITENING,N,8110,1,Sterilized instrumentation,2
+WHITENING,WHITENING,N,8304,1,Isolation of tooth/teeth – per arch,3
+WHITENING,WHITENING,N,8159,1,Prophylaxis (scaling and polishing) – complete d,4
+WHITENING,WHITENING,N,8308,1,External tooth whitening procedures – per arch,5

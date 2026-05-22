@@ -18,10 +18,10 @@
 
 ### Phase 1 — Foundation: accounts + catalogue + macros
 - [x] P1.0 Branch + build infra (BUILD_LOG, UNCERTAINTIES)
-- [ ] P1.1 Migrations: billing_accounts, account_patients, medical_schemes, scheme_memberships, scheme_membership_patients
-- [ ] P1.2 Migrations: procedure_codes, treatment_macros, treatment_macro_items, fee_schedules, fee_schedule_items
-- [ ] P1.3 Models + associations (additive on Patient via link tables; Patient itself untouched)
-- [ ] P1.4 Seeds: procedure codes from PRACTICE_CONFIG + transaction history; import Dental Macro's.xlsx
+- [x] P1.1 Migrations: billing_accounts, account_patients, medical_schemes, scheme_memberships, scheme_membership_patients
+- [x] P1.2 Migrations: procedure_codes, treatment_macros, treatment_macro_items, fee_schedules, fee_schedule_items
+- [x] P1.3 Models + associations (additive on Patient via PracticeManagementPatient concern; Patient logic untouched) — migrated + sanity-verified in Docker
+- [x] P1.4 Seeds: 172 procedure_codes (real median fees from transactions) + 20 macros (170 lines, all linked) + PRIVATE 2026 fee schedule. CSVs in db/seed_data/, seed at db/seeds/practice_management.rb (idempotent)
 - [ ] P1.5 Importer: Patient Demographics.XLS → patients + billing_accounts (dry-run first)
 - [ ] P1.6 Controllers + Inertia pages: Accounts list/show, Procedure catalogue, Macros
 - [ ] P1.7 Verify on localhost:3000
@@ -63,7 +63,26 @@
 ---
 
 ## Current status
-**Phase 1, step P1.1 — writing the accounts + schemes migrations.** Next: P1.2 catalogue + macros migrations, then P1.3 models, then migrate in Docker.
+**Phase 1, next step P1.5 — patient import (dry-run first).** Data layer + seeds done. NEXT:
+extract `Patient Demographics.XLS` (2,200 rows) → a repo CSV (db/seed_data/patients.csv), write an
+idempotent importer that (a) matches existing patients by normalised phone (NEVER duplicates/clobbers
+live patients), (b) creates billing_accounts + account_patients, (c) captures scheme membership where
+present. Run a DRY-RUN that reports create/match/skip counts before any write. Then P1.6
+controllers/pages (Accounts list/show, Procedure catalogue, Macros), P1.7 verify on localhost:3000.
+
+How to resume: read this file, do the next unchecked `[ ]` step, stay additive, verify in Docker
+(`docker compose exec -T web bundle exec rails ...`), commit, append a session entry, keep going.
+Park anything uncertain in UNCERTAINTIES.md.
 
 ## Session entries
-- **2026-05-22 ~17:10** — Set up branch `feat/practice-management-system` (based on calendar branch — see UNCERTAINTIES #1), wrote BUILD_LOG + UNCERTAINTIES, studied existing schema/controllers/Inertia conventions. Beginning Phase 1 migrations.
+- **2026-05-22 ~17:10** — Branch set up (based on calendar branch — UNCERTAINTIES #1), wrote
+  BUILD_LOG + UNCERTAINTIES, studied schema/controllers/Inertia conventions.
+- **2026-05-22 ~17:35** — P1.1–P1.3 DONE. 10 new tables + 11 models, Patient extended via concern.
+  Migrated cleanly in Docker; sanity test passed (account codes, associations, macro resolution, VAT).
+  Committed `e93367b`. Next: P1.4 seeds + macro import.
+- **2026-05-22 ~17:55** — P1.4 DONE. Extracted real GoodX data to repo CSVs (db/seed_data/): 172
+  procedure codes with real median fees from a year of transactions, 20 macros (170 lines). Fixed a
+  column bug (tariff code lives in `TariffLink`, not `TariffCode`). Idempotent seed at
+  db/seeds/practice_management.rb; PRIVATE 2026 fee schedule built. Verified BRIDGE 3 expands to 16
+  linked lines. Parked UNCERTAINTIES #10–12 (placeholder descriptions, VAT-by-keyword, junk codes).
+  Next: P1.5 patient import (dry-run).

@@ -39,5 +39,17 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
 
 ---
 
+### Added during the build
+10. **[decided] Procedure-code descriptions are partly placeholders.** Your GoodX transaction export
+    didn't carry procedure descriptions, so ~150 of 172 codes show "Tariff NNNN" (the 20-odd codes used
+    in your macros have real descriptions from the macro file). Fees are REAL (median of a year's
+    actual charges). → **I'll enrich descriptions from the SADA tariff book later — can you share a SADA
+    code list, or confirm it's fine to pull standard SADA descriptions?**
+11. **[decided] VAT per code guessed by keyword.** Codes whose description mentions
+    whiten/bleach/cosmetic/veneer → standard-rated 15%; everything else → zero-rated (medical). Most
+    codes lack descriptions so defaulted to zero-rated. → **Needs a proper pass once descriptions are in.**
+12. **[decided] A few non-clinical codes** (e.g. `0000`) came through from the transaction export. Left
+    in the catalogue as `category: other` for now. → **Confirm these can be hidden/removed.**
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*
