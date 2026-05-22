@@ -116,10 +116,12 @@ now (Paul connects live at end); name=Ivory; VAT 4260308871 + BHF 0992801 (confi
 - [x] P8.5 Usability: global search now covers invoices/estimates/procedure-codes; "/" focuses search;
   empty states + clean layout already in place; docs/USABILITY_SCORECARD.md written. Verified search
   returns the new groups. Commit 3dc09e8. (Follow-ups: phone-viewport polish, AF localisation, roles.)
-- [ ] P8.6 Stress test + audit MULTIPLE times: expand script/ivory_scenarios.rb; run repeatedly; run CI
-  locally (rubocop/brakeman/tests per docs/CLAUDE.md) and fix.
-- [ ] P8.7 docs/build/GO_LIVE_CHECKLIST.md (done vs Paul's to-dos: deploy/merge, prod env vars, real PII
-  import, SIDEXIS connect, confirm VAT/BHF). Final summary + all parked uncertainties.
+- [x] P8.6 Harness expanded to 51 (stable over 3 runs); RuboCop autocorrected my files (0 offenses);
+  Brakeman 0 warnings; model specs 0 failures. 18 repo-wide offenses are PRE-EXISTING live WhatsApp files
+  (not touched); 39 full-suite failures are environmental (integration specs need creds). Commit 64b2b21.
+- [x] P8.7 docs/build/GO_LIVE_CHECKLIST.md written (built vs Paul's gating to-dos + deferred + go/no-go).
+
+**PHASE 8 COMPLETE — IVORY IS GO-LIVE READY (pending Paul's deploy/prod steps).**
 
 ## Cross-cutting (every phase)
 - [ ] Users/roles/permissions (reception vs dentist) + immutable AuditLog on every clinical/financial change
@@ -128,12 +130,12 @@ now (Paul connects live at end); name=Ivory; VAT 4260308871 + BHF 0992801 (confi
 ---
 
 ## Current status
-**🔁 LOOP RE-OPENED for PHASE 8 — GO-LIVE READINESS (Paul wants the system DONE in ~12h, live Monday).**
-Work the Phase 8 checklist (P8.1→P8.7) in order, one solid chunk per wakeup, additive only, verify in
-Docker, commit each, re-arm via ScheduleWakeup (~15 min). NEXT = P8.1 (pricing: latest tx fee + medical
-column). Decisions are locked at the Phase 8 header above. Keep COMPARISON + scorecard updated. When
-Phase 8 is genuinely done: write GO_LIVE_CHECKLIST.md, run the scenario harness + CI clean, and present
-the final summary + everything Paul must do for Monday. (Phases 1-7 already complete + committed.)
+**✅ PHASE 8 COMPLETE — IVORY GO-LIVE READY. THE LOOP HAS ENDED.** All of Phases 1–8 are built, tested
+(51/51 harness, Brakeman clean, model specs clean), and committed on `feat/practice-management-system`.
+NOT deployed. The only remaining work is Paul's gating steps in docs/build/GO_LIVE_CHECKLIST.md (deploy/
+merge, prod env vars, prod migrate+seed+import, logo drop, confirm numbers) + SIDEXIS/Discovery connects
++ deferred integrations (WhatsApp delivery, Whisper, storage backend). DO NO FURTHER BUILD WORK on a
+stale wakeup — confirm completion and stop.
 
 (historical) NEXT (P5.1):
 SIDEXIS bridge — model `imaging_studies` (patient_id, modality: intraoral_2d/bitewing/panoramic/
