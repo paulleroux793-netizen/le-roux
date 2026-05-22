@@ -40,8 +40,10 @@
 ### Phase 2 — Clinical core: Course of Treatment + tooth chart
 - [x] P2.1 Migrations: courses_of_treatment, treatment_items, clinical_notes, tooth_chart_entries
 - [x] P2.2 Models + state machine (planned→completed), immutable signed notes — verified in Docker
-- [ ] P2.3 Tooth chart (odontogram) component + COT page (Inertia)
-- [ ] P2.4 Verify
+- [x] P2.3 Odontogram component (FDI, colour-coded) + CoursesOfTreatment index/show pages + routes + nav
+- [x] P2.4 Verified — pages HTTP 200 with demo COT (odontogram, items, signed note). Demo seed added.
+
+**PHASE 2 COMPLETE.**
 
 ### Phase 3 — Money: estimates → invoices → payments → statements
 - [ ] P3.1 Migrations: estimates, estimate_lines, invoices (sequential no.), invoice_lines, payments, statements
@@ -74,9 +76,13 @@
 ---
 
 ## Current status
-**Phase 2 data layer done. Next: P2.3 — odontogram (tooth chart) component + Course-of-Treatment page
-(Inertia), then P2.4 verify. Then Phase 3 (money).** Accelerating per Paul (finish all phases ASAP).
-Review artifact created: docs/COMPARISON_IVORY_VS_GOODX_VS_EXACT.md (keep ticking it each phase).
+**PHASES 1 & 2 COMPLETE. Next: Phase 3 — money (estimates → invoices → payments → statements).**
+Accelerating per Paul (finish all phases ASAP). NEXT (P3.1) migrations: estimates + estimate_lines
+(from a COT's planned items), invoices (SEQUENTIAL gap-free number) + invoice_lines (from completed
+items; patient-pay only, VAT per line), payments (card/cash/eft + whitening deposit), statements.
+P3.2 compliance (16 invoice elements, HPCSA DP0118702 + BHF placeholder, VAT zero/15%, immutable —
+reverse-not-edit). P3.3 claimable statement PDF + WhatsApp-send hook (additive). P3.4 verify.
+Remember Guardrails: migration timestamps 20260523NNNNNN; irregular plurals need explicit column/class_name.
 
 (historical) NEXT (P2.1):
 migrations for courses_of_treatment (patient_id, optional scheme_membership_id, setting enum:
@@ -118,3 +124,7 @@ Park anything uncertain in UNCERTAINTIES.md.
   FDI tooth chart. Hit + fixed two Rails gotchas (future migration timestamp; irregular-plural
   FK/association) — now in Guardrails. Named the system **Ivory** (UNCERTAINTIES #16) and wrote
   docs/COMPARISON_IVORY_VS_GOODX_VS_EXACT.md (the review scorecard). Committed a52684c. Next: P2.3 odontogram UI.
+- **2026-05-22 ~19:15** — P2.3 + P2.4 DONE → PHASE 2 COMPLETE. Odontogram component (FDI, colour-coded
+  conditions), CoursesOfTreatment index + show pages, routes, nav entry. Demo seed
+  (db/seeds/practice_management_demo.rb, fake patient) so clinical screens are reviewable. Verified
+  HTTP 200 with chart + items + signed note. Scorecard updated (odontogram ✅). Next: Phase 3 (money).

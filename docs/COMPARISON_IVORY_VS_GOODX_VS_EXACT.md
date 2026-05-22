@@ -22,7 +22,7 @@ digital patient file replacing paper, and an AI chair-side scribe that drafts es
 | **Procedure-code catalogue (SADA)** | ✅ | ✅ | ✅ | 172 codes, **priced from a real year of your charges**. Phase 1 ✅ |
 | **Treatment macros / bundles** | ✅ | ✅ | ✅ | Your 20 GoodX macros imported (BRIDGE 3 → its lines). Phase 1 ✅ |
 | **Fee schedules** | ✅ | ✅ | ✅ | PRIVATE 2026 list built from real fees. Phase 1 ✅ |
-| **Tooth charting / odontogram** | ✅ | ✅ (best) | 🟡 | Data model done (FDI). UI in P2.3. Phase 2 |
+| **Tooth charting / odontogram** | ✅ | ✅ (best) | ✅ | FDI odontogram component + colour-coded conditions. Phase 2 ✅ |
 | **Course-of-treatment planning** | ✅ | ✅ | ✅ | The clinical↔billing bridge; carries setting + auth. Phase 2 ✅ |
 | **In-chair / hospital / sedation setting** | ✅ | 🟡 | ✅ | Matches your real billing (LocationCode/Theatre). Phase 2 ✅ |
 | **Clinical SOAP notes (immutable)** | ✅ | ✅ | ✅ | Append-only; signed notes lock, corrections supersede (HPCSA). Phase 2 ✅ |

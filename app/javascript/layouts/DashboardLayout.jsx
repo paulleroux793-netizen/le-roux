@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Users, MessageSquare, BarChart2,
   BellRing, Settings, ChevronDown, HelpCircle, Globe,
   User, LogOut, KeyRound, ClipboardList,
-  Stethoscope, Layers, Wallet,
+  Stethoscope, Layers, Wallet, ClipboardPlus,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -23,9 +23,10 @@ const NAV_ITEMS = [
 
 // Practice-management system (Phase 1+). Literal labels for now — localisation parked.
 const PMS_NAV_ITEMS = [
-  { label: 'Accounts',          href: '/accounts',         icon: Wallet },
-  { label: 'Procedure Codes',   href: '/procedure-codes',  icon: Stethoscope },
-  { label: 'Treatment Macros',  href: '/treatment-macros', icon: Layers },
+  { label: 'Accounts',             href: '/accounts',             icon: Wallet },
+  { label: 'Courses of Treatment', href: '/courses-of-treatment', icon: ClipboardPlus },
+  { label: 'Procedure Codes',      href: '/procedure-codes',      icon: Stethoscope },
+  { label: 'Treatment Macros',     href: '/treatment-macros',     icon: Layers },
 ]
 
 export default function DashboardLayout({ children }) {
