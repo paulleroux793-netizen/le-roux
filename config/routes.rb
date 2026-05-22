@@ -75,7 +75,7 @@ Rails.application.routes.draw do
   get "treatment-macros", to: "treatment_macros#index", as: :treatment_macros
   resources :billing_accounts, only: [ :index, :show ], path: "accounts"
   resources :courses_of_treatment, only: [ :index, :show ], path: "courses-of-treatment"
-  resources :estimates, only: [ :index ]
+  resources :estimates, only: [ :index, :show ]
   resources :invoices, only: [ :index, :show ]
   get "patients/:patient_id/file", to: "patient_files#show", as: :patient_file
   get "imaging", to: "imaging#index", as: :imaging

@@ -1,5 +1,6 @@
 import React from 'react'
-import { FileText } from 'lucide-react'
+import { Link } from '@inertiajs/react'
+import { FileText, ChevronRight } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { cn } from '../lib/utils'
 
@@ -39,6 +40,7 @@ export default function Estimates({ estimates = [], stats = {} }) {
                 <th className="px-4 py-3 text-center font-semibold">Lines</th>
                 <th className="px-4 py-3 font-semibold">Valid until</th>
                 <th className="px-4 py-3 text-right font-semibold">Total</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -50,6 +52,7 @@ export default function Estimates({ estimates = [], stats = {} }) {
                   <td className="px-4 py-2.5 text-center text-brand-ink">{e.line_count}</td>
                   <td className="px-4 py-2.5 text-brand-muted">{fmtDate(e.valid_until)}</td>
                   <td className="px-4 py-2.5 text-right text-brand-ink">{rand(e.total)}</td>
+                  <td className="px-4 py-2.5 text-right"><Link href={`/estimates/${e.id}`} className="inline-flex items-center text-brand-primary hover:underline">Open <ChevronRight size={14} /></Link></td>
                 </tr>
               ))}
             </tbody>

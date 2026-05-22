@@ -30,11 +30,14 @@ class InvoicesController < ApplicationController
         total: invoice.total,
         paid: invoice.paid_cents / 100.0,
         balance: invoice.balance,
+        medical_total: invoice.medical_total,
+        self_total: invoice.self_total,
         lines: invoice.invoice_lines.map { |l|
           {
             code: l.code, description: l.description, tooth_number: l.tooth_number,
             quantity: l.quantity, unit_fee: l.unit_fee_cents / 100.0,
-            vat_treatment: l.vat_treatment, line_total: l.line_total
+            vat_treatment: l.vat_treatment, medical: l.medical, self_portion: l.self_portion,
+            line_total: l.line_total
           }
         }
       },

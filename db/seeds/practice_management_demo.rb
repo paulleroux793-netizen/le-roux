@@ -20,16 +20,16 @@ cot = CourseOfTreatment.find_or_create_by!(patient: patient, description: "Upper
   c.billing_account = account
 end
 
-# Treatment items from real catalogue codes
+# Treatment items from real catalogue codes (visit shows the multi-appointment grouping)
 {
-  "8101" => { tooth: nil,  status: "completed" },   # oral exam
-  "8341" => { tooth: "26", status: "completed" },   # restorative
-  "8201" => { tooth: "28", status: "planned" },     # extraction
+  "8101" => { tooth: nil,  status: "completed", visit: 1 }, # oral exam
+  "8341" => { tooth: "26", status: "completed", visit: 1 }, # restorative
+  "8201" => { tooth: "28", status: "planned",   visit: 2 }, # extraction (second appointment)
 }.each do |code, opts|
   pc = ProcedureCode.find_by(code: code)
   next unless pc
   next if cot.treatment_items.exists?(procedure_code: pc, tooth_number: opts[:tooth])
-  item = cot.treatment_items.create!(procedure_code: pc, tooth_number: opts[:tooth], status: "planned", provider_name: "Dr le Roux")
+  item = cot.treatment_items.create!(procedure_code: pc, tooth_number: opts[:tooth], status: "planned", provider_name: "Dr le Roux", visit: opts[:visit])
   item.complete! if opts[:status] == "completed"
 end
 
