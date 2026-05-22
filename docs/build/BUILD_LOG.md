@@ -46,9 +46,11 @@
 **PHASE 2 COMPLETE.**
 
 ### Phase 3 — Money: estimates → invoices → payments → statements
-- [ ] P3.1 Migrations: estimates, estimate_lines, invoices (sequential no.), invoice_lines, payments, statements
-- [ ] P3.2 Compliance: 16-element invoice, VAT logic (zero/15%), HPCSA+BHF, sequential numbering, immutable (reverse-not-edit)
-- [ ] P3.3 PDF generation (claimable statement) + WhatsApp send hook (additive, not touching live flow)
+- [x] P3.1 Migrations: estimates+lines, invoices (sequential no.)+lines, payments, statements, document_sequences
+- [x] P3.2 Models + logic: atomic gap-free numbering, per-line VAT (inclusive), estimate→invoice convert,
+  invoice-from-completed-items, payment→status, statements, void-not-edit immutability. Verified in Docker.
+- [ ] P3.3 UI (Invoices/Estimates pages) + 16-element compliant invoice presentation (HPCSA DP0118702 +
+  BHF placeholder on practice settings) + claimable statement PDF + WhatsApp-send hook (additive)
 - [ ] P3.4 Verify
 
 ### Phase 4 — Digital file & forms
@@ -76,13 +78,13 @@
 ---
 
 ## Current status
-**PHASES 1 & 2 COMPLETE. Next: Phase 3 — money (estimates → invoices → payments → statements).**
-Accelerating per Paul (finish all phases ASAP). NEXT (P3.1) migrations: estimates + estimate_lines
-(from a COT's planned items), invoices (SEQUENTIAL gap-free number) + invoice_lines (from completed
-items; patient-pay only, VAT per line), payments (card/cash/eft + whitening deposit), statements.
-P3.2 compliance (16 invoice elements, HPCSA DP0118702 + BHF placeholder, VAT zero/15%, immutable —
-reverse-not-edit). P3.3 claimable statement PDF + WhatsApp-send hook (additive). P3.4 verify.
-Remember Guardrails: migration timestamps 20260523NNNNNN; irregular plurals need explicit column/class_name.
+**Phase 3 data layer + logic done (P3.1, P3.2). Next: P3.3 — billing UI + compliant invoice
+presentation + statement PDF + WhatsApp hook, then P3.4 verify. Then Phase 4 (digital file & forms).**
+NEXT (P3.3): Invoices index/show + Estimates index pages; add HPCSA (DP0118702) + BHF (placeholder)
+fields to practice settings for the invoice header; render a compliant invoice (practice+practitioner
+numbers, patient details, SADA+tooth+date+VAT per line, sequential number); claimable statement view;
+an additive "send via WhatsApp" stub (do NOT touch the live WhatsApp incoming flow). Guardrails:
+migration timestamps 20260523NNNNNN; irregular plurals need explicit column/class_name.
 
 (historical) NEXT (P2.1):
 migrations for courses_of_treatment (patient_id, optional scheme_membership_id, setting enum:
@@ -128,3 +130,8 @@ Park anything uncertain in UNCERTAINTIES.md.
   conditions), CoursesOfTreatment index + show pages, routes, nav entry. Demo seed
   (db/seeds/practice_management_demo.rb, fake patient) so clinical screens are reviewable. Verified
   HTTP 200 with chart + items + signed note. Scorecard updated (odontogram ✅). Next: Phase 3 (money).
+- **2026-05-22 ~19:16** — Phase 3 data layer DONE (P3.1, P3.2). 7 billing tables; DocumentSequence
+  (atomic gap-free numbering), BillableLine concern (VAT-inclusive per-line), Estimate/Invoice/Payment/
+  Statement models with estimate→invoice conversion, invoice-from-completed-items, payment→status,
+  void-not-edit immutability. Verified full flow in Docker (EST/INV sequential, VAT, statement balance).
+  Parked #17 (VAT-inclusive + VAT-registered?). Committed 10d3a9e. Scorecard updated. Next: P3.3 billing UI + compliant invoice.

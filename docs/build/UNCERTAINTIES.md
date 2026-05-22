@@ -75,5 +75,11 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
     using **Ivory** so the build + comparison doc have something to refer to (clean, dental, brandable —
     reads well as "Exact · GoodX · Ivory"). → **Keep "Ivory" or rename?** One place to change it.
 
+17. **[decided] VAT is treated as INCLUSIVE in the fee.** Your catalogue fees (the real medians) are
+    taken as VAT-inclusive; for cosmetic/standard-rated lines the 15% is extracted from the price
+    (not added on top). Most dental treatment is zero-rated anyway. → **Confirm fees are VAT-inclusive
+    (vs. adding 15% on top of cosmetic line prices).** Also: **are you VAT-registered?** If not, no VAT
+    line is needed at all and whitening etc. are simply not taxed.
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*

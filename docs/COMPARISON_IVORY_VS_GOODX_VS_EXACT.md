@@ -26,13 +26,13 @@ digital patient file replacing paper, and an AI chair-side scribe that drafts es
 | **Course-of-treatment planning** | ✅ | ✅ | ✅ | The clinical↔billing bridge; carries setting + auth. Phase 2 ✅ |
 | **In-chair / hospital / sedation setting** | ✅ | 🟡 | ✅ | Matches your real billing (LocationCode/Theatre). Phase 2 ✅ |
 | **Clinical SOAP notes (immutable)** | ✅ | ✅ | ✅ | Append-only; signed notes lock, corrections supersede (HPCSA). Phase 2 ✅ |
-| **Estimates / quotations** | ✅ | ✅ | ⬜ | Phase 3 |
-| **Invoicing** | ✅ | ✅ | ⬜ | Phase 3 — 16-element compliant invoice |
+| **Estimates / quotations** | ✅ | ✅ | ✅ | Built from a course of treatment; estimate→invoice conversion. Phase 3 ✅ |
+| **Invoicing** | ✅ | ✅ | 🟡 | Sequential gap-free numbers, per-line VAT, immutable (void-not-edit). Compliant PDF/presentation = P3.3 |
 | **Medical-aid claim submission (EDI)** | ✅ | 🟡 | ➖ | **Deliberately omitted** — we don't claim. Big simplification. |
-| **Self-claim statement (patient claims back)** | 🟡 | 🟡 | ⬜ | ⭐ First-class for us, not an afterthought. Phase 3 |
-| **VAT logic (zero-rated vs cosmetic 15%)** | ✅ | 🟡 | 🟡 | Per-code VAT in catalogue; full logic Phase 3 |
-| **Payments (card/cash/EFT + deposits)** | ✅ | ✅ | ⬜ | Phase 3 — incl. whitening R2,000 deposit |
-| **Debtors / statements / age analysis** | ✅ | ✅ | ⬜ | Phase 3 |
+| **Self-claim statement (patient claims back)** | 🟡 | 🟡 | 🟡 | ⭐ Statement model + balances done; claimable PDF = P3.3 |
+| **VAT logic (zero-rated vs cosmetic 15%)** | ✅ | 🟡 | ✅ | Per-line VAT computed (VAT-inclusive). Phase 3 ✅ |
+| **Payments (card/cash/EFT + deposits)** | ✅ | ✅ | ✅ | Applied to invoices; deposit flag (whitening R2,000). Phase 3 ✅ |
+| **Debtors / statements / age analysis** | ✅ | ✅ | 🟡 | Statements + balances done; age-analysis view P3.3 |
 | **Digital patient file (paperless)** | 🟡 | 🟡 | ⬜ | ⭐ Replaces the 5 physical files. Phase 4 |
 | **WhatsApp digital forms + e-signature** | ⬜ | ⬜ | ⬜ | ⭐⭐ Neither incumbent does this. Phase 4 |
 | **Digital notepad / annotate on forms** | ⬜ | 🟡 | ⬜ | ⭐ Phase 4 |
