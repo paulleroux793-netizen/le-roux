@@ -97,6 +97,24 @@
 - [x] P7.5 Scenario stress test (script/ivory_scenarios.rb, 43 cases) → 43/43 pass. Found + fixed 2 real
   bugs: Payment missing belongs_to :patient; ImagingStudy uniqueness validation. No regressions. (commit 1ac9ed0)
 
+### Phase 8 — GO-LIVE READINESS (Paul: DONE in 12h, live Monday). Run the loop hard. Decisions locked
+2026-05-22: banking=Investec; estimate phases→"Visit 1/Visit 2"; replicate Medical/Self columns;
+**practice fee = LATEST transaction value** (NOT Discovery+30%); Medical col = Discovery rate (pull via
+Perplexity where possible — tx Medical/Patient-due cols are EMPTY); use the REAL logo; SIDEXIS folder for
+now (Paul connects live at end); name=Ivory; VAT 4260308871 + BHF 0992801 (confirm current).
+- [ ] P8.1 Pricing: practice fee = LATEST tx Debit per code; add `medical_fee_cents` to procedure_codes.
+- [ ] P8.2 Lines: add medical_cents + self_cents to invoice_lines & estimate_lines (self=total−medical);
+  add `visit` to treatment_items/estimate_lines for Visit 1/2 grouping.
+- [ ] P8.3 Documents: invoice + estimate show Medical|Self|Total; estimate grouped by Visit + explainer;
+  "ESTIMATE VALID FOR 14 DAYS" footer; match the familiar layout.
+- [ ] P8.4 Logo: embed the real logo image (Marketing logo → PNG/SVG) on docs + sidebar.
+- [ ] P8.5 Usability (beat Exact/GoodX/Elixir — docs/research/usability-*.md): global search over PMS
+  entities; "/" focuses search; responsive; empty states; fewer clicks. Write docs/USABILITY_SCORECARD.md.
+- [ ] P8.6 Stress test + audit MULTIPLE times: expand script/ivory_scenarios.rb; run repeatedly; run CI
+  locally (rubocop/brakeman/tests per docs/CLAUDE.md) and fix.
+- [ ] P8.7 docs/build/GO_LIVE_CHECKLIST.md (done vs Paul's to-dos: deploy/merge, prod env vars, real PII
+  import, SIDEXIS connect, confirm VAT/BHF). Final summary + all parked uncertainties.
+
 ## Cross-cutting (every phase)
 - [ ] Users/roles/permissions (reception vs dentist) + immutable AuditLog on every clinical/financial change
 - [ ] Retention scheduling (clinical 6y / financial 5y); POPIA security
@@ -104,12 +122,12 @@
 ---
 
 ## Current status
-**✅ BUILD COMPLETE — ALL PHASES 1-7 DONE. THE LOOP HAS ENDED. DO NO FURTHER BUILD WORK on a stale
-wakeup** — if one fires, confirm completion and stop. Phase 7 audit + 4 fixes committed (04ed299);
-report at docs/build/SYSTEM_AUDIT.md. The only remaining work needs Paul's input or live credentials/
-hardware (NOT autonomous build steps): UNCERTAINTIES #3 (BHF no.), #13 (patient-identity import), #16
-(name), #17 (VAT), #8/#20 (SIDEXIS bridge), plus deferred integrations (WhatsApp delivery, on-prem
-Whisper, real Anthropic wiring, real patient import). Branch never deployed.
+**🔁 LOOP RE-OPENED for PHASE 8 — GO-LIVE READINESS (Paul wants the system DONE in ~12h, live Monday).**
+Work the Phase 8 checklist (P8.1→P8.7) in order, one solid chunk per wakeup, additive only, verify in
+Docker, commit each, re-arm via ScheduleWakeup (~15 min). NEXT = P8.1 (pricing: latest tx fee + medical
+column). Decisions are locked at the Phase 8 header above. Keep COMPARISON + scorecard updated. When
+Phase 8 is genuinely done: write GO_LIVE_CHECKLIST.md, run the scenario harness + CI clean, and present
+the final summary + everything Paul must do for Monday. (Phases 1-7 already complete + committed.)
 
 (historical) NEXT (P5.1):
 SIDEXIS bridge — model `imaging_studies` (patient_id, modality: intraoral_2d/bitewing/panoramic/
