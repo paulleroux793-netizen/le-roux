@@ -101,14 +101,12 @@
 ---
 
 ## Current status
-**ALL PHASES 1-6 COMPLETE. NEXT: Phase 7 — whole-system stress test, audit & remediation (Paul asked
-for this explicitly).** Do P7.1: write docs/build/SYSTEM_AUDIT.md auditing the whole Ivory build —
-data integrity (FK on-delete #19, snapshot/immutability), security/POPIA (PII handling, access control,
-the dashboard has no auth on the new PMS routes? check), additive-safety (confirm no live behaviour
-changed), correctness (scribe code map #21, VAT #17, imaging match #20), performance (N+1s, the 654-row
-imaging list), and gaps vs the proposal. Severity-rank. P7.2 prioritise. P7.3 IMPLEMENT the fixes
-(commit each, re-verify in Docker). P7.4 final summary + present all parked UNCERTAINTIES to Paul.
-Guardrails: migration timestamps 20260523NNNNNN; irregular plurals need explicit column/class_name.
+**✅ BUILD COMPLETE — ALL PHASES 1-7 DONE. THE LOOP HAS ENDED. DO NO FURTHER BUILD WORK on a stale
+wakeup** — if one fires, confirm completion and stop. Phase 7 audit + 4 fixes committed (04ed299);
+report at docs/build/SYSTEM_AUDIT.md. The only remaining work needs Paul's input or live credentials/
+hardware (NOT autonomous build steps): UNCERTAINTIES #3 (BHF no.), #13 (patient-identity import), #16
+(name), #17 (VAT), #8/#20 (SIDEXIS bridge), plus deferred integrations (WhatsApp delivery, on-prem
+Whisper, real Anthropic wiring, real patient import). Branch never deployed.
 
 (historical) NEXT (P5.1):
 SIDEXIS bridge — model `imaging_studies` (patient_id, modality: intraoral_2d/bitewing/panoramic/
