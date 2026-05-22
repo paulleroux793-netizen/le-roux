@@ -158,6 +158,16 @@ class AppointmentsController < ApplicationController
       alert: e.message,
       inertia: { errors: { base: e.message } },
       status: :see_other
+  rescue ActiveRecord::StatementInvalid => e
+    # The no_overlapping_active_appointments DB exclusion constraint rejected
+    # the booking — another appointment was created for that slot in the race
+    # window after the form's availability check. Show a friendly conflict
+    # message rather than a 500.
+    raise unless e.message.include?("no_overlapping_active_appointments")
+    redirect_back fallback_location: appointments_location(anchor_date_for(start_at)),
+      alert: "That time slot was just taken by another booking. Please pick a different time.",
+      inertia: { errors: { start_time: "slot no longer available" } },
+      status: :see_other
   end
 
   # PATCH /appointments/:id
@@ -215,6 +225,15 @@ class AppointmentsController < ApplicationController
     redirect_back fallback_location: appointments_location(anchor_date_for(new_start || appointment.start_time)),
       alert: e.record.errors.full_messages.to_sentence,
       inertia: { errors: inertia_errors_for(e.record) },
+      status: :see_other
+  rescue ActiveRecord::StatementInvalid => e
+    # Reschedule moved the appointment onto an occupied slot — blocked by the
+    # no_overlapping_active_appointments DB constraint. (The model's overlap
+    # validation only runs on :create, so the constraint is the guard here.)
+    raise unless e.message.include?("no_overlapping_active_appointments")
+    redirect_back fallback_location: appointments_location(anchor_date_for(new_start || appointment.start_time)),
+      alert: "That time slot is already booked. Please choose a different time.",
+      inertia: { errors: { start_time: "slot already booked" } },
       status: :see_other
   end
 
