@@ -94,6 +94,9 @@
 
 **PHASE 7 COMPLETE — BUILD DONE. Loop ended (remaining items are Paul-decisions, not build steps).**
 
+- [x] P7.5 Scenario stress test (script/ivory_scenarios.rb, 43 cases) → 43/43 pass. Found + fixed 2 real
+  bugs: Payment missing belongs_to :patient; ImagingStudy uniqueness validation. No regressions. (commit 1ac9ed0)
+
 ## Cross-cutting (every phase)
 - [ ] Users/roles/permissions (reception vs dentist) + immutable AuditLog on every clinical/financial change
 - [ ] Retention scheduling (clinical 6y / financial 5y); POPIA security

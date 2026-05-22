@@ -65,6 +65,17 @@ decisions for Paul.
 3. Imaging index N+1 → `includes(:patient)`.
 4. Courses list N+1 → compute total from loaded items.
 
+## G. Scenario stress test (43 cases) — script/ivory_scenarios.rb
+A savepoint-isolated harness exercises Phases 1-6 across 43 edge cases (validations, state machines,
+sequential numbering, VAT math, estimate→invoice, payment status, void immutability, statement
+balances, form e-sign filing, patient-delete cascade, imaging idempotency/modality, recall scopes,
+scribe extraction/needs_code/never-auto-bill). **Result: 43/43 pass.** It found + fixed 2 real bugs:
+- 🟡→✅ **Payment had no `belongs_to :patient`** (the `patient_id` column existed but couldn't be set) —
+  patient-level payments now work.
+- 🟢→✅ **ImagingStudy** now has a model-level uniqueness validation on `[source_folder, source_file]`
+  (was DB-index-only, so `.save` raised) — re-imports fail gracefully.
+No page regressions; importer still idempotent (re-run creates 0).
+
 ## Verdict
 Ivory is a coherent, additive, reviewable system at parity-or-ahead of GoodX/Exact for this practice
 (see the comparison scorecard). The remaining items are deliberate decisions for Paul (billing
