@@ -11,7 +11,7 @@ class PracticeBillingProfile < ApplicationRecord
       practice_name: "Dr Chalita le Roux Inc",
       hpcsa_number: "DP 0118702",
       company_reg: "2022/698149/21",
-      vat_registered: false,
+      vat_registered: true, # confirmed by Paul; VAT number still to be supplied (TODO)
       practitioner_name: "Dr Chalita le Roux",
       practitioner_hpcsa_number: "DP 0118702",
       phone: "011 568 8285",

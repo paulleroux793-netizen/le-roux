@@ -80,29 +80,40 @@ class PatientDemographicsImporter
           r.memberships_created += 1 # counted per row that carries a membership
         end
 
-        # --- Patient identity (match by phone, never clobber) ---
-        if phone.blank?
-          r.rows_blank_phone += 1
-          r.exceptions << { row: i + 2, reason: "no phone", name: "#{first} #{last}".strip, account: acc_code }
+        # --- Patient identity: match by id_number OR phone; never clobber. ---
+        # Identity is the SA ID / passport / DOB-based number (dependant first, else main member).
+        id_number = row["dep_id"].to_s.strip.presence || row["main_id"].to_s.strip.presence
+
+        # Match an existing patient: by id_number first, then by phone.
+        existing = (id_number && Patient.find_by(id_number: id_number)) ||
+                   (phone.present? && Patient.find_by(phone: phone))
+        if existing
+          r.patients_matched += 1
+          link_account(existing, acc_code) unless dry_run
           next
         end
 
-        existing = Patient.find_by(phone: phone) || (seen_phones[phone] == :existing)
-        if Patient.exists?(phone: phone)
-          r.patients_matched += 1
-          seen_phones[phone] = :existing
-        elsif seen_phones[phone]
-          # phone already used by an earlier row in this import → family sharing a cell
+        # No name AND no identity → can't create a meaningful record.
+        if first.blank? && last.blank? && id_number.blank?
+          r.exceptions << { row: i + 2, reason: "no name or identity", account: acc_code }
+          next
+        end
+
+        # A shared phone is kept by the FIRST patient that claims it; later family members get a nil
+        # phone (their contact lives on the billing account) and are identified by id_number.
+        usable_phone = phone.presence
+        if usable_phone && (seen_phones[usable_phone] || Patient.exists?(phone: usable_phone))
+          usable_phone = nil
           r.rows_dup_phone += 1
-          r.exceptions << { row: i + 2, reason: "duplicate phone (family shares cell)", name: "#{first} #{last}".strip, phone: phone, account: acc_code }
-        elsif first.present? || last.present?
-          r.patients_created += 1
-          seen_phones[phone] = :pending
-          unless dry_run
-            Patient.create!(first_name: first.presence || "Unknown", last_name: last.presence || "(imported)", phone: phone)
-          end
-        else
-          r.exceptions << { row: i + 2, reason: "no name", phone: phone, account: acc_code }
+        end
+        r.rows_blank_phone += 1 if phone.blank?
+
+        r.patients_created += 1
+        seen_phones[usable_phone] = :pending if usable_phone
+        unless dry_run
+          p = Patient.create!(first_name: first.presence || "Unknown", last_name: last.presence || "(imported)",
+                              phone: usable_phone, id_number: id_number)
+          link_account(p, acc_code)
         end
       end
 
@@ -110,5 +121,15 @@ class PatientDemographicsImporter
     end
 
     r
+  end
+
+  private
+
+  # Link a patient to their billing account (idempotent).
+  def link_account(patient, acc_code)
+    return if acc_code.blank?
+    acc = BillingAccount.find_by(account_code: acc_code)
+    return unless acc
+    AccountPatient.find_or_create_by!(billing_account: acc, patient: patient) { |ap| ap.relationship = "self" }
   end
 end

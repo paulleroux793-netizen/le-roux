@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000009) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000010) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -457,11 +457,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000009) do
     t.date "date_of_birth"
     t.string "email"
     t.string "first_name", null: false
+    t.string "id_number"
     t.string "last_name", null: false
     t.text "notes"
-    t.string "phone", null: false
+    t.string "phone"
     t.string "preferred_language", limit: 5
     t.datetime "updated_at", null: false
+    t.index ["id_number"], name: "index_patients_on_id_number", where: "(id_number IS NOT NULL)"
     t.index ["last_name", "first_name"], name: "index_patients_on_last_name_and_first_name"
     t.index ["phone"], name: "index_patients_on_phone", unique: true
     t.index ["preferred_language"], name: "index_patients_on_preferred_language"

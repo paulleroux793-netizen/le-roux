@@ -33,8 +33,12 @@ class Patient < ApplicationRecord
 
   validates :first_name, presence: true
   validates :last_name, presence: true
-  validates :phone, presence: true, uniqueness: true,
-            format: { with: /\A\+?\d{10,15}\z/, message: "must be a valid phone number" }
+  # Phone is unique when present, but optional: a patient may instead be identified by id_number
+  # (SA ID / passport / DOB-based for children, and family members who share one contact number).
+  # Live WhatsApp/booking flows always set a phone, so their behaviour is unchanged.
+  validates :phone, uniqueness: true, allow_nil: true,
+            format: { with: /\A\+?\d{10,15}\z/, message: "must be a valid phone number", allow_blank: true }
+  validate  :phone_or_identity_present
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates :preferred_language, inclusion: { in: SUPPORTED_LANGUAGES }, allow_nil: true
 
@@ -89,5 +93,11 @@ class Patient < ApplicationRecord
   def normalize_phone!
     normalized = phone.to_s.gsub(/\s+/, "").presence
     self.phone = normalized&.start_with?("+") ? normalized : normalized&.then { |value| "+#{value}" }
+  end
+
+  # A patient must be identifiable by at least a phone OR an id_number.
+  def phone_or_identity_present
+    return if phone.present? || id_number.present?
+    errors.add(:base, "a phone number or ID number is required")
   end
 end
