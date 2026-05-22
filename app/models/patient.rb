@@ -1,4 +1,8 @@
 class Patient < ApplicationRecord
+  # Practice-management associations (Phase 1+) live in a concern so this model's
+  # core booking/conversation logic stays untouched. Additive only.
+  include PracticeManagementPatient
+
   AUTO_CREATED_PLACEHOLDER_NAMES = [
     [ "WhatsApp", "Patient" ],
     [ "Phone", "Caller" ]

@@ -10,10 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_22_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "account_patients", force: :cascade do |t|
+    t.bigint "billing_account_id", null: false
+    t.datetime "created_at", null: false
+    t.bigint "patient_id", null: false
+    t.string "relationship", default: "self", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billing_account_id", "patient_id"], name: "idx_account_patients_unique", unique: true
+    t.index ["patient_id"], name: "index_account_patients_on_patient_id"
+  end
 
   create_table "analytics_events", force: :cascade do |t|
     t.datetime "created_at", null: false
@@ -58,6 +68,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_000002) do
     t.index ["created_at"], name: "index_audit_logs_on_created_at"
     t.index ["performed_by"], name: "index_audit_logs_on_performed_by"
     t.index ["resource_type", "resource_id"], name: "index_audit_logs_on_resource_type_and_resource_id"
+  end
+
+  create_table "billing_accounts", force: :cascade do |t|
+    t.string "account_code"
+    t.string "address_line1"
+    t.string "address_line2"
+    t.string "billing_name", null: false
+    t.string "city"
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.bigint "head_patient_id"
+    t.text "notes"
+    t.string "phone"
+    t.string "postal_code"
+    t.datetime "updated_at", null: false
+    t.index ["account_code"], name: "index_billing_accounts_on_account_code", unique: true, where: "(account_code IS NOT NULL)"
+    t.index ["billing_name"], name: "index_billing_accounts_on_billing_name"
+    t.index ["head_patient_id"], name: "index_billing_accounts_on_head_patient_id"
   end
 
   create_table "calendar_notes", force: :cascade do |t|
@@ -149,6 +177,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_000002) do
     t.index ["day_of_week"], name: "index_doctor_schedules_on_day_of_week", unique: true
   end
 
+  create_table "fee_schedule_items", force: :cascade do |t|
+    t.integer "allowed_amount_cents"
+    t.datetime "created_at", null: false
+    t.bigint "fee_schedule_id", null: false
+    t.integer "practice_fee_cents", default: 0, null: false
+    t.bigint "procedure_code_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["fee_schedule_id", "procedure_code_id"], name: "idx_fee_schedule_items_unique", unique: true
+    t.index ["procedure_code_id"], name: "index_fee_schedule_items_on_procedure_code_id"
+  end
+
+  create_table "fee_schedules", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.bigint "medical_scheme_id"
+    t.string "name", null: false
+    t.string "plan_option"
+    t.datetime "updated_at", null: false
+    t.integer "year"
+    t.index ["medical_scheme_id"], name: "index_fee_schedules_on_medical_scheme_id"
+    t.index ["name", "year"], name: "index_fee_schedules_on_name_and_year"
+  end
+
+  create_table "medical_schemes", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "administrator"
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.string "scheme_code"
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_medical_schemes_on_name"
+    t.index ["scheme_code"], name: "index_medical_schemes_on_scheme_code", unique: true, where: "(scheme_code IS NOT NULL)"
+  end
+
   create_table "notifications", force: :cascade do |t|
     t.bigint "appointment_id"
     t.text "body"
@@ -217,6 +279,53 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_000002) do
     t.string "price_cleaning"
     t.string "price_consultation"
     t.datetime "updated_at", null: false
+  end
+
+  create_table "procedure_codes", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.integer "age_max"
+    t.integer "age_min"
+    t.string "category"
+    t.string "code", null: false
+    t.datetime "created_at", null: false
+    t.integer "default_fee_cents"
+    t.string "description", null: false
+    t.boolean "lab_fee_applicable", default: false, null: false
+    t.boolean "material_fee_applicable", default: false, null: false
+    t.integer "max_per_year"
+    t.boolean "requires_authorisation", default: false, null: false
+    t.boolean "tooth_specific", default: false, null: false
+    t.datetime "updated_at", null: false
+    t.string "vat_treatment", default: "zero_rated", null: false
+    t.index ["active"], name: "index_procedure_codes_on_active"
+    t.index ["category"], name: "index_procedure_codes_on_category"
+    t.index ["code"], name: "index_procedure_codes_on_code", unique: true
+  end
+
+  create_table "scheme_membership_patients", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "dependant_code"
+    t.bigint "patient_id", null: false
+    t.string "role", default: "dependant", null: false
+    t.bigint "scheme_membership_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["patient_id"], name: "index_scheme_membership_patients_on_patient_id"
+    t.index ["scheme_membership_id", "patient_id"], name: "idx_scheme_membership_patients_unique", unique: true
+  end
+
+  create_table "scheme_memberships", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.date "effective_from"
+    t.date "effective_to"
+    t.string "main_member_name"
+    t.bigint "main_member_patient_id"
+    t.bigint "medical_scheme_id", null: false
+    t.string "member_number", null: false
+    t.string "plan_option"
+    t.datetime "updated_at", null: false
+    t.index ["main_member_patient_id"], name: "index_scheme_memberships_on_main_member_patient_id"
+    t.index ["medical_scheme_id"], name: "index_scheme_memberships_on_medical_scheme_id"
+    t.index ["member_number"], name: "index_scheme_memberships_on_member_number"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
@@ -361,19 +470,55 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_000002) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "treatment_macro_items", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.text "more_info"
+    t.integer "position", default: 0, null: false
+    t.bigint "procedure_code_id"
+    t.integer "quantity", default: 1, null: false
+    t.string "tariff_code"
+    t.bigint "treatment_macro_id", null: false
+    t.datetime "updated_at", null: false
+    t.index ["procedure_code_id"], name: "index_treatment_macro_items_on_procedure_code_id"
+    t.index ["treatment_macro_id"], name: "index_treatment_macro_items_on_treatment_macro_id"
+  end
+
+  create_table "treatment_macros", force: :cascade do |t|
+    t.string "access_code", null: false
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.boolean "laboratory", default: false, null: false
+    t.string "name", null: false
+    t.text "notes"
+    t.datetime "updated_at", null: false
+    t.index ["access_code"], name: "index_treatment_macros_on_access_code", unique: true
+  end
+
+  add_foreign_key "account_patients", "billing_accounts"
+  add_foreign_key "account_patients", "patients"
   add_foreign_key "appointments", "patients"
+  add_foreign_key "billing_accounts", "patients", column: "head_patient_id"
   add_foreign_key "call_logs", "patients"
   add_foreign_key "cancellation_reasons", "appointments"
   add_foreign_key "confirmation_logs", "appointments"
   add_foreign_key "conversations", "patients"
+  add_foreign_key "fee_schedule_items", "fee_schedules"
+  add_foreign_key "fee_schedule_items", "procedure_codes"
+  add_foreign_key "fee_schedules", "medical_schemes"
   add_foreign_key "notifications", "appointments"
   add_foreign_key "notifications", "conversations"
   add_foreign_key "notifications", "patients"
   add_foreign_key "patient_medical_histories", "patients"
+  add_foreign_key "scheme_membership_patients", "patients"
+  add_foreign_key "scheme_membership_patients", "scheme_memberships"
+  add_foreign_key "scheme_memberships", "medical_schemes"
+  add_foreign_key "scheme_memberships", "patients", column: "main_member_patient_id"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "treatment_macro_items", "procedure_codes"
+  add_foreign_key "treatment_macro_items", "treatment_macros"
 end
