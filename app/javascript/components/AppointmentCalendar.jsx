@@ -258,6 +258,11 @@ export default function AppointmentCalendar({
           </div>
         )}
 
+      {/* min-h-0 flex-1 gives FullCalendar a bounded pixel height so its
+          height="100%" + expandRows can compress the whole 08:00–17:00
+          day to fit. Without this the flex parent reports no height and
+          FC falls back to an oversized aspect-ratio layout that scrolls. */}
+      <div className="min-h-0 flex-1">
       <FullCalendar
         ref={calendarRef}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -294,6 +299,16 @@ export default function AppointmentCalendar({
         dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
       />
       </div>
+      </div>
+
+      {/* Compact slot rows so the full working day fits without scrolling.
+          expandRows still stretches to fill any extra height, but the
+          smaller minimum keeps 36 fifteen-minute lanes inside one screen. */}
+      <style>{`
+        .appointment-calendar .fc-timegrid-slot { height: 1.1em; }
+        .appointment-calendar .fc-timegrid-slot-label { font-size: 11px; }
+        .appointment-calendar .fc-col-header-cell-cushion { font-size: 12px; }
+      `}</style>
     </div>
   )
 }
