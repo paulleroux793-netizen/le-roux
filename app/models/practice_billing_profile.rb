@@ -10,8 +10,10 @@ class PracticeBillingProfile < ApplicationRecord
     {
       practice_name: "Dr Chalita le Roux Inc",
       hpcsa_number: "DP 0118702",
+      bhf_practice_number: "0992801",      # from past practice documents — Paul to confirm current
       company_reg: "2022/698149/21",
-      vat_registered: true, # confirmed by Paul; VAT number still to be supplied (TODO)
+      vat_registered: true,                # confirmed by Paul; fees VAT-inclusive
+      vat_number: "4260308871",            # from past practice documents — Paul to confirm current
       practitioner_name: "Dr Chalita le Roux",
       practitioner_hpcsa_number: "DP 0118702",
       phone: "011 568 8285",

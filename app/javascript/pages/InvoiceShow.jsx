@@ -10,7 +10,7 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-ZA', { day: 
 export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} }) {
   return (
     <DashboardLayout>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between no-print">
         <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-brand-muted hover:text-brand-ink">
           <ArrowLeft size={14} /> All invoices
         </Link>
@@ -25,7 +25,7 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
       </div>
 
       {/* The compliant invoice document */}
-      <div className="mx-auto max-w-3xl rounded-xl border border-brand-border bg-white p-8 shadow-sm">
+      <div className="print-document mx-auto max-w-3xl rounded-xl border border-brand-border bg-white p-8 shadow-sm">
         {invoice.void && (
           <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-center text-sm font-semibold text-red-700">VOID</div>
         )}
@@ -33,8 +33,14 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
         {/* Header — practice + practitioner identifiers (mandatory for the patient's self-claim) */}
         <div className="flex items-start justify-between border-b border-brand-border pb-5">
           <div>
-            <h1 className="text-lg font-bold text-brand-ink">{practice.name}</h1>
-            <p className="mt-0.5 text-xs text-brand-muted">{practice.address}</p>
+            {/* Brand wordmark — mirrors the practice logo (gold + grey) */}
+            <div className="leading-none">
+              <span className="text-xl font-semibold tracking-wide text-brand-primary">
+                Dr Chalita <span className="font-normal italic">le</span> Roux
+              </span>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-brand-muted">dentist &amp; aesthetic practitioner</p>
+            </div>
+            <p className="mt-2 text-xs text-brand-muted">{practice.address}</p>
             <p className="text-xs text-brand-muted">{practice.phone} · {practice.email}</p>
             <div className="mt-2 space-y-0.5 text-xs text-brand-ink">
               <p><span className="text-brand-muted">Practitioner:</span> {practice.practitioner}</p>

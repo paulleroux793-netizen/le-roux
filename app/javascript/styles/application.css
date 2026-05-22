@@ -12,24 +12,37 @@
  * and keep these in sync.
  */
 :root {
-  --brand-primary:         #0E9F9F;
-  --brand-primary-dark:    #0B8080;
-  --brand-accent:          #E6F7F7;
-  --brand-surface:         #EEF0F3;
+  /* Dr Chalita le Roux brand palette — gold wordmark + warm grey (from the practice logo).
+   * Primary is a deep gold chosen so WHITE text on it stays readable (≈5:1). */
+  --brand-primary:         #9A7521; /* deep gold (readable with white text) */
+  --brand-primary-dark:    #7C5E1A;
+  --brand-accent:          #F4ECD8; /* warm gold tint */
+  --brand-surface:         #F5F2EC; /* warm off-white app background */
   --brand-white:           #FFFFFF;
-  --brand-ink:             #0F172A;
-  --brand-ink-soft:        #334155;
-  --brand-muted:           #64748B;
-  --brand-border:          #E2E8F0;
+  --brand-ink:             #2B2620; /* warm near-black, high contrast */
+  --brand-ink-soft:        #4C453B;
+  --brand-muted:           #8B8378; /* warm grey (logo subtitle tone) */
+  --brand-border:          #E8E1D4; /* warm light border */
   --brand-success:         #10B981;
   --brand-warning:         #F59E0B;
-  --brand-danger:          #EF4444;
+  --brand-danger:          #C0392B;
 
   /* Derived tokens — translucent variants used for focus rings,
    * current-time markers, ::selection highlights, etc. */
-  --brand-primary-ring:    rgba(14, 159, 159, 0.28);
-  --brand-primary-tint:    rgba(14, 159, 159, 0.08);
-  --brand-border-soft:     rgba(226, 232, 240, 0.70);
+  --brand-primary-ring:    rgba(154, 117, 33, 0.28);
+  --brand-primary-tint:    rgba(154, 117, 33, 0.08);
+  --brand-border-soft:     rgba(232, 225, 212, 0.70);
+}
+
+/* Print: any document page (invoice/statement/estimate) prints clean — hide the app chrome
+ * (sidebar + top bar) and any .no-print element, and drop margins so the document fills the
+ * sheet. Mark the document container with .print-document. */
+@media print {
+  aside, header, .no-print { display: none !important; }
+  main { margin-left: 0 !important; padding-top: 0 !important; }
+  main .p-8 { padding: 0 !important; }
+  .print-document { box-shadow: none !important; border: none !important; max-width: 100% !important; margin: 0 !important; }
+  body { background: #fff !important; }
 }
 
 @layer base {

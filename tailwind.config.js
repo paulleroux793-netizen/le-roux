@@ -31,19 +31,21 @@
 // mass rename. Page-level refactors in Phase 9.14 will gradually
 // retire them in favour of the role-based keys above.
 
+// Dr Chalita le Roux brand palette — gold wordmark + warm grey (from the practice logo).
+// Keep in sync with app/javascript/styles/application.css :root.
 const tokens = {
-  primary:          '#0E9F9F', // teal
-  'primary-dark':   '#0B8080',
-  accent:           '#E6F7F7', // primary-light tint
-  surface:          '#EEF0F3', // app background (visibly grey vs white cards/navbar)
+  primary:          '#9A7521', // deep gold (readable with white text)
+  'primary-dark':   '#7C5E1A',
+  accent:           '#F4ECD8', // warm gold tint
+  surface:          '#F5F2EC', // warm off-white app background
   white:            '#FFFFFF',
-  ink:              '#0F172A',
-  'ink-soft':       '#334155',
-  muted:            '#64748B',
-  border:           '#E2E8F0',
+  ink:              '#2B2620', // warm near-black
+  'ink-soft':       '#4C453B',
+  muted:            '#8B8378', // warm grey (logo subtitle tone)
+  border:           '#E8E1D4', // warm light border
   success:          '#10B981',
   warning:          '#F59E0B',
-  danger:           '#EF4444',
+  danger:           '#C0392B',
 }
 
 export default {
