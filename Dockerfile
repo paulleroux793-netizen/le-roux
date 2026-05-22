@@ -52,12 +52,18 @@ RUN bundle install && \
 # Copy application code
 COPY . .
 
-# Normalise + make bin/ scripts runnable on Linux regardless of deploy source.
-# Deploying via `railway up` from a Windows machine (a) strips the Unix +x bit
-# and (b) rewrites line endings to CRLF, so the script shebangs become
-# "#!/usr/bin/env ruby\r" and fail at exec with "/bin/bash: -: invalid option".
-# Strip carriage returns and restore +x. GitHub deploys are unaffected. (2026-05-22)
-RUN sed -i 's/\r$//' bin/* && chmod +x bin/*
+# Normalise the source for Linux regardless of deploy origin. Deploying via
+# `railway up` from a Windows machine introduces three artifacts that break a
+# clean Linux container (GitHub deploys are unaffected):
+#   (a) bin/ scripts lose the Unix +x bit → "permission to execute start command"
+#   (b) bin/ scripts get CRLF line endings → shebang becomes "...ruby\r" →
+#       "/bin/bash: -: invalid option"
+#   (c) tmp/ etc. arrive without the write bit → Rails server create_tmp_directories
+#       fails with "Permission denied @ dir_s_mkdir - /rails/tmp/sockets"
+# Fix all three here (build stage runs as root). (2026-05-22)
+RUN sed -i 's/\r$//' bin/* && chmod +x bin/* && \
+    mkdir -p tmp/pids tmp/cache tmp/sockets log storage && \
+    chmod -R 0775 tmp log storage
 
 # Install JS dependencies and build Vite assets
 RUN npm ci && npm run build
