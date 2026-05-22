@@ -110,7 +110,9 @@ now (Paul connects live at end); name=Ivory; VAT 4260308871 + BHF 0992801 (confi
 - [x] P8.3 Documents: invoice has Medical|Self|Total; new EstimateShow groups by Visit 1/2 + explainer,
   14-day footer, brand wordmark, print-friendly; estimates list links to it. Verified HTTP 200 + content;
   43/43 scenarios pass. Commit 65ff38b.
-- [ ] P8.4 Logo: embed the real logo image (Marketing logo → PNG/SVG) on docs + sidebar.
+- [x] P8.4 Logo: swappable BrandLogo on documents — real logo shows when public/brand/logo.png is
+  dropped in (no rebuild), gold wordmark fallback until then. No PDF rasteriser in env to auto-convert.
+  Commit a2e5952. (Paul: drop the logo PNG at public/brand/logo.png — see UNCERTAINTIES #27.)
 - [ ] P8.5 Usability (beat Exact/GoodX/Elixir — docs/research/usability-*.md): global search over PMS
   entities; "/" focuses search; responsive; empty states; fewer clicks. Write docs/USABILITY_SCORECARD.md.
 - [ ] P8.6 Stress test + audit MULTIPLE times: expand script/ivory_scenarios.rb; run repeatedly; run CI
