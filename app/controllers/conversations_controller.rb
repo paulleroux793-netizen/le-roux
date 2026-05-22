@@ -189,10 +189,9 @@ class ConversationsController < ApplicationController
 
   def conversation_props(conversation)
     patient = conversation.patient
-    display_name = patient.full_name.presence || patient.phone
     {
       id: conversation.id,
-      patient_name: display_name,
+      patient_name: patient.display_name,
       patient_phone: patient.phone,
       channel: conversation.channel,
       status: conversation.status,
@@ -221,7 +220,7 @@ class ConversationsController < ApplicationController
     patient = conversation.patient
     {
       id: conversation.id,
-      patient_name: patient.full_name.presence || patient.phone,
+      patient_name: patient.display_name,
       patient_phone: patient.phone,
       patient_id: conversation.patient_id,
       channel: conversation.channel,

@@ -46,6 +46,12 @@ export default function AppointmentCalendar({
   appointments = [],
   onEventClick,
   calendarMeta = {},
+  // Height of the scrollable calendar body. The inline dashboard view
+  // leaves room for the page header + stat cards (~210px); the dedicated
+  // /calendar fullscreen page passes a much smaller offset so the whole
+  // 08:00–17:00 day fills the screen. expandRows compresses the rows to
+  // fit whatever height it's given.
+  heightClass = 'h-[calc(100vh-210px)]',
 }) {
   const calendarRef = useRef(null)
   // `loadedRangeKeyRef` tracks the last visible range we've already
@@ -245,7 +251,7 @@ export default function AppointmentCalendar({
         </div>
       </div>
 
-      <div className="flex h-[calc(100vh-210px)] flex-col px-3 pb-3 pt-2 md:px-4">
+      <div className={`flex ${heightClass} flex-col px-3 pb-3 pt-2 md:px-4`}>
         {search && filtered.length === 0 && (
           <div className="mb-3 rounded-lg border border-dashed border-brand-border bg-brand-surface px-4 py-2.5 text-sm text-brand-muted">
             No appointments match your search.

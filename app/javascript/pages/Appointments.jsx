@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { router } from '@inertiajs/react'
-import { CalendarDays, List, Plus, CheckCircle, Eye, Pencil, X as XIcon } from 'lucide-react'
+import { router, Link } from '@inertiajs/react'
+import { CalendarDays, List, Plus, CheckCircle, Eye, Pencil, X as XIcon, Maximize2 } from 'lucide-react'
 import { toast } from 'sonner'
 import DashboardLayout from '../layouts/DashboardLayout'
 import AppointmentCalendar from '../components/AppointmentCalendar'
@@ -189,6 +189,13 @@ export default function Appointments({
             <ViewTab active={view === 'schedule'} onClick={() => setView('schedule')} icon={CalendarDays} label={t('apt_schedule')} />
             <ViewTab active={view === 'list'}     onClick={() => setView('list')}     icon={List}         label={t('apt_list')} />
           </div>
+
+          <Link
+            href="/appointments/calendar"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-4 py-2.5 text-sm font-semibold text-brand-ink shadow-sm transition hover:bg-brand-surface"
+          >
+            <Maximize2 size={15} /> Full calendar
+          </Link>
 
           <button
             onClick={openCreate}

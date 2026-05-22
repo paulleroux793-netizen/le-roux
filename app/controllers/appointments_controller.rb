@@ -60,6 +60,48 @@ class AppointmentsController < ApplicationController
     render inertia: "Appointments", props: page_data
   end
 
+  # GET /appointments/calendar
+  #
+  # Dedicated full-screen calendar page. Same calendar payload as #index
+  # (week grid + patient picker for the create modal) but rendered without
+  # the dashboard chrome / stat cards so the whole working day fits the
+  # screen. Reception lives here for day-to-day booking.
+  def calendar
+    range_start, range_end = calendar_range
+    calendar_view = requested_calendar_view
+    calendar_date = calendar_anchor_date(range_start)
+
+    page_data = dev_page_cache(
+      "appointments",
+      "calendar",
+      range_start.to_date.iso8601,
+      range_end.to_date.iso8601,
+      calendar_view,
+      calendar_date.iso8601
+    ) do
+      calendar_appointments = Appointment
+        .includes(:patient)
+        .where(start_time: range_start..range_end)
+        .order(:start_time)
+        .to_a
+
+      patients = Patient.order(:first_name, :last_name).limit(500).select(:id, :first_name, :last_name, :phone).to_a
+
+      {
+        calendar_appointments: calendar_appointments.map { |a| appointment_props(a) },
+        patients: patients.map { |p| { id: p.id, name: p.full_name, phone: p.phone } },
+        calendar_meta: {
+          initial_date: calendar_date.iso8601,
+          range_start: range_start.iso8601,
+          range_end: range_end.iso8601,
+          view: calendar_view
+        }
+      }
+    end
+
+    render inertia: "CalendarFullscreen", props: page_data
+  end
+
   def show
     page_data = dev_page_cache("appointments", "show", params[:id]) do
       appointment = Appointment.includes(:patient, :cancellation_reason, :confirmation_logs).find(params[:id])
@@ -419,6 +461,7 @@ class AppointmentsController < ApplicationController
 
   def expire_appointment_caches!
     expire_dev_page_cache("appointments/index")
+    expire_dev_page_cache("appointments/calendar")
     expire_dev_page_cache("appointments/show")
     expire_dev_page_cache("dashboard")
     expire_dev_page_cache("reminders/index")

@@ -38,6 +38,25 @@ class Patient < ApplicationRecord
     "#{first_name} #{last_name}"
   end
 
+  # True when this record still carries a system-generated placeholder
+  # name (WhatsApp Patient / Phone Caller / Unknown / (imported)) rather
+  # than a real one captured from the patient or imported from Elixir.
+  def placeholder_name?
+    AUTO_CREATED_PLACEHOLDER_NAMES.include?([ first_name, last_name ]) ||
+      first_name == "Unknown" ||
+      last_name == "(imported)"
+  end
+
+  # What the UI should show as the contact's name. We never want to
+  # render "WhatsApp Patient" — it's identical for every unknown caller
+  # and tells reception nothing. Until a real name is known, the phone
+  # number at least uniquely identifies the person; once their name is
+  # captured (booking flow) or imported (Elixir migration) it shows
+  # automatically because everything is keyed on the phone number.
+  def display_name
+    placeholder_name? ? phone : full_name
+  end
+
   # Convenience accessor — returns the existing record or a new
   # unsaved one so views / props can always call the same getter
   # without nil checks.

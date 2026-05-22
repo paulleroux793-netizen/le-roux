@@ -24,6 +24,11 @@ Rails.application.routes.draw do
 
   # Dashboard pages
   resources :appointments, only: [ :index, :show, :create, :update ] do
+    collection do
+      # Dedicated full-screen calendar page — just the week grid with the
+      # dentist name at the top, no dashboard chrome / stat cards.
+      get :calendar
+    end
     member do
       patch :cancel
       patch :confirm
