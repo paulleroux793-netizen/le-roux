@@ -49,9 +49,13 @@
 - [x] P3.1 Migrations: estimates+lines, invoices (sequential no.)+lines, payments, statements, document_sequences
 - [x] P3.2 Models + logic: atomic gap-free numbering, per-line VAT (inclusive), estimate→invoice convert,
   invoice-from-completed-items, payment→status, statements, void-not-edit immutability. Verified in Docker.
-- [ ] P3.3 UI (Invoices/Estimates pages) + 16-element compliant invoice presentation (HPCSA DP0118702 +
-  BHF placeholder on practice settings) + claimable statement PDF + WhatsApp-send hook (additive)
-- [ ] P3.4 Verify
+- [x] P3.3 Billing UI: Invoices index/show (compliant invoice w/ HPCSA+BHF, patient+scheme, codes,
+  per-line VAT, sequential no., print/PDF, self-claim note), Estimates index. PracticeBillingProfile
+  table+seed (HPCSA DP0118702, banking; BHF placeholder). WhatsApp-send button = disabled stub (not
+  wired to live flow). Routes + nav added.
+- [x] P3.4 Verified — /invoices, /estimates, /invoices/:id all HTTP 200; compliant invoice renders.
+
+**PHASE 3 COMPLETE.**
 
 ### Phase 4 — Digital file & forms
 - [ ] P4.1 Patient file folders (mirror practice structure) + document model + uploads
@@ -78,13 +82,13 @@
 ---
 
 ## Current status
-**Phase 3 data layer + logic done (P3.1, P3.2). Next: P3.3 — billing UI + compliant invoice
-presentation + statement PDF + WhatsApp hook, then P3.4 verify. Then Phase 4 (digital file & forms).**
-NEXT (P3.3): Invoices index/show + Estimates index pages; add HPCSA (DP0118702) + BHF (placeholder)
-fields to practice settings for the invoice header; render a compliant invoice (practice+practitioner
-numbers, patient details, SADA+tooth+date+VAT per line, sequential number); claimable statement view;
-an additive "send via WhatsApp" stub (do NOT touch the live WhatsApp incoming flow). Guardrails:
-migration timestamps 20260523NNNNNN; irregular plurals need explicit column/class_name.
+**PHASES 1, 2, 3 COMPLETE. Next: Phase 4 — digital file & forms.** NEXT (P4.1): document/file model
++ patient file folders mirroring the practice structure (Consent Forms, Referral Letters, Befores &
+Afters, Sidexis Scans, etc.) with uploads (Active Storage if available, else a documents table w/
+metadata + storage path). P4.2 WhatsApp digital forms: form_templates (versioned) + form_submissions
+(tokenised mobile link, e-signature capture) → lands in patient file. P4.3 digital notepad/annotation
+→ PDF to file. P4.4 verify. Guardrails: migration timestamps 20260523NNNNNN; irregular plurals need
+explicit column/class_name; do NOT touch the live WhatsApp incoming flow (forms send is additive/outbound only).
 
 (historical) NEXT (P2.1):
 migrations for courses_of_treatment (patient_id, optional scheme_membership_id, setting enum:
@@ -135,3 +139,8 @@ Park anything uncertain in UNCERTAINTIES.md.
   Statement models with estimate→invoice conversion, invoice-from-completed-items, payment→status,
   void-not-edit immutability. Verified full flow in Docker (EST/INV sequential, VAT, statement balance).
   Parked #17 (VAT-inclusive + VAT-registered?). Committed 10d3a9e. Scorecard updated. Next: P3.3 billing UI + compliant invoice.
+- **2026-05-22 ~19:34** — P3.3 + P3.4 DONE → PHASE 3 COMPLETE. PracticeBillingProfile (HPCSA DP0118702,
+  banking, BHF placeholder) + Invoices index/show (compliant invoice: practice+practitioner numbers,
+  patient+scheme, SADA codes+tooth+VAT per line, sequential no., print/PDF, self-claim note) + Estimates
+  index. Routes + nav. WhatsApp-send = disabled stub. Demo seed extended (estimate+invoice+payment).
+  Verified HTTP 200 + compliant header. Scorecard: Invoicing ✅, Self-claim statement ✅. Next: Phase 4.

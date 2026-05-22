@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000004) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000005) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -399,6 +399,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000004) do
     t.index ["billing_account_id"], name: "index_payments_on_billing_account_id"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
     t.index ["received_at"], name: "index_payments_on_received_at"
+  end
+
+  create_table "practice_billing_profiles", force: :cascade do |t|
+    t.string "address_line1"
+    t.string "address_line2"
+    t.string "bank_account_name"
+    t.string "bank_account_number"
+    t.string "bank_branch_code"
+    t.string "bank_name"
+    t.string "bhf_practice_number"
+    t.string "city"
+    t.string "company_reg"
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.string "hpcsa_number"
+    t.string "phone"
+    t.string "postal_code"
+    t.string "practice_name", default: "Dr Chalita le Roux Inc", null: false
+    t.string "practitioner_bhf_number"
+    t.string "practitioner_hpcsa_number"
+    t.string "practitioner_name"
+    t.datetime "updated_at", null: false
+    t.string "vat_number"
+    t.boolean "vat_registered", default: false, null: false
   end
 
   create_table "practice_settings", force: :cascade do |t|

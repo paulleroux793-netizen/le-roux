@@ -51,4 +51,16 @@ unless cot.clinical_notes.exists?
   note.sign!(by: "Dr le Roux")
 end
 
-puts "Demo ready: patient=#{patient.id} cot=#{cot.id} items=#{cot.treatment_items.count} chart=#{ToothChartEntry.where(patient: patient).count} notes=#{cot.clinical_notes.count}"
+# Phase 3 — a demo estimate, invoice (from completed items) + a part payment, so billing screens render.
+PracticeBillingProfile.current # ensure the billing profile exists
+
+if cot.estimates.none?
+  est = Estimate.from_course(cot); est.save!; est.mark_sent!
+end
+
+if cot.invoices.none?
+  inv = Invoice.from_course(cot); inv.save!
+  Payment.create!(billing_account: cot.billing_account, invoice: inv, method: "card", amount_cents: 50000) if inv.total_cents.positive?
+end
+
+puts "Demo ready: patient=#{patient.id} cot=#{cot.id} items=#{cot.treatment_items.count} chart=#{ToothChartEntry.where(patient: patient).count} notes=#{cot.clinical_notes.count} estimates=#{cot.estimates.count} invoices=#{cot.invoices.count}"

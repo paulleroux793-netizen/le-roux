@@ -75,6 +75,8 @@ Rails.application.routes.draw do
   get "treatment-macros", to: "treatment_macros#index", as: :treatment_macros
   resources :billing_accounts, only: [ :index, :show ], path: "accounts"
   resources :courses_of_treatment, only: [ :index, :show ], path: "courses-of-treatment"
+  resources :estimates, only: [ :index ]
+  resources :invoices, only: [ :index, :show ]
   get   "settings",          to: "settings#index"
   post  "settings/language", to: "settings#update_language"
   patch "settings/practice", to: "settings#update_practice", as: :settings_practice

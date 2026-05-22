@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Calendar, Users, MessageSquare, BarChart2,
   BellRing, Settings, ChevronDown, HelpCircle, Globe,
   User, LogOut, KeyRound, ClipboardList,
-  Stethoscope, Layers, Wallet, ClipboardPlus,
+  Stethoscope, Layers, Wallet, ClipboardPlus, Receipt, FileText,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -25,6 +25,8 @@ const NAV_ITEMS = [
 const PMS_NAV_ITEMS = [
   { label: 'Accounts',             href: '/accounts',             icon: Wallet },
   { label: 'Courses of Treatment', href: '/courses-of-treatment', icon: ClipboardPlus },
+  { label: 'Estimates',            href: '/estimates',            icon: FileText },
+  { label: 'Invoices',             href: '/invoices',             icon: Receipt },
   { label: 'Procedure Codes',      href: '/procedure-codes',      icon: Stethoscope },
   { label: 'Treatment Macros',     href: '/treatment-macros',     icon: Layers },
 ]

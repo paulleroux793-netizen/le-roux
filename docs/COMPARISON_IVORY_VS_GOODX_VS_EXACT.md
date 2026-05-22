@@ -27,9 +27,9 @@ digital patient file replacing paper, and an AI chair-side scribe that drafts es
 | **In-chair / hospital / sedation setting** | ✅ | 🟡 | ✅ | Matches your real billing (LocationCode/Theatre). Phase 2 ✅ |
 | **Clinical SOAP notes (immutable)** | ✅ | ✅ | ✅ | Append-only; signed notes lock, corrections supersede (HPCSA). Phase 2 ✅ |
 | **Estimates / quotations** | ✅ | ✅ | ✅ | Built from a course of treatment; estimate→invoice conversion. Phase 3 ✅ |
-| **Invoicing** | ✅ | ✅ | 🟡 | Sequential gap-free numbers, per-line VAT, immutable (void-not-edit). Compliant PDF/presentation = P3.3 |
+| **Invoicing** | ✅ | ✅ | ✅ | Compliant invoice: HPCSA+BHF, patient+scheme, SADA+tooth+VAT per line, sequential no., print/PDF. Phase 3 ✅ |
 | **Medical-aid claim submission (EDI)** | ✅ | 🟡 | ➖ | **Deliberately omitted** — we don't claim. Big simplification. |
-| **Self-claim statement (patient claims back)** | 🟡 | 🟡 | 🟡 | ⭐ Statement model + balances done; claimable PDF = P3.3 |
+| **Self-claim statement (patient claims back)** | 🟡 | 🟡 | ✅ | ⭐ Invoice IS the claimable doc (print/PDF + self-claim note + HPCSA/BHF). Phase 3 ✅ |
 | **VAT logic (zero-rated vs cosmetic 15%)** | ✅ | 🟡 | ✅ | Per-line VAT computed (VAT-inclusive). Phase 3 ✅ |
 | **Payments (card/cash/EFT + deposits)** | ✅ | ✅ | ✅ | Applied to invoices; deposit flag (whitening R2,000). Phase 3 ✅ |
 | **Debtors / statements / age analysis** | ✅ | ✅ | 🟡 | Statements + balances done; age-analysis view P3.3 |
