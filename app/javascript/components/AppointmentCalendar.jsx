@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
-import { CalendarRange, Scissors, Search, X as XIcon } from 'lucide-react'
+import { Bell, CalendarRange, Plus, Scissors, Search, X as XIcon } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import { toast } from 'sonner'
+import ReminderModal from './ReminderModal'
 
 const DEFAULT_CALENDAR_VIEW = 'timeGridWeek'
 
@@ -44,6 +45,7 @@ const rangeKey = (view, startStr, endStr) => `${view}|${startStr}|${endStr}`
 
 export default function AppointmentCalendar({
   appointments = [],
+  notes = [],
   onEventClick,
   calendarMeta = {},
   // Height of the scrollable calendar body for the inline dashboard view,
@@ -83,6 +85,9 @@ export default function AppointmentCalendar({
   const [clipboard, setClipboard] = useState(null)
   const lastSelectedRef = useRef(null)
   const lastSlotRef = useRef(null)
+
+  // Diary reminder modal: { mode: 'create'|'edit', note, prefillStart }.
+  const [reminderModal, setReminderModal] = useState(null)
 
   // Filter appointments client-side by search text. Looks at patient
   // name, phone, reason, and status so a single input covers every
@@ -136,24 +141,45 @@ export default function AppointmentCalendar({
     [filtered]
   )
 
+  // Diary reminders rendered as distinct amber events (id prefixed
+  // "note-" so click/drag handlers can tell them apart from bookings).
+  const noteEvents = useMemo(
+    () =>
+      notes.map((n) => ({
+        id: `note-${n.id}`,
+        title: n.note,
+        start: n.starts_at,
+        end: n.ends_at,
+        backgroundColor: n.done ? '#F1F5F9' : '#FEF3C7',
+        borderColor: n.done ? '#CBD5E1' : '#F59E0B',
+        textColor: n.done ? '#94A3B8' : '#92400E',
+        extendedProps: { type: 'note', done: n.done, raw: n },
+      })),
+    [notes]
+  )
+
+  const allEvents = useMemo(() => [...events, ...noteEvents], [events, noteEvents])
+
   // Drag-to-reschedule and drag-to-resize both end here: PATCH the server,
   // revert the UI on error. `revert` is the FullCalendar callback that
   // snaps the event back to where it was if the save fails (e.g. the slot
   // is already booked — the DB exclusion constraint rejects it).
+  // A note event's id is "note-<id>"; appointments are plain numeric ids.
+  const isNoteId = (id) => String(id).startsWith('note-')
+  const noteIdOf = (id) => String(id).replace('note-', '')
+
   const persistMove = (id, start, end, revert) => {
-    router.patch(`/appointments/${id}`, {
-      appointment: {
-        start_time: start.toISOString(),
-        end_time:   end ? end.toISOString() : null,
-      },
-    }, {
-      preserveScroll: true,
-      onSuccess: () => toast.success('Appointment moved'),
-      onError: () => {
-        revert?.()
-        toast.error('Could not move — slot may be taken')
-      },
-    })
+    const ok = () => toast.success(isNoteId(id) ? 'Reminder moved' : 'Appointment moved')
+    const fail = () => { revert?.(); toast.error('Could not move — slot may be taken') }
+    if (isNoteId(id)) {
+      router.patch(`/calendar_notes/${noteIdOf(id)}`, {
+        calendar_note: { starts_at: start.toISOString(), ends_at: end ? end.toISOString() : null },
+      }, { preserveScroll: true, onSuccess: ok, onError: fail })
+    } else {
+      router.patch(`/appointments/${id}`, {
+        appointment: { start_time: start.toISOString(), end_time: end ? end.toISOString() : null },
+      }, { preserveScroll: true, onSuccess: ok, onError: fail })
+    }
   }
 
   const handleEventDrop   = (info) => persistMove(info.event.id, info.event.start, info.event.end, info.revert)
@@ -161,6 +187,11 @@ export default function AppointmentCalendar({
 
   const handleEventClick = (info) => {
     info.jsEvent.preventDefault()
+    // Diary reminder → open the reminder editor instead of the patient modal.
+    if (info.event.extendedProps?.type === 'note') {
+      setReminderModal({ mode: 'edit', note: info.event.extendedProps.raw })
+      return
+    }
     // Remember this event so Ctrl+X can cut it later (the detail modal
     // opens on top, but the keyboard shortcut still needs the target).
     lastSelectedRef.current = {
@@ -186,10 +217,15 @@ export default function AppointmentCalendar({
   }
 
   // Clicking an empty slot: if something is "cut", drop it here; otherwise
-  // just remember the slot so Ctrl+V has a paste target.
+  // open the diary-reminder creator pre-filled with that time. (Remember
+  // the slot too, so Ctrl+V has a paste target.)
   const handleDateClick = (info) => {
     lastSlotRef.current = info.date
-    if (clipboard) placeClipboardAt(info.date)
+    if (clipboard) {
+      placeClipboardAt(info.date)
+    } else {
+      setReminderModal({ mode: 'create', prefillStart: info.date })
+    }
   }
 
   // Cut (Ctrl/Cmd+X) the last-clicked appointment; paste (Ctrl/Cmd+V) at
@@ -267,7 +303,21 @@ export default function AppointmentCalendar({
   // Compact event card — patient name + reason, plus a hover scissors
   // button to cut-and-move. Click the body opens the detail pop-over.
   const renderEventContent = (arg) => {
-    const { reason } = arg.event.extendedProps
+    const ext = arg.event.extendedProps
+
+    // Diary reminder card: bell + note text, struck through when done.
+    if (ext.type === 'note') {
+      return (
+        <div className="flex h-full w-full cursor-pointer items-start gap-1 overflow-hidden px-1.5 py-0.5 leading-tight">
+          <Bell size={11} className="mt-0.5 flex-shrink-0 opacity-80" />
+          <p className={`truncate text-[11px] font-medium ${ext.done ? 'line-through opacity-60' : ''}`}>
+            {arg.event.title}
+          </p>
+        </div>
+      )
+    }
+
+    const { reason } = ext
     const patient = arg.event.title
 
     return (
@@ -372,7 +422,7 @@ export default function AppointmentCalendar({
           center: '',
           right: 'today prev,next timeGridWeek,timeGridDay,dayGridMonth',
         }}
-        events={events}
+        events={allEvents}
         editable
         eventResizableFromStart
         selectable
@@ -384,7 +434,7 @@ export default function AppointmentCalendar({
         datesSet={handleDatesSet}
         eventContent={renderEventContent}
         eventClassNames={(arg) => (clipboard && String(clipboard.id) === arg.event.id ? ['fc-cut-event'] : [])}
-        slotMinTime="08:00:00"
+        slotMinTime="06:00:00"
         slotMaxTime="20:00:00"
         scrollTime="08:00:00"
         allDaySlot={false}
@@ -416,6 +466,14 @@ export default function AppointmentCalendar({
         /* The appointment currently "cut" for moving — dimmed + dashed. */
         .appointment-calendar .fc-cut-event { opacity: 0.45; outline: 2px dashed #0f766e; outline-offset: -2px; }
       `}</style>
+
+      {/* Diary reminder create/edit modal (self-contained — no patient). */}
+      <ReminderModal
+        open={Boolean(reminderModal)}
+        onClose={() => setReminderModal(null)}
+        note={reminderModal?.note}
+        prefillStart={reminderModal?.prefillStart}
+      />
     </div>
   )
 }

@@ -35,6 +35,9 @@ Rails.application.routes.draw do
       patch :set_status
     end
   end
+  # Diary reminders / notes (non-appointment calendar items)
+  resources :calendar_notes, only: [ :create, :update, :destroy ]
+
   resources :patients, only: [ :index, :show, :create, :update, :destroy ]
   resources :conversations, only: [ :index, :show ] do
     collection do

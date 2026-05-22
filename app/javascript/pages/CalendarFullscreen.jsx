@@ -20,6 +20,7 @@ const DENTIST_NAME = 'Dr Chalita le Roux'
 
 export default function CalendarFullscreen({
   calendar_appointments = [],
+  calendar_notes = [],
   calendar_meta = {},
   patients = [],
 }) {
@@ -37,7 +38,7 @@ export default function CalendarFullscreen({
   useEffect(() => {
     const timer = setInterval(() => {
       router.reload({
-        only: ['calendar_appointments'],
+        only: ['calendar_appointments', 'calendar_notes'],
         preserveState: true,
         preserveScroll: true,
       })
@@ -87,6 +88,7 @@ export default function CalendarFullscreen({
       <main className="min-h-0 flex-1 overflow-hidden p-3">
         <AppointmentCalendar
           appointments={calendar_appointments}
+          notes={calendar_notes}
           calendarMeta={calendar_meta}
           onEventClick={handleEventClick}
           fillHeight

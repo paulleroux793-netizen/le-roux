@@ -32,6 +32,7 @@ const STATUS_KEYS = {
 export default function Appointments({
   appointments = [],
   calendar_appointments = [],
+  calendar_notes = [],
   calendar_meta = {},
   patients = [],
   stats,
@@ -62,7 +63,7 @@ export default function Appointments({
   useEffect(() => {
     const timer = setInterval(() => {
       router.reload({
-        only: ['appointments', 'calendar_appointments', 'stats'],
+        only: ['appointments', 'calendar_appointments', 'calendar_notes', 'stats'],
         preserveState: true,
         preserveScroll: true,
       })
@@ -227,6 +228,7 @@ export default function Appointments({
       {view === 'schedule' ? (
         <AppointmentCalendar
           appointments={calendar_appointments}
+          notes={calendar_notes}
           calendarMeta={calendar_meta}
           onEventClick={handleEventClick}
         />

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_22_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_22_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -58,6 +58,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_22_000001) do
     t.index ["created_at"], name: "index_audit_logs_on_created_at"
     t.index ["performed_by"], name: "index_audit_logs_on_performed_by"
     t.index ["resource_type", "resource_id"], name: "index_audit_logs_on_resource_type_and_resource_id"
+  end
+
+  create_table "calendar_notes", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "done", default: false, null: false
+    t.datetime "ends_at", null: false
+    t.string "note", null: false
+    t.datetime "starts_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["starts_at"], name: "index_calendar_notes_on_starts_at"
   end
 
   create_table "call_logs", force: :cascade do |t|

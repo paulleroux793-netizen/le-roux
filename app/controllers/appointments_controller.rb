@@ -34,6 +34,7 @@ class AppointmentsController < ApplicationController
       {
         appointments: appointments.map { |a| appointment_props(a) },
         calendar_appointments: calendar_appointments.map { |a| appointment_props(a) },
+        calendar_notes: CalendarNote.between(range_start, range_end).order(:starts_at).map { |n| calendar_note_props(n) },
         # Lightweight patient list for the Create modal picker. Phase 9.6
         # sub-area #5 will replace this with a proper SearchController,
         # but for now 500 patients loaded inline is fine for a single-
@@ -89,6 +90,7 @@ class AppointmentsController < ApplicationController
 
       {
         calendar_appointments: calendar_appointments.map { |a| appointment_props(a) },
+        calendar_notes: CalendarNote.between(range_start, range_end).order(:starts_at).map { |n| calendar_note_props(n) },
         patients: patients.map { |p| { id: p.id, name: p.full_name, phone: p.phone } },
         calendar_meta: {
           initial_date: calendar_date.iso8601,
@@ -445,6 +447,16 @@ class AppointmentsController < ApplicationController
       status: appointment.status,
       reason: appointment.reason,
       notes: appointment.notes
+    }
+  end
+
+  def calendar_note_props(note)
+    {
+      id: note.id,
+      note: note.note,
+      starts_at: note.starts_at.iso8601,
+      ends_at: note.ends_at.iso8601,
+      done: note.done
     }
   end
 
