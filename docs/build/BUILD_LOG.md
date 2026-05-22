@@ -102,7 +102,8 @@
 **practice fee = LATEST transaction value** (NOT Discovery+30%); Medical col = Discovery rate (pull via
 Perplexity where possible — tx Medical/Patient-due cols are EMPTY); use the REAL logo; SIDEXIS folder for
 now (Paul connects live at end); name=Ivory; VAT 4260308871 + BHF 0992801 (confirm current).
-- [ ] P8.1 Pricing: practice fee = LATEST tx Debit per code; add `medical_fee_cents` to procedure_codes.
+- [x] P8.1 Pricing: practice fee = LATEST tx Debit per code (172 updated, 8101=R699.30); added
+  medical_fee_cents (nil until SADA Discovery rates). Commit 964acee.
 - [ ] P8.2 Lines: add medical_cents + self_cents to invoice_lines & estimate_lines (self=total−medical);
   add `visit` to treatment_items/estimate_lines for Visit 1/2 grouping.
 - [ ] P8.3 Documents: invoice + estimate show Medical|Self|Total; estimate grouped by Visit + explainer;
