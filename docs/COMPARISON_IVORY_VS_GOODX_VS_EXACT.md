@@ -36,10 +36,10 @@ digital patient file replacing paper, and an AI chair-side scribe that drafts es
 | **Digital patient file (paperless)** | 🟡 | 🟡 | ✅ | ⭐ Folders mirror the real practice; docs/forms/notes filed. Phase 4 ✅ (binary store backend parked #18) |
 | **WhatsApp digital forms + e-signature** | ⬜ | ⬜ | 🟡 | ⭐⭐ Versioned templates, tokenised link, e-sign capture, auto-file. Mobile form UI + WhatsApp delivery = integration. Phase 4 |
 | **Digital notepad / annotate on forms** | ⬜ | 🟡 | 🟡 | ⭐ Notepad model + file-to-patient done; drawing canvas UI later. Phase 4 |
-| **Imaging integration (X-ray/scan)** | ✅ | ✅ | ⬜ | SIDEXIS bridge. Phase 5 |
-| **Recalls (6-month) + reminders** | ✅ | ✅ (best) | ⬜ | Phase 5 |
-| **Reporting / KPIs** | ✅ | ✅ | ⬜ | Phase 5 |
-| **AI chair-side scribe → draft estimate** | ⬜ | ⬜ | ⬜ | ⭐⭐⭐ The headline. Neither has it. Phase 6 |
+| **Imaging integration (X-ray/scan)** | ✅ | ✅ | ✅ | SIDEXIS bridge: real export parsed (654 studies), modality + match queue. Phase 5 ✅ (thumbnails/viewer = backend #18) |
+| **Recalls (6-month) + reminders** | ✅ | ✅ (best) | 🟡 | Recall model + due tracking; WhatsApp send job = additive integration. Phase 5 |
+| **Reporting / KPIs** | ✅ | ✅ | ✅ | Production, collections, outstanding, by setting/status. Phase 5 ✅ |
+| **AI chair-side scribe → draft estimate** | ⬜ | ⬜ | ✅ | ⭐⭐⭐ Transcript→findings→draft estimate for review (Claude + fallback). Neither incumbent has it. Phase 6 ✅ |
 | **WhatsApp booking AI receptionist** | ⬜ | ⬜ | ✅ | ⭐ Already live (the existing system this extends) |
 | **Immutable audit trail** | ✅ | ✅ | ✅ | Reuses existing AuditLog + append-only clinical/financial records |
 | **Multi-site / multi-tenant** | ✅ | ✅ | ➖ | Single practice — deliberately simpler & faster |

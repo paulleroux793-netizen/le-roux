@@ -89,5 +89,16 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
     reference each other; deleting a patient could hit an FK ordering error. Low-risk edge (deleting a
     patient is rare). → Will address in the Phase 7 audit (nullify document_id on dependent destroy).
 
+20. **[decided] Imaging patient-matching is conservative.** The importer links a SIDEXIS folder to a
+    patient only on an exact normalised full-name match or an account-code folder; everything else is
+    queued `needs_match` for manual linking (in dev all 654 are needs_match because real patients aren't
+    imported). → **After the real patient import, most will auto-match; confirm exact-name matching is
+    acceptable, and we'll add a one-click manual-link UI for the rest.** Also: the on-prem bridge that
+    produces the manifest + thumbnails (and keeps CBCT volumes local) still needs building/installing.
+21. **[decided] Scribe code mapping references codes not in the catalogue.** The fallback extractor maps
+    "filling"→8341, but 8341 isn't in your 172-code catalogue, so those lines are skipped. → **Phase 7
+    audit will remap scribe keywords to codes that exist (and the production Claude path will pick codes
+    from the live catalogue).** Also: wire the real Anthropic call + the local Whisper capture on the PC.
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*

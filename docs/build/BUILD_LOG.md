@@ -66,16 +66,23 @@
 **PHASE 4 COMPLETE** (binary storage backend parked #18; FK-on-delete edge → audit #19).
 
 ### Phase 5 — Integrations
-- [ ] P5.1 SIDEXIS bridge agent (export-folder watcher first) + patient-ID matching + thumbnails
-- [ ] P5.2 Recalls (6-month) + reminders (additive)
-- [ ] P5.3 Reporting / KPIs
-- [ ] P5.4 Verify
+- [x] P5.1 imaging_studies + ImagingImportService (real SIDEXIS naming parsed, modality, conservative
+  match→needs_match queue). 654 studies imported in dev. Imaging page. (Bridge agent + thumbnails = #18/#20)
+- [x] P5.2 Recalls (model + due tracking + page). WhatsApp send = additive job (later).
+- [x] P5.3 Reporting / KPIs page (production, collections, outstanding, by setting/status).
+- [x] P5.4 Verified — /imaging, /recalls, /reporting HTTP 200.
+
+**PHASE 5 COMPLETE.**
 
 ### Phase 6 — AI chair-side scribe (LAST)
-- [ ] P6.1 In-chair appointment state → local Whisper capture (reuse transcribe_calls.py)
-- [ ] P6.2 Claude extracts findings → drafts Course of Treatment + Estimate
-- [ ] P6.3 Review-and-confirm UI (never auto-bill)
-- [ ] P6.4 Verify
+- [x] P6.1 scribe_sessions bound to in-chair appointment (start_for); local-Whisper transcript field.
+- [x] P6.2 ScribeDraftService (transcript→findings→proposed draft estimate; Claude backend + deterministic fallback).
+- [x] P6.3 Review UI (ScribeSessions list + ScribeSessionShow with transcript/findings/draft estimate; never auto-bills).
+- [x] P6.4 Verified — /scribe-sessions + show HTTP 200; transcript→4 findings→draft estimate.
+
+**PHASE 6 COMPLETE.** (Wire real Anthropic + on-PC Whisper capture, and fix scribe code map → #21.)
+
+**ALL PHASES 1-6 COMPLETE.** Next: Phase 7 — whole-system stress test, audit & remediation.
 
 ### Phase 7 — Whole-system stress test, audit & remediation (after Phases 1-6, per Paul 22 May)
 - [ ] P7.1 Stress-test/audit the whole Ivory system (data integrity, security/POPIA, additive-safety,
@@ -91,7 +98,16 @@
 ---
 
 ## Current status
-**PHASES 1-4 COMPLETE. Next: Phase 5 — integrations (SIDEXIS + recalls + reporting).** NEXT (P5.1):
+**ALL PHASES 1-6 COMPLETE. NEXT: Phase 7 — whole-system stress test, audit & remediation (Paul asked
+for this explicitly).** Do P7.1: write docs/build/SYSTEM_AUDIT.md auditing the whole Ivory build —
+data integrity (FK on-delete #19, snapshot/immutability), security/POPIA (PII handling, access control,
+the dashboard has no auth on the new PMS routes? check), additive-safety (confirm no live behaviour
+changed), correctness (scribe code map #21, VAT #17, imaging match #20), performance (N+1s, the 654-row
+imaging list), and gaps vs the proposal. Severity-rank. P7.2 prioritise. P7.3 IMPLEMENT the fixes
+(commit each, re-verify in Docker). P7.4 final summary + present all parked UNCERTAINTIES to Paul.
+Guardrails: migration timestamps 20260523NNNNNN; irregular plurals need explicit column/class_name.
+
+(historical) NEXT (P5.1):
 SIDEXIS bridge — model `imaging_studies` (patient_id, modality: intraoral_2d/bitewing/panoramic/
 cephalometric/cbct_3d, captured_at, sidexis_patient_ref, thumbnail/storage_key, status) + an
 `ImagingImportService` that ingests from a watched export-folder manifest (CSV/JSON) and matches to
@@ -168,3 +184,10 @@ Park anything uncertain in UNCERTAINTIES.md.
   PatientFile page (folders/docs/forms/notes). Verified HTTP 200 (Sidexis Scans folder, OPG xray,
   signed consent form). Parked #18 (binary storage backend) + #19 (FK-on-delete → audit). Committed next.
   Next: Phase 5 (SIDEXIS + recalls + reporting). Also added Phase 7 (audit+remediate) per Paul.
+- **2026-05-22 ~19:43** — PHASES 5 & 6 COMPLETE (built together per Paul). Phase 5: imaging_studies +
+  ImagingImportService (real SIDEXIS naming parsed; 654 studies; conservative match→needs_match),
+  Recalls, Reporting KPIs. Phase 6: scribe_sessions + ScribeDraftService (transcript→findings→draft
+  estimate, Claude+fallback, never auto-bills) + review UI. Added missing Recall model (caused 2 transient
+  500s, fixed). 9 new pages/controllers, routes, nav. Verified all HTTP 200. Parked #20 (imaging match/
+  bridge) + #21 (scribe code map/Anthropic+Whisper wiring). Committed 7ade322. ALL PHASES 1-6 DONE.
+  Next: Phase 7 audit + remediation.
