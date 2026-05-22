@@ -46,12 +46,14 @@ export default function AppointmentCalendar({
   appointments = [],
   onEventClick,
   calendarMeta = {},
-  // Height of the scrollable calendar body. The inline dashboard view
-  // leaves room for the page header + stat cards (~210px); the dedicated
-  // /calendar fullscreen page passes a much smaller offset so the whole
-  // 08:00–17:00 day fills the screen. expandRows compresses the rows to
-  // fit whatever height it's given.
+  // Height of the scrollable calendar body for the inline dashboard view,
+  // which leaves room for the page header + stat cards (~210px).
   heightClass = 'h-[calc(100vh-210px)]',
+  // Fullscreen /calendar page: render every slot at a fixed compact
+  // height (height="auto", no expandRows) so the whole 08:00–17:00 day
+  // is visible at once without scrolling. expandRows would otherwise
+  // apply its own inline row heights and oversize the grid.
+  autoHeight = false,
 }) {
   const calendarRef = useRef(null)
   // `loadedRangeKeyRef` tracks the last visible range we've already
@@ -251,7 +253,7 @@ export default function AppointmentCalendar({
         </div>
       </div>
 
-      <div className={`flex ${heightClass} flex-col px-3 pb-3 pt-2 md:px-4`}>
+      <div className={`flex flex-col px-3 pb-3 pt-2 md:px-4 ${autoHeight ? '' : heightClass}`}>
         {search && filtered.length === 0 && (
           <div className="mb-3 rounded-lg border border-dashed border-brand-border bg-brand-surface px-4 py-2.5 text-sm text-brand-muted">
             No appointments match your search.
@@ -285,8 +287,8 @@ export default function AppointmentCalendar({
         slotMaxTime="17:00:00"
         allDaySlot={false}
         nowIndicator
-        expandRows
-        height="100%"
+        expandRows={!autoHeight}
+        height={autoHeight ? 'auto' : '100%'}
         stickyHeaderDates
         slotDuration="00:15:00"
         slotLabelInterval="01:00:00"
@@ -301,11 +303,12 @@ export default function AppointmentCalendar({
       </div>
       </div>
 
-      {/* Compact slot rows so the full working day fits without scrolling.
-          expandRows still stretches to fill any extra height, but the
-          smaller minimum keeps 36 fifteen-minute lanes inside one screen. */}
+      {/* Compact slot rows so the full working day fits on one screen.
+          In autoHeight (fullscreen) mode there is no expandRows, so these
+          fixed heights take effect and all 36 fifteen-minute lanes
+          (08:00–17:00) render inside the viewport without scrolling. */}
       <style>{`
-        .appointment-calendar .fc-timegrid-slot { height: 1.1em; }
+        .appointment-calendar .fc-timegrid-slot { height: 1.35em !important; }
         .appointment-calendar .fc-timegrid-slot-label { font-size: 11px; }
         .appointment-calendar .fc-col-header-cell-cushion { font-size: 12px; }
       `}</style>
