@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
-import { CalendarRange, Search } from 'lucide-react'
+import { CalendarRange, Scissors, Search, X as XIcon } from 'lucide-react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -73,6 +73,17 @@ export default function AppointmentCalendar({
   // happens on every Inertia partial reload that updates calendarMeta.
   const [stableInitialDate] = useState(() => calendarMeta.initial_date)
 
+  // ── Cut / paste move ────────────────────────────────────────────────
+  // `clipboard` holds the appointment "cut" for moving (id + duration +
+  // name); while set, a banner shows and clicking any time slot drops it
+  // there (preserving its length). `lastSelectedRef` remembers the most
+  // recently clicked event so Ctrl+X knows what to cut even after the
+  // detail modal has opened/closed. `lastSlotRef` remembers the last
+  // empty slot clicked so Ctrl+V has a target.
+  const [clipboard, setClipboard] = useState(null)
+  const lastSelectedRef = useRef(null)
+  const lastSlotRef = useRef(null)
+
   // Filter appointments client-side by search text. Looks at patient
   // name, phone, reason, and status so a single input covers every
   // useful case without a dedicated dropdown. Case-insensitive.
@@ -125,32 +136,85 @@ export default function AppointmentCalendar({
     [filtered]
   )
 
-  // Drag-to-reschedule — PATCHes the server; reverts the UI drop on error.
-  const handleEventDrop = (info) => {
-    const payload = {
+  // Drag-to-reschedule and drag-to-resize both end here: PATCH the server,
+  // revert the UI on error. `revert` is the FullCalendar callback that
+  // snaps the event back to where it was if the save fails (e.g. the slot
+  // is already booked — the DB exclusion constraint rejects it).
+  const persistMove = (id, start, end, revert) => {
+    router.patch(`/appointments/${id}`, {
       appointment: {
-        start_time: info.event.start.toISOString(),
-        end_time:   info.event.end ? info.event.end.toISOString() : null,
+        start_time: start.toISOString(),
+        end_time:   end ? end.toISOString() : null,
       },
-    }
-    router.patch(`/appointments/${info.event.id}`, payload, {
+    }, {
       preserveScroll: true,
-      onSuccess: () => toast.success('Appointment rescheduled'),
+      onSuccess: () => toast.success('Appointment moved'),
       onError: () => {
-        info.revert()
-        toast.error('Could not reschedule — reverted')
+        revert?.()
+        toast.error('Could not move — slot may be taken')
       },
     })
   }
 
+  const handleEventDrop   = (info) => persistMove(info.event.id, info.event.start, info.event.end, info.revert)
+  const handleEventResize = (info) => persistMove(info.event.id, info.event.start, info.event.end, info.revert)
+
   const handleEventClick = (info) => {
     info.jsEvent.preventDefault()
+    // Remember this event so Ctrl+X can cut it later (the detail modal
+    // opens on top, but the keyboard shortcut still needs the target).
+    lastSelectedRef.current = {
+      id: info.event.id,
+      title: info.event.title,
+      durationMs: info.event.end && info.event.start
+        ? info.event.end.getTime() - info.event.start.getTime()
+        : 30 * 60 * 1000,
+    }
     if (onEventClick) {
       onEventClick(info.event)
     } else {
       router.visit(`/appointments/${info.event.id}`)
     }
   }
+
+  // Drop a cut appointment onto a new start time, keeping its length.
+  const placeClipboardAt = (startDate) => {
+    if (!clipboard) return
+    const end = new Date(startDate.getTime() + clipboard.durationMs)
+    persistMove(clipboard.id, startDate, end, null)
+    setClipboard(null)
+  }
+
+  // Clicking an empty slot: if something is "cut", drop it here; otherwise
+  // just remember the slot so Ctrl+V has a paste target.
+  const handleDateClick = (info) => {
+    lastSlotRef.current = info.date
+    if (clipboard) placeClipboardAt(info.date)
+  }
+
+  // Cut (Ctrl/Cmd+X) the last-clicked appointment; paste (Ctrl/Cmd+V) at
+  // the last-clicked slot; Esc cancels a pending move.
+  useEffect(() => {
+    const onKey = (e) => {
+      const mod = e.ctrlKey || e.metaKey
+      if (mod && (e.key === 'x' || e.key === 'X')) {
+        if (lastSelectedRef.current) {
+          e.preventDefault()
+          setClipboard(lastSelectedRef.current)
+          toast(`Cut ${lastSelectedRef.current.title} — click a slot to drop it, or Ctrl+V`)
+        }
+      } else if (mod && (e.key === 'v' || e.key === 'V')) {
+        if (clipboard && lastSlotRef.current) {
+          e.preventDefault()
+          placeClipboardAt(lastSlotRef.current)
+        }
+      } else if (e.key === 'Escape' && clipboard) {
+        setClipboard(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [clipboard])
 
   const handleDatesSet = (info) => {
     const nextKey = rangeKey(info.view.type, info.startStr, info.endStr)
@@ -190,21 +254,36 @@ export default function AppointmentCalendar({
     })
   }
 
-  // Compact event card — shows only essential info that fits in a
-  // 30-minute slot. Patient name + time + reason. Click to see full
-  // details in AppointmentDetailModal.
+  // Cut an event for moving without going through the detail modal —
+  // the little scissors button on each card. stopPropagation so the
+  // click doesn't also open the modal.
+  const cutEvent = (e, ev) => {
+    e.stopPropagation()
+    const durationMs = ev.end && ev.start ? ev.end.getTime() - ev.start.getTime() : 30 * 60 * 1000
+    setClipboard({ id: ev.id, title: ev.title, durationMs })
+    toast(`Cut ${ev.title} — click a slot to drop it here. Esc to cancel`)
+  }
+
+  // Compact event card — patient name + reason, plus a hover scissors
+  // button to cut-and-move. Click the body opens the detail pop-over.
   const renderEventContent = (arg) => {
     const { reason } = arg.event.extendedProps
     const patient = arg.event.title
 
-    // Compact card per Paul's spec: name + reason for visit. Full details
-    // (contact, new/existing, etc.) live in the click pop-over.
     return (
-      <div className="flex h-full w-full cursor-pointer flex-col justify-center overflow-hidden px-1.5 py-0.5 leading-tight">
-        <p className="truncate text-[12px] font-semibold">{patient}</p>
+      <div className="group/event relative flex h-full w-full cursor-pointer flex-col justify-center overflow-hidden px-1.5 py-0.5 leading-tight">
+        <p className="truncate pr-5 text-[12px] font-semibold">{patient}</p>
         {reason && (
           <p className="truncate text-[10px] opacity-75">{reason}</p>
         )}
+        <button
+          type="button"
+          title="Cut / move this appointment"
+          onClick={(e) => cutEvent(e, arg.event)}
+          className="absolute right-0.5 top-0.5 rounded p-0.5 opacity-0 transition-opacity hover:bg-black/10 group-hover/event:opacity-100"
+        >
+          <Scissors size={12} />
+        </button>
       </div>
     )
   }
@@ -261,6 +340,23 @@ export default function AppointmentCalendar({
           </div>
         )}
 
+        {/* Cut/paste banner — visible while an appointment is "cut". */}
+        {clipboard && (
+          <div className="mb-2 flex items-center justify-between gap-3 rounded-lg border border-brand-primary/40 bg-brand-primary/10 px-4 py-2 text-sm text-brand-ink">
+            <span className="flex items-center gap-2">
+              <Scissors size={14} className="text-brand-primary" />
+              Moving <strong>{clipboard.title}</strong> — click any time slot to drop it (or press Ctrl+V). Esc to cancel.
+            </span>
+            <button
+              type="button"
+              onClick={() => setClipboard(null)}
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-muted hover:bg-white hover:text-brand-ink"
+            >
+              <XIcon size={13} /> Cancel
+            </button>
+          </div>
+        )}
+
       {/* min-h-0 flex-1 gives FullCalendar a bounded pixel height so its
           height="100%" + expandRows can compress the whole 08:00–17:00
           day to fit. Without this the flex parent reports no height and
@@ -278,14 +374,18 @@ export default function AppointmentCalendar({
         }}
         events={events}
         editable
+        eventResizableFromStart
         selectable
         selectMirror
         eventDrop={handleEventDrop}
+        eventResize={handleEventResize}
         eventClick={handleEventClick}
+        dateClick={handleDateClick}
         datesSet={handleDatesSet}
         eventContent={renderEventContent}
+        eventClassNames={(arg) => (clipboard && String(clipboard.id) === arg.event.id ? ['fc-cut-event'] : [])}
         slotMinTime="08:00:00"
-        slotMaxTime="17:00:00"
+        slotMaxTime="20:00:00"
         scrollTime="08:00:00"
         allDaySlot={false}
         nowIndicator
@@ -294,6 +394,7 @@ export default function AppointmentCalendar({
         slotDuration="00:15:00"
         slotLabelInterval="01:00:00"
         snapDuration="00:15:00"
+        businessHours={{ daysOfWeek: [1, 2, 3, 4, 5], startTime: '08:00', endTime: '17:00' }}
         weekends={false}
         firstDay={1}
         buttonText={{ timeGridWeek: 'Week', timeGridDay: 'Day', dayGridMonth: 'Month' }}
@@ -312,6 +413,8 @@ export default function AppointmentCalendar({
         .appointment-calendar .fc-timegrid-slot { height: 1.5em !important; }
         .appointment-calendar .fc-timegrid-slot-label { font-size: 11px; }
         .appointment-calendar .fc-col-header-cell-cushion { font-size: 12px; }
+        /* The appointment currently "cut" for moving — dimmed + dashed. */
+        .appointment-calendar .fc-cut-event { opacity: 0.45; outline: 2px dashed #0f766e; outline-offset: -2px; }
       `}</style>
     </div>
   )

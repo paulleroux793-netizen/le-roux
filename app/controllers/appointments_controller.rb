@@ -261,7 +261,10 @@ class AppointmentsController < ApplicationController
     )
     expire_appointment_caches!
 
-    redirect_to appointments_location(appointment.start_time.to_date.iso8601),
+    # redirect_back (not redirect_to) so a drag/cut-paste move on the
+    # full-screen /calendar page stays there instead of bouncing to the
+    # dashboard /appointments list. Inline view still lands on /appointments.
+    redirect_back fallback_location: appointments_location(appointment.start_time.to_date.iso8601),
       notice: "Appointment updated", status: :see_other
   rescue ActiveRecord::RecordInvalid => e
     redirect_back fallback_location: appointments_location(anchor_date_for(new_start || appointment.start_time)),
