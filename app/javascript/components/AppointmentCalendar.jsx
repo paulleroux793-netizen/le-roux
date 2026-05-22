@@ -308,7 +308,7 @@ export default function AppointmentCalendar({
           fixed heights take effect and all 36 fifteen-minute lanes
           (08:00–17:00) render inside the viewport without scrolling. */}
       <style>{`
-        .appointment-calendar .fc-timegrid-slot { height: 1.35em !important; }
+        .appointment-calendar .fc-timegrid-slot { height: 1.1em !important; }
         .appointment-calendar .fc-timegrid-slot-label { font-size: 11px; }
         .appointment-calendar .fc-col-header-cell-cushion { font-size: 12px; }
       `}</style>
