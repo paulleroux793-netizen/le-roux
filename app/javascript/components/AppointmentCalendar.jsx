@@ -286,9 +286,9 @@ export default function AppointmentCalendar({
         eventContent={renderEventContent}
         slotMinTime="08:00:00"
         slotMaxTime="17:00:00"
+        scrollTime="08:00:00"
         allDaySlot={false}
         nowIndicator
-        expandRows
         height="100%"
         stickyHeaderDates
         slotDuration="00:15:00"
@@ -304,12 +304,12 @@ export default function AppointmentCalendar({
       </div>
       </div>
 
-      {/* Compact slot rows so the full working day fits on one screen.
-          In autoHeight (fullscreen) mode there is no expandRows, so these
-          fixed heights take effect and all 36 fifteen-minute lanes
-          (08:00–17:00) render inside the viewport without scrolling. */}
+      {/* Comfortable, readable slot rows. Without expandRows the grid keeps
+          these fixed heights and scrolls vertically when the day is taller
+          than the viewport — a normal, familiar week-calendar feel. The
+          FullCalendar toolbar stays pinned above the scroller. */}
       <style>{`
-        .appointment-calendar .fc-timegrid-slot { height: 1.1em !important; }
+        .appointment-calendar .fc-timegrid-slot { height: 1.5em !important; }
         .appointment-calendar .fc-timegrid-slot-label { font-size: 11px; }
         .appointment-calendar .fc-col-header-cell-cushion { font-size: 12px; }
       `}</style>

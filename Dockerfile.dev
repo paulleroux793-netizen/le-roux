@@ -1,0 +1,36 @@
+# Development image — NOT for production (production uses ./Dockerfile).
+# Installs all gems (incl. development/test groups) + Node, then runs the app
+# from a bind-mounted source tree so edits are live. Assets are served by the
+# Vite dev server (HMR), not precompiled.
+ARG RUBY_VERSION=3.3.2
+FROM docker.io/library/ruby:$RUBY_VERSION-slim
+
+WORKDIR /rails
+
+# Build + runtime deps (superset of prod base + build stage, kept in one image)
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      build-essential git curl pkg-config \
+      libpq-dev libvips libyaml-dev postgresql-client && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install --no-install-recommends -y nodejs && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+ENV RAILS_ENV=development \
+    BUNDLE_PATH=/usr/local/bundle
+
+# Install gems (all groups). Bundle lives outside /rails so the source bind
+# mount can't shadow it. Re-run a build when Gemfile changes.
+COPY vendor/* ./vendor/
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# Install JS deps. node_modules is preserved via a named volume in compose so
+# the bind-mounted (Windows) tree doesn't overwrite Linux-native modules.
+COPY package.json package-lock.json ./
+RUN npm ci
+
+EXPOSE 3000 3036
+
+# Default; overridden per-service in docker-compose.yml
+CMD ["bash", "-lc", "bundle exec rails server -b 0.0.0.0 -p 3000"]
