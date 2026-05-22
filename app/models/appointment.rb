@@ -10,7 +10,9 @@ class Appointment < ApplicationRecord
     cancelled: 3,
     no_show: 4,
     rescheduled: 5,
-    pending_confirmation: 6
+    pending_confirmation: 6,
+    arrived: 7,            # patient has checked in at reception
+    in_consultation: 8     # patient is in the chair with the dentist
   }
 
   validates :start_time, presence: true

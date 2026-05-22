@@ -309,6 +309,40 @@ class AppointmentsController < ApplicationController
       notice: "Appointment confirmed", status: :see_other
   end
 
+  # PATCH /appointments/:id/set_status
+  #
+  # Front-desk patient-journey transitions driven from the calendar pop-over:
+  # confirmed → arrived → in_consultation → completed (and back to scheduled
+  # if a click was a mistake). Each maps to a colour on the calendar so
+  # reception can read the room at a glance.
+  STATUS_TRANSITIONS = %w[scheduled confirmed arrived in_consultation completed no_show].freeze
+
+  def set_status
+    appointment = Appointment.find(params[:id])
+    new_status = params[:status].to_s
+
+    unless STATUS_TRANSITIONS.include?(new_status)
+      return redirect_back fallback_location: appointments_path,
+        alert: "Unknown status: #{new_status}", status: :see_other
+    end
+
+    appointment.update!(status: new_status)
+    AuditService.log(
+      action: "appointment.status_changed",
+      summary: "Marked #{appointment.patient.full_name}'s appointment as #{new_status.humanize} (#{appointment.start_time.strftime('%-d %b at %H:%M')})",
+      resource: appointment,
+      details: { status: new_status },
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    expire_appointment_caches!
+    redirect_back fallback_location: appointments_path,
+      notice: "Marked as #{new_status.humanize}", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: appointments_path,
+      alert: e.record.errors.full_messages.to_sentence, status: :see_other
+  end
+
   private
 
   def create_params
@@ -349,11 +383,18 @@ class AppointmentsController < ApplicationController
   end
 
   def appointment_props(appointment)
+    patient = appointment.patient
     {
       id: appointment.id,
       patient_id: appointment.patient_id,
-      patient_name: appointment.patient.full_name,
-      patient_phone: appointment.patient.phone,
+      patient_name: patient.full_name,
+      patient_phone: patient.phone,
+      patient_email: patient.email,
+      patient_dob: patient.date_of_birth&.iso8601,
+      patient_language: patient.preferred_language,
+      # "New" = this is the patient's only/earliest appointment. Lets the
+      # pop-over show new-vs-existing without a server round-trip on click.
+      is_new_patient: patient.appointments.where.not(id: appointment.id).none?,
       start_time: appointment.start_time.iso8601,
       end_time: appointment.end_time.iso8601,
       status: appointment.status,

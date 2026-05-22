@@ -1,25 +1,41 @@
 import React from 'react'
 import { router } from '@inertiajs/react'
-import { Phone, Mail, Calendar, Edit3, X as XIcon, CheckCircle, FileText } from 'lucide-react'
+import { Phone, Mail, Calendar, Edit3, X as XIcon, FileText, UserPlus, UserCheck, Cake, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import Modal from './Modal'
 
 // ── Detail modal ────────────────────────────────────────────────────
-// Rendered when the user clicks an event on the calendar. Mirrors the
-// right-side panel from screenshot ref #1 (Jerome Bellingham). Keeps
-// the heavy-weight AppointmentShow.jsx page intact — that's still
-// available for deep-link access, but 90% of reception tasks are
-// one-screen operations that don't need a full navigation.
-//
-// Actions (Edit / Cancel) are callbacks rather than navigation so the
-// host page can swap this modal for the Edit / Cancel modals in place.
+// Click an event on the calendar → this pops open with the full patient
+// + booking detail and the patient-journey status buttons. Reception
+// drives a patient through the day from here:
+//   Confirm → Arrived → In Consultation → Completed
+// Each transition recolours the event on the calendar.
 const STATUS_CHIP = {
-  scheduled:   'bg-amber-100 text-amber-700',
-  confirmed:   'bg-emerald-100 text-emerald-700',
-  completed:   'bg-blue-100 text-blue-700',
-  cancelled:   'bg-red-100 text-red-700',
-  no_show:     'bg-gray-100 text-gray-600',
-  rescheduled: 'bg-violet-100 text-violet-700',
+  scheduled:            'bg-gray-100 text-gray-600',
+  confirmed:            'bg-emerald-100 text-emerald-700',
+  arrived:              'bg-yellow-100 text-yellow-800',
+  in_consultation:      'bg-blue-100 text-blue-700',
+  completed:            'bg-blue-700 text-white',
+  cancelled:            'bg-red-100 text-red-700',
+  no_show:              'bg-gray-100 text-gray-600',
+  rescheduled:          'bg-violet-100 text-violet-700',
+  pending_confirmation: 'bg-orange-100 text-orange-700',
+}
+
+// The front-desk journey, in order. Each button sets the status via
+// /appointments/:id/set_status and tints the calendar event.
+const JOURNEY = [
+  { key: 'confirmed',       label: 'Confirm',         active: 'bg-emerald-500' },
+  { key: 'arrived',         label: 'Arrived',         active: 'bg-yellow-400 text-yellow-900' },
+  { key: 'in_consultation', label: 'In Consultation', active: 'bg-blue-400' },
+  { key: 'completed',       label: 'Completed',       active: 'bg-blue-700' },
+]
+
+const STATUS_LABEL = {
+  scheduled: 'Scheduled', confirmed: 'Confirmed', arrived: 'Arrived',
+  in_consultation: 'In Consultation', completed: 'Completed',
+  cancelled: 'Cancelled', no_show: 'No show', rescheduled: 'Rescheduled',
+  pending_confirmation: 'Pending Confirmation',
 }
 
 const fmtDate = (iso) =>
@@ -28,25 +44,26 @@ const fmtDate = (iso) =>
 const fmtTime = (iso) =>
   new Date(iso).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
 
-export default function AppointmentDetailModal({
-  appointment,
-  open,
-  onClose,
-  onEdit,
-  onCancel,
-}) {
+const fmtDob = (iso) => {
+  if (!iso) return null
+  const d = new Date(iso)
+  const age = Math.floor((Date.now() - d.getTime()) / (365.25 * 24 * 3600 * 1000))
+  return `${d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })} (age ${age})`
+}
+
+export default function AppointmentDetailModal({ appointment, open, onClose, onEdit, onCancel }) {
   if (!appointment) return null
 
-  const handleConfirm = () => {
-    router.patch(`/appointments/${appointment.id}/confirm`, {}, {
+  const setStatus = (status) => {
+    router.patch(`/appointments/${appointment.id}/set_status`, { status }, {
       preserveScroll: true,
-      onSuccess: () => {
-        toast.success('Appointment confirmed')
-        onClose?.()
-      },
-      onError: () => toast.error('Could not confirm'),
+      onSuccess: () => { toast.success(`Marked as ${STATUS_LABEL[status] || status}`); onClose?.() },
+      onError:   () => toast.error('Could not update status'),
     })
   }
+
+  const dob = fmtDob(appointment.patient_dob)
+  const isNew = appointment.is_new_patient
 
   return (
     <Modal
@@ -55,32 +72,24 @@ export default function AppointmentDetailModal({
       title="Appointment Details"
       size="xl"
       footer={
-        <>
+        <div className="flex w-full items-center justify-between gap-2">
           <button
             onClick={onCancel}
-            className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-brand-danger transition-colors hover:bg-brand-danger/10"
+            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-brand-danger transition-colors hover:bg-brand-danger/10"
           >
             <XIcon size={15} /> Cancel
           </button>
           <button
             onClick={onEdit}
-            className="inline-flex items-center gap-1.5 rounded-2xl px-4 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-brand-surface/45"
+            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-brand-surface/45"
           >
             <Edit3 size={15} /> Edit
           </button>
-          {appointment.status !== 'confirmed' && appointment.status !== 'cancelled' && (
-            <button
-              onClick={handleConfirm}
-              className="inline-flex items-center gap-1.5 rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark"
-            >
-              <CheckCircle size={15} /> Confirm
-            </button>
-          )}
-        </>
+        </div>
       }
     >
       {/* Patient card */}
-      <div className="mb-5 rounded-xl border border-brand-accent/75 bg-gradient-to-br from-brand-surface/35 to-white p-5">
+      <div className="mb-4 rounded-xl border border-brand-accent/75 bg-gradient-to-br from-brand-surface/35 to-white p-5">
         <div className="flex items-start gap-4">
           <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-primary">
             <span className="text-white font-semibold">
@@ -88,40 +97,68 @@ export default function AppointmentDetailModal({
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-lg font-semibold text-brand-ink">
-              {appointment.patient_name}
-            </h3>
-            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-brand-muted">
+            <div className="flex items-center gap-2">
+              <h3 className="truncate text-lg font-semibold text-brand-ink">{appointment.patient_name}</h3>
+              <span className={`inline-flex flex-shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${isNew ? 'bg-sky-100 text-sky-700' : 'bg-gray-100 text-gray-600'}`}>
+                {isNew ? <><UserPlus size={11} /> New patient</> : <><UserCheck size={11} /> Returning</>}
+              </span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-brand-muted">
               {appointment.patient_phone && (
-                <span className="flex items-center gap-1.5">
-                  <Phone size={13} /> {appointment.patient_phone}
-                </span>
+                <span className="flex items-center gap-1.5"><Phone size={13} /> {appointment.patient_phone}</span>
+              )}
+              {appointment.patient_email && (
+                <span className="flex items-center gap-1.5"><Mail size={13} /> {appointment.patient_email}</span>
               )}
             </div>
           </div>
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_CHIP[appointment.status] || 'bg-gray-100 text-gray-600'}`}>
-            {appointment.status}
+          <span className={`inline-flex flex-shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_CHIP[appointment.status] || 'bg-gray-100 text-gray-600'}`}>
+            {STATUS_LABEL[appointment.status] || appointment.status}
           </span>
         </div>
       </div>
 
-      {/* Booking Info */}
+      {/* Patient journey — one-click status buttons */}
+      <div className="mb-4">
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-muted">Patient journey</h4>
+        <div className="grid grid-cols-4 gap-2">
+          {JOURNEY.map((step) => {
+            const isCurrent = appointment.status === step.key
+            return (
+              <button
+                key={step.key}
+                onClick={() => setStatus(step.key)}
+                className={`rounded-xl px-2 py-2.5 text-xs font-semibold transition-colors ${
+                  isCurrent
+                    ? `${step.active} ${step.key === 'arrived' ? '' : 'text-white'} shadow-sm`
+                    : 'border border-brand-border bg-white text-brand-ink hover:bg-brand-surface/50'
+                }`}
+              >
+                {step.label}
+              </button>
+            )
+          })}
+        </div>
+        <p className="mt-1.5 text-[11px] text-brand-muted">
+          Tap to update — the colour on the calendar changes to match.
+        </p>
+      </div>
+
+      {/* Booking info */}
       <div>
-        <h4 className="mb-3 text-sm font-semibold text-brand-ink">Booking Information</h4>
+        <h4 className="mb-2 text-sm font-semibold text-brand-ink">Booking information</h4>
         <div className="space-y-3 rounded-xl border border-brand-accent/75 p-4">
-          <Row icon={Calendar} label="Date">
-            {fmtDate(appointment.start_time)}
-          </Row>
-          <Row icon={Calendar} label="Time">
-            {fmtTime(appointment.start_time)} — {fmtTime(appointment.end_time)}
-          </Row>
-          <Row icon={Mail} label="Reason">
-            {appointment.reason || '—'}
-          </Row>
-          {appointment.notes && (
-            <Row icon={FileText} label="Notes">
-              <span className="whitespace-pre-wrap">{appointment.notes}</span>
+          <Row icon={Calendar} label="Date">{fmtDate(appointment.start_time)}</Row>
+          <Row icon={Calendar} label="Time">{fmtTime(appointment.start_time)} — {fmtTime(appointment.end_time)}</Row>
+          <Row icon={FileText} label="Reason for visit">{appointment.reason || '—'}</Row>
+          {dob && <Row icon={Cake} label="Date of birth">{dob}</Row>}
+          {appointment.patient_language && (
+            <Row icon={Globe} label="Preferred language">
+              {appointment.patient_language === 'af' ? 'Afrikaans' : 'English'}
             </Row>
+          )}
+          {appointment.notes && (
+            <Row icon={FileText} label="Notes"><span className="whitespace-pre-wrap">{appointment.notes}</span></Row>
           )}
         </div>
       </div>

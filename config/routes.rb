@@ -27,6 +27,7 @@ Rails.application.routes.draw do
     member do
       patch :cancel
       patch :confirm
+      patch :set_status
     end
   end
   resources :patients, only: [ :index, :show, :create, :update, :destroy ]

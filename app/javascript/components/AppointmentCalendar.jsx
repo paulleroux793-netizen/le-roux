@@ -12,13 +12,22 @@ const DEFAULT_CALENDAR_VIEW = 'timeGridWeek'
 // ── Status colours ────────────────────────────────────────────────
 // Minimal: a tinted background + matching text for the compact event
 // card. All details live in the popup (AppointmentDetailModal).
+// Patient-journey colour scheme (Paul's spec 2026-05-22):
+//   scheduled        → white (normal)
+//   confirmed        → green
+//   arrived          → light yellow
+//   in_consultation  → light blue
+//   completed        → darker blue (white text)
+// The other statuses keep sensible distinct tints.
 const STATUS_COLORS = {
-  scheduled:   { bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD', label: 'Scheduled',   dot: 'bg-brand-primary' },
-  confirmed:   { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0', label: 'Confirmed',   dot: 'bg-brand-success' },
-  completed:   { bg: '#E0E7FF', text: '#3730A3', border: '#C7D2FE', label: 'Completed',   dot: 'bg-brand-primary-dark' },
-  cancelled:   { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA', label: 'Cancelled',   dot: 'bg-brand-danger' },
-  no_show:     { bg: '#F3F4F6', text: '#4B5563', border: '#E5E7EB', label: 'No show',     dot: 'bg-brand-muted' },
-  rescheduled:          { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'Rescheduled',          dot: 'bg-brand-warning' },
+  scheduled:            { bg: '#FFFFFF', text: '#374151', border: '#CBD5E1', label: 'Scheduled',        dot: 'bg-gray-300' },
+  confirmed:            { bg: '#BBF7D0', text: '#065F46', border: '#4ADE80', label: 'Confirmed',        dot: 'bg-emerald-500' },
+  arrived:              { bg: '#FEF08A', text: '#854D0E', border: '#FACC15', label: 'Arrived',          dot: 'bg-yellow-400' },
+  in_consultation:      { bg: '#BFDBFE', text: '#1E3A8A', border: '#60A5FA', label: 'In Consultation',  dot: 'bg-blue-400' },
+  completed:            { bg: '#1D4ED8', text: '#FFFFFF', border: '#1E3A8A', label: 'Completed',        dot: 'bg-blue-700' },
+  cancelled:            { bg: '#FEE2E2', text: '#991B1B', border: '#FCA5A5', label: 'Cancelled',        dot: 'bg-brand-danger' },
+  no_show:              { bg: '#F3F4F6', text: '#4B5563', border: '#E5E7EB', label: 'No show',          dot: 'bg-brand-muted' },
+  rescheduled:          { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A', label: 'Rescheduled',      dot: 'bg-brand-warning' },
   pending_confirmation: { bg: '#FFF7ED', text: '#9A3412', border: '#FED7AA', label: 'Pending Confirmation', dot: 'bg-orange-400' },
 }
 
@@ -100,6 +109,7 @@ export default function AppointmentCalendar({
             reason: apt.reason,
             status: apt.status,
             phone: apt.patient_phone,
+            isNew: apt.is_new_patient,
           },
         }
       }),
@@ -177,21 +187,14 @@ export default function AppointmentCalendar({
   const renderEventContent = (arg) => {
     const { reason } = arg.event.extendedProps
     const patient = arg.event.title
-    const start = arg.event.start
-    const end = arg.event.end || arg.event.start
 
+    // Compact card per Paul's spec: name + reason for visit. Full details
+    // (contact, new/existing, etc.) live in the click pop-over.
     return (
-      <div className="flex h-full w-full cursor-pointer flex-col justify-center overflow-hidden px-2 py-1">
-        <p className="truncate text-[12px] font-semibold leading-tight">
-          {patient}
-        </p>
-        <p className="truncate text-[11px] font-medium leading-tight opacity-80">
-          {formatClock(start)} – {formatClock(end)}
-        </p>
+      <div className="flex h-full w-full cursor-pointer flex-col justify-center overflow-hidden px-1.5 py-0.5 leading-tight">
+        <p className="truncate text-[12px] font-semibold">{patient}</p>
         {reason && (
-          <p className="truncate text-[10px] leading-tight opacity-60">
-            {reason}
-          </p>
+          <p className="truncate text-[10px] opacity-75">{reason}</p>
         )}
       </div>
     )
@@ -242,7 +245,7 @@ export default function AppointmentCalendar({
         </div>
       </div>
 
-      <div className="px-4 pb-4 pt-3 md:px-5">
+      <div className="flex h-[calc(100vh-210px)] flex-col px-3 pb-3 pt-2 md:px-4">
         {search && filtered.length === 0 && (
           <div className="mb-3 rounded-lg border border-dashed border-brand-border bg-brand-surface px-4 py-2.5 text-sm text-brand-muted">
             No appointments match your search.
@@ -268,21 +271,21 @@ export default function AppointmentCalendar({
         datesSet={handleDatesSet}
         eventContent={renderEventContent}
         slotMinTime="08:00:00"
-        slotMaxTime="17:30:00"
+        slotMaxTime="17:00:00"
         allDaySlot={false}
         nowIndicator
-        expandRows={false}
-        height={600}
+        expandRows
+        height="100%"
         stickyHeaderDates
-        slotDuration="00:30:00"
+        slotDuration="00:15:00"
+        slotLabelInterval="01:00:00"
+        snapDuration="00:15:00"
         weekends={false}
         firstDay={1}
         buttonText={{ timeGridWeek: 'Week', timeGridDay: 'Day', dayGridMonth: 'Month' }}
         eventTimeFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
         slotLabelFormat={{ hour: 'numeric', minute: '2-digit', meridiem: 'short' }}
         dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
-        dayMaxEvents={3}
-        moreLinkClick="popover"
       />
       </div>
     </div>
