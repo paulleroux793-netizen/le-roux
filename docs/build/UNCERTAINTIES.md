@@ -100,5 +100,20 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
     audit will remap scribe keywords to codes that exist (and the production Claude path will pick codes
     from the live catalogue).** Also: wire the real Anthropic call + the local Whisper capture on the PC.
 
+### RESOLVED by Paul (2026-05-22)
+- **#13 Patient identity — RESOLVED**: use a flexible `id_number` (SA ID / passport / DOB-based for
+  kids). Implemented; phone made optional; import now does all 2,200 with 0 exceptions.
+- **#16 Name — RESOLVED**: keep **Ivory**.
+- **#17 VAT — RESOLVED**: practice IS VAT-registered, fees are VAT-inclusive. Set vat_registered=true.
+  *(Still need the actual VAT NUMBER string to print on invoices — Paul to-do.)*
+
+### New tasks from Paul's 2026-05-22 direction
+22. **[needs-access] SADA / Discovery 2026 rates.** Paul: scrape the latest rates from the SADA website
+    (login required — Paul to log me in). Pricing model: **base = Discovery medical-aid rate; private
+    practice rate = Discovery + 30%** (some codes adjusted further — Paul to specify which). Only
+    Discovery needed (private practice; patients self-claim). Needs annual update. → I'll scrape via
+    Playwright once Paul provides access, then re-seed the catalogue with Discovery base + 30% markup
+    (replacing the interim median-from-transactions fees).
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*
