@@ -2,6 +2,7 @@ import React from 'react'
 import { Link } from '@inertiajs/react'
 import { ArrowLeft, Printer, MessageCircle } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
+import BrandLogo from '../components/BrandLogo'
 import { cn } from '../lib/utils'
 
 const rand = (n) => `R${(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -33,13 +34,8 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
         {/* Header — practice + practitioner identifiers (mandatory for the patient's self-claim) */}
         <div className="flex items-start justify-between border-b border-brand-border pb-5">
           <div>
-            {/* Brand wordmark — mirrors the practice logo (gold + grey) */}
-            <div className="leading-none">
-              <span className="text-xl font-semibold tracking-wide text-brand-primary">
-                Dr Chalita <span className="font-normal italic">le</span> Roux
-              </span>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-brand-muted">dentist &amp; aesthetic practitioner</p>
-            </div>
+            {/* Real logo if provided (public/brand/logo.png), else gold wordmark */}
+            <BrandLogo className="h-14" />
             <p className="mt-2 text-xs text-brand-muted">{practice.address}</p>
             <p className="text-xs text-brand-muted">{practice.phone} · {practice.email}</p>
             <div className="mt-2 space-y-0.5 text-xs text-brand-ink">

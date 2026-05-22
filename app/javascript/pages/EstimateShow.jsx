@@ -2,6 +2,7 @@ import React from 'react'
 import { Link } from '@inertiajs/react'
 import { ArrowLeft, Printer, MessageCircle, Info } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
+import BrandLogo from '../components/BrandLogo'
 
 const rand = (n) => `R${(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
@@ -28,12 +29,7 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
         {/* Header — brand wordmark + practice identifiers */}
         <div className="flex items-start justify-between border-b border-brand-border pb-5">
           <div>
-            <div className="leading-none">
-              <span className="text-xl font-semibold tracking-wide text-brand-primary">
-                Dr Chalita <span className="font-normal italic">le</span> Roux
-              </span>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-brand-muted">dentist &amp; aesthetic practitioner</p>
-            </div>
+            <BrandLogo className="h-14" />
             <p className="mt-2 text-xs text-brand-muted">{practice.address}</p>
             <p className="text-xs text-brand-muted">{practice.phone} · {practice.email}</p>
             <p className="mt-2 text-xs text-brand-ink"><span className="text-brand-muted">HPCSA:</span> {practice.hpcsa} &nbsp; <span className="text-brand-muted">Practice no:</span> {practice.bhf} &nbsp; <span className="text-brand-muted">VAT:</span> {practice.vat_number}</p>
