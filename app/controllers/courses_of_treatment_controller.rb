@@ -55,7 +55,8 @@ class CoursesOfTreatmentController < ApplicationController
       setting: c.setting,
       status: c.status,
       item_count: c.treatment_items.size,
-      estimated_total: c.estimated_total
+      # Compute from the already-loaded items (avoids an N+1 SUM per row).
+      estimated_total: c.treatment_items.reject { |i| i.status == "voided" }.sum { |i| i.fee_cents.to_i } / 100.0
     }
   end
 

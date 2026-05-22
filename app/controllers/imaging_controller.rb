@@ -1,7 +1,7 @@
 # SIDEXIS imaging studies — review queue + matched studies. Additive route. (Ivory, Phase 5.)
 class ImagingController < ApplicationController
   def index
-    studies = ImagingStudy.order(captured_at: :desc).limit(400).to_a
+    studies = ImagingStudy.includes(:patient).order(captured_at: :desc).limit(400).to_a
     render inertia: "Imaging", props: {
       studies: studies.map { |s|
         {

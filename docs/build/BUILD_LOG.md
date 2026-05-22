@@ -85,11 +85,14 @@
 **ALL PHASES 1-6 COMPLETE.** Next: Phase 7 — whole-system stress test, audit & remediation.
 
 ### Phase 7 — Whole-system stress test, audit & remediation (after Phases 1-6, per Paul 22 May)
-- [ ] P7.1 Stress-test/audit the whole Ivory system (data integrity, security/POPIA, additive-safety,
-  performance, gaps vs the proposal). Write docs/build/SYSTEM_AUDIT.md with findings + severity.
-- [ ] P7.2 Turn findings into a prioritised recommendations list.
-- [ ] P7.3 IMPLEMENT the recommendations (commit each fix; re-verify).
-- [ ] P7.4 Final summary + present all parked UNCERTAINTIES to Paul.
+- [x] P7.1 Audited whole system → docs/build/SYSTEM_AUDIT.md (security/POPIA, integrity, correctness, perf, additive-safety, gaps).
+- [x] P7.2 Prioritised: 4 actionable fixes (high/med); rest are decisions for Paul.
+- [x] P7.3 IMPLEMENTED + verified: (1) FK on_delete nullify — patient-delete safe (#19); (2) scribe
+  surfaces needs_code instead of guessing a missing billable code (#21); (3) Imaging N+1 → includes(:patient);
+  (4) Courses list N+1 → compute from loaded items. Pages still HTTP 200.
+- [x] P7.4 Final summary + uncertainties presented to Paul.
+
+**PHASE 7 COMPLETE — BUILD DONE. Loop ended (remaining items are Paul-decisions, not build steps).**
 
 ## Cross-cutting (every phase)
 - [ ] Users/roles/permissions (reception vs dentist) + immutable AuditLog on every clinical/financial change

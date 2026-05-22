@@ -38,20 +38,22 @@ class ScribeDraftService
   end
 
   # Deterministic: find FDI tooth numbers near action keywords.
+  # IMPORTANT: only attach a procedure code if it actually exists in the practice catalogue;
+  # otherwise leave code nil + needs_code so the dentist selects it during review (never guess a
+  # wrong billable code). (Audit fix #21.)
   def keyword_extract
     findings = []
-    # Sentences / clauses
     @transcript.split(/[.;\n]/).each do |clause|
       teeth = clause.scan(/\b([1-4][1-8])\b/).flatten.uniq
       KEYWORD_CODES.each do |pattern, code|
         next unless clause.match?(pattern)
-        if teeth.any?
-          teeth.each { |t| findings << { "tooth" => t, "code" => code, "note" => clause.strip } }
-        else
-          findings << { "tooth" => nil, "code" => code, "note" => clause.strip }
+        resolved = ProcedureCode.exists?(code: code) ? code : nil
+        targets = teeth.any? ? teeth : [ nil ]
+        targets.each do |t|
+          findings << { "tooth" => t, "code" => resolved, "needs_code" => resolved.nil?, "note" => clause.strip }
         end
       end
     end
-    findings.uniq { |f| [ f["tooth"], f["code"] ] }
+    findings.uniq { |f| [ f["tooth"], f["code"], f["note"] ] }
   end
 end

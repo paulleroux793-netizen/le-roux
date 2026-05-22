@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000008) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000009) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -841,7 +841,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000008) do
   add_foreign_key "fee_schedule_items", "fee_schedules"
   add_foreign_key "fee_schedule_items", "procedure_codes"
   add_foreign_key "fee_schedules", "medical_schemes"
-  add_foreign_key "form_submissions", "documents"
+  add_foreign_key "form_submissions", "documents", on_delete: :nullify
   add_foreign_key "form_submissions", "form_templates"
   add_foreign_key "form_submissions", "patients"
   add_foreign_key "imaging_studies", "patients"
@@ -850,7 +850,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000008) do
   add_foreign_key "invoices", "courses_of_treatment", column: "course_of_treatment_id"
   add_foreign_key "invoices", "patients"
   add_foreign_key "notepad_pages", "courses_of_treatment", column: "course_of_treatment_id"
-  add_foreign_key "notepad_pages", "documents"
+  add_foreign_key "notepad_pages", "documents", on_delete: :nullify
   add_foreign_key "notepad_pages", "patients"
   add_foreign_key "notifications", "appointments"
   add_foreign_key "notifications", "conversations"
@@ -864,8 +864,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000008) do
   add_foreign_key "scheme_memberships", "medical_schemes"
   add_foreign_key "scheme_memberships", "patients", column: "main_member_patient_id"
   add_foreign_key "scribe_sessions", "appointments"
-  add_foreign_key "scribe_sessions", "courses_of_treatment", column: "course_of_treatment_id"
-  add_foreign_key "scribe_sessions", "estimates"
+  add_foreign_key "scribe_sessions", "courses_of_treatment", column: "course_of_treatment_id", on_delete: :nullify
+  add_foreign_key "scribe_sessions", "estimates", on_delete: :nullify
   add_foreign_key "scribe_sessions", "patients"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
