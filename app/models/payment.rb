@@ -5,6 +5,7 @@ class Payment < ApplicationRecord
 
   belongs_to :billing_account, optional: true
   belongs_to :invoice, optional: true
+  belongs_to :patient, optional: true   # a payment may be tied directly to a patient, not just an account
 
   validates :method, inclusion: { in: METHODS }
   validates :amount_cents, numericality: { greater_than: 0 }

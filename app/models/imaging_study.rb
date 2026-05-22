@@ -12,6 +12,8 @@ class ImagingStudy < ApplicationRecord
 
   validates :modality, inclusion: { in: MODALITIES }
   validates :status, inclusion: { in: STATUSES }
+  # Guard idempotency at the model level too (DB has a unique index) so re-imports fail gracefully.
+  validates :source_file, uniqueness: { scope: :source_folder }, allow_nil: true
 
   scope :needs_match, -> { where(status: "needs_match") }
   scope :matched, -> { where(status: "matched") }
