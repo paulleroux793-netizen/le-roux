@@ -26,8 +26,11 @@
   (gitignored PII), matches existing patients by phone, never clobbers. Dry-run plan: 1572 accounts,
   1690 patients, 168 schemes, 510 exceptions (families sharing/lacking a phone). **Real write GATED on
   UNCERTAINTIES #13 (patient identity).** Logic proven; no live data touched.
-- [ ] P1.6 Controllers + Inertia pages: Accounts list/show, Procedure catalogue, Macros
-- [ ] P1.7 Verify on localhost:3000
+- [x] P1.6 Controllers + Inertia pages: ProcedureCatalogue, TreatmentMacros, BillingAccounts(+show).
+  Additive routes (/procedure-codes, /treatment-macros, /accounts). New "Practice" nav group.
+- [x] P1.7 Verified on localhost:3000 — all three pages HTTP 200 with real seeded data (8101, BRIDGE 3).
+
+**PHASE 1 COMPLETE.**
 
 ### Phase 2 — Clinical core: Course of Treatment + tooth chart
 - [ ] P2.1 Migrations: courses_of_treatment, treatment_items, clinical_notes, tooth_chart_entries
@@ -66,14 +69,14 @@
 ---
 
 ## Current status
-**Phase 1, next step P1.6 — controllers + Inertia pages.** Data layer, seeds, and import (dry-run)
-done. The real patient import is gated on UNCERTAINTIES #13 (don't unblock without Paul). NEXT (P1.6):
-build read-first Inertia pages on the seeded catalogue/macros (which exist now), in the app's style
-(`render inertia: "Page"`, pages in app/javascript/pages, DashboardLayout). Suggested:
-- `ProcedureCatalogue` page + controller (list 172 codes, fee, VAT, category) — additive route.
-- `TreatmentMacros` page (list 20 macros, expand to lines).
-- `BillingAccounts` index/show (will populate once import is unblocked; build the screens now).
-Add routes additively (do NOT touch existing routes/webhooks). Then P1.7 verify on localhost:3000.
+**PHASE 1 COMPLETE. Next: Phase 2 — clinical core (Course of Treatment + tooth chart).** NEXT (P2.1):
+migrations for courses_of_treatment (patient_id, optional scheme_membership_id, setting enum:
+in_chair/hospital_chair/hospital_theatre/sedation, status, authorisation_number),
+treatment_items (cot_id, procedure_code_id, provider, tooth_number FDI, surface, planned/completed
+dates, status, fee), clinical_notes (cot_id/patient_id, SOAP fields, signed_by/at — append-only),
+tooth_chart_entries (patient_id, tooth_number, condition, surface, noted_at). Then P2.2 models +
+status state machine (planned→completed moves item toward invoicing), P2.3 odontogram component +
+COT page, P2.4 verify. Keep additive; no live tables touched.
 
 How to resume: read this file, do the next unchecked `[ ]` step, stay additive, verify in Docker
 (`docker compose exec -T web bundle exec rails ...`), commit, append a session entry, keep going.
@@ -97,3 +100,7 @@ Park anything uncertain in UNCERTAINTIES.md.
   Dry-run: 1572 accounts / 1690 patients / 168 schemes / 510 exceptions. Real write GATED on
   UNCERTAINTIES #13 (patient identity for families sharing a phone). Committed importer code only.
   Next: P1.6 controllers + Inertia pages on the seeded catalogue.
+- **2026-05-22 ~18:30** — P1.6 + P1.7 DONE → PHASE 1 COMPLETE. Built ProcedureCodes/TreatmentMacros/
+  BillingAccounts controllers + 4 Inertia pages + additive routes + a "Practice" sidebar group.
+  Verified all 3 pages HTTP 200 with real seeded data (8101, BRIDGE 3). Parked #15 (nav labels not yet
+  localised to AF). Next: Phase 2 clinical core.

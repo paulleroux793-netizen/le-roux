@@ -66,5 +66,10 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
     importer at a secured local path; don't put the export in the repo.** (Macro/procedure-code CSVs
     are non-PII and are tracked.)
 
+15. **[decided] New nav labels are English-only.** The existing dashboard has an EN/AF toggle via a
+    translations file; my new "Practice" nav items (Accounts / Procedure Codes / Treatment Macros) use
+    literal English labels to avoid touching the shared i18n system. → **Want these (and the new pages)
+    localised to Afrikaans too? I'll add the keys if so.**
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*

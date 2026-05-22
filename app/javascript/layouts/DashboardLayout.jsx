@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Calendar, Users, MessageSquare, BarChart2,
   BellRing, Settings, ChevronDown, HelpCircle, Globe,
   User, LogOut, KeyRound, ClipboardList,
+  Stethoscope, Layers, Wallet,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -18,6 +19,13 @@ const NAV_ITEMS = [
   { key: 'nav_conversations', href: '/conversations', icon: MessageSquare },
   { key: 'nav_analytics',     href: '/analytics',     icon: BarChart2 },
   { key: 'nav_audit_log',    href: '/audit-log',     icon: ClipboardList },
+]
+
+// Practice-management system (Phase 1+). Literal labels for now — localisation parked.
+const PMS_NAV_ITEMS = [
+  { label: 'Accounts',          href: '/accounts',         icon: Wallet },
+  { label: 'Procedure Codes',   href: '/procedure-codes',  icon: Stethoscope },
+  { label: 'Treatment Macros',  href: '/treatment-macros', icon: Layers },
 ]
 
 export default function DashboardLayout({ children }) {
@@ -86,6 +94,30 @@ export default function DashboardLayout({ children }) {
                 {active && (
                   <span className="ml-auto h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white" />
                 )}
+              </Link>
+            )
+          })}
+
+          {/* Practice-management section (Phase 1+) */}
+          <p className="mb-3 mt-6 px-3 text-xs font-semibold uppercase tracking-[0.22em] text-brand-muted select-none">
+            Practice
+          </p>
+          {PMS_NAV_ITEMS.map(({ label, href, icon: Icon }) => {
+            const active = isActive(href)
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition-all',
+                  active
+                    ? 'bg-brand-primary text-white'
+                    : 'text-brand-muted hover:bg-brand-surface hover:text-brand-ink'
+                )}
+              >
+                <Icon size={16} className={cn('flex-shrink-0', active ? 'text-white' : 'text-brand-muted')} />
+                <span className="truncate">{label}</span>
+                {active && <span className="ml-auto h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white" />}
               </Link>
             )
           })}

@@ -69,6 +69,11 @@ Rails.application.routes.draw do
   get "analytics", to: "analytics#index"
   get "audit-log", to: "audit_logs#index", as: :audit_log
   get "audit-log/export", to: "audit_logs#export", as: :audit_log_export
+
+  # ── Practice-management system (Phase 1+) — ADDITIVE, read-first ──
+  get "procedure-codes", to: "procedure_codes#index", as: :procedure_codes
+  get "treatment-macros", to: "treatment_macros#index", as: :treatment_macros
+  resources :billing_accounts, only: [ :index, :show ], path: "accounts"
   get   "settings",          to: "settings#index"
   post  "settings/language", to: "settings#update_language"
   patch "settings/practice", to: "settings#update_practice", as: :settings_practice
