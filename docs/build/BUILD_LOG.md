@@ -22,7 +22,10 @@
 - [x] P1.2 Migrations: procedure_codes, treatment_macros, treatment_macro_items, fee_schedules, fee_schedule_items
 - [x] P1.3 Models + associations (additive on Patient via PracticeManagementPatient concern; Patient logic untouched) — migrated + sanity-verified in Docker
 - [x] P1.4 Seeds: 172 procedure_codes (real median fees from transactions) + 20 macros (170 lines, all linked) + PRIVATE 2026 fee schedule. CSVs in db/seed_data/, seed at db/seeds/practice_management.rb (idempotent)
-- [ ] P1.5 Importer: Patient Demographics.XLS → patients + billing_accounts (dry-run first)
+- [x] P1.5 Importer (dry-run): PatientDemographicsImporter — extracts to db/seed_data/patients.csv
+  (gitignored PII), matches existing patients by phone, never clobbers. Dry-run plan: 1572 accounts,
+  1690 patients, 168 schemes, 510 exceptions (families sharing/lacking a phone). **Real write GATED on
+  UNCERTAINTIES #13 (patient identity).** Logic proven; no live data touched.
 - [ ] P1.6 Controllers + Inertia pages: Accounts list/show, Procedure catalogue, Macros
 - [ ] P1.7 Verify on localhost:3000
 
@@ -63,12 +66,14 @@
 ---
 
 ## Current status
-**Phase 1, next step P1.5 — patient import (dry-run first).** Data layer + seeds done. NEXT:
-extract `Patient Demographics.XLS` (2,200 rows) → a repo CSV (db/seed_data/patients.csv), write an
-idempotent importer that (a) matches existing patients by normalised phone (NEVER duplicates/clobbers
-live patients), (b) creates billing_accounts + account_patients, (c) captures scheme membership where
-present. Run a DRY-RUN that reports create/match/skip counts before any write. Then P1.6
-controllers/pages (Accounts list/show, Procedure catalogue, Macros), P1.7 verify on localhost:3000.
+**Phase 1, next step P1.6 — controllers + Inertia pages.** Data layer, seeds, and import (dry-run)
+done. The real patient import is gated on UNCERTAINTIES #13 (don't unblock without Paul). NEXT (P1.6):
+build read-first Inertia pages on the seeded catalogue/macros (which exist now), in the app's style
+(`render inertia: "Page"`, pages in app/javascript/pages, DashboardLayout). Suggested:
+- `ProcedureCatalogue` page + controller (list 172 codes, fee, VAT, category) — additive route.
+- `TreatmentMacros` page (list 20 macros, expand to lines).
+- `BillingAccounts` index/show (will populate once import is unblocked; build the screens now).
+Add routes additively (do NOT touch existing routes/webhooks). Then P1.7 verify on localhost:3000.
 
 How to resume: read this file, do the next unchecked `[ ]` step, stay additive, verify in Docker
 (`docker compose exec -T web bundle exec rails ...`), commit, append a session entry, keep going.
@@ -86,3 +91,9 @@ Park anything uncertain in UNCERTAINTIES.md.
   db/seeds/practice_management.rb; PRIVATE 2026 fee schedule built. Verified BRIDGE 3 expands to 16
   linked lines. Parked UNCERTAINTIES #10–12 (placeholder descriptions, VAT-by-keyword, junk codes).
   Next: P1.5 patient import (dry-run).
+- **2026-05-22 ~18:10** — P1.5 DONE (dry-run). Extracted 2,200-row demographics → gitignored
+  db/seed_data/patients.csv (PII never committed). Built PatientDemographicsImporter (matches existing
+  by phone, never clobbers; creates accounts/schemes; creates new patients only with unique phone).
+  Dry-run: 1572 accounts / 1690 patients / 168 schemes / 510 exceptions. Real write GATED on
+  UNCERTAINTIES #13 (patient identity for families sharing a phone). Committed importer code only.
+  Next: P1.6 controllers + Inertia pages on the seeded catalogue.

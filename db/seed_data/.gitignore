@@ -1,0 +1,2 @@
+# Real patient PII — never commit. Import reads it locally only.
+patients.csv

@@ -51,5 +51,20 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
 12. **[decided] A few non-clinical codes** (e.g. `0000`) came through from the transaction export. Left
     in the catalogue as `category: other` for now. → **Confirm these can be hidden/removed.**
 
+13. **[BLOCKED-needs-you] Patient identity / family members sharing a phone.** The live `patients`
+    table requires a **unique, non-blank phone**. In your 2,200-row export, **386 rows are family
+    members sharing one cell number** and **124 have no phone** — 510 patients that can't each get a
+    unique-phone Patient row. My dry-run importer creates the 1,690 patients that DO have a unique
+    phone, plus all 1,572 accounts + 168 schemes, and parks the other 510 as exceptions. → **To import
+    the whole family, I recommend adding a nullable `id_number` to patients as the real identity key
+    (SA ID is unique per person) and allowing a blank phone for non-contactable dependants. That's a
+    small additive change to the patients table — may I make it? Or do you prefer family members live
+    only as account links until they first message us?** *(Real import is gated on this answer; dry-run
+    proves the logic.)*
+14. **[decided] Patient PII is NOT committed to git.** `db/seed_data/patients.csv` is gitignored (real
+    names/IDs/phones). The importer reads it locally only. → **For the production import, point the
+    importer at a secured local path; don't put the export in the repo.** (Macro/procedure-code CSVs
+    are non-PII and are tracked.)
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*
