@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000003) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -124,6 +124,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000002) do
     t.index ["reason_category"], name: "index_cancellation_reasons_on_reason_category"
   end
 
+  create_table "clinical_notes", force: :cascade do |t|
+    t.text "assessment"
+    t.bigint "course_of_treatment_id"
+    t.datetime "created_at", null: false
+    t.boolean "locked", default: false, null: false
+    t.text "objective"
+    t.bigint "patient_id", null: false
+    t.text "plan"
+    t.datetime "signed_at"
+    t.string "signed_by"
+    t.text "subjective"
+    t.bigint "supersedes_id"
+    t.datetime "updated_at", null: false
+    t.index ["course_of_treatment_id"], name: "index_clinical_notes_on_course_of_treatment_id"
+    t.index ["locked"], name: "index_clinical_notes_on_locked"
+    t.index ["patient_id"], name: "index_clinical_notes_on_patient_id"
+  end
+
   create_table "confirmation_logs", force: :cascade do |t|
     t.bigint "appointment_id", null: false
     t.integer "attempts", default: 0, null: false
@@ -163,6 +181,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000002) do
     t.index ["patient_id"], name: "index_conversations_on_patient_id"
     t.index ["source"], name: "index_conversations_on_source"
     t.index ["status"], name: "index_conversations_on_status"
+  end
+
+  create_table "courses_of_treatment", force: :cascade do |t|
+    t.string "authorisation_number"
+    t.bigint "billing_account_id"
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.date "end_date"
+    t.text "notes"
+    t.bigint "patient_id", null: false
+    t.bigint "scheme_membership_id"
+    t.string "setting", default: "in_chair", null: false
+    t.date "start_date"
+    t.string "status", default: "planned", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billing_account_id"], name: "index_courses_of_treatment_on_billing_account_id"
+    t.index ["patient_id"], name: "index_courses_of_treatment_on_patient_id"
+    t.index ["setting"], name: "index_courses_of_treatment_on_setting"
+    t.index ["status"], name: "index_courses_of_treatment_on_status"
   end
 
   create_table "doctor_schedules", force: :cascade do |t|
@@ -470,6 +507,40 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000002) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "tooth_chart_entries", force: :cascade do |t|
+    t.string "condition", null: false
+    t.bigint "course_of_treatment_id"
+    t.datetime "created_at", null: false
+    t.datetime "noted_at", null: false
+    t.string "noted_by"
+    t.bigint "patient_id", null: false
+    t.string "surface"
+    t.string "tooth_number", null: false
+    t.bigint "treatment_item_id"
+    t.datetime "updated_at", null: false
+    t.index ["course_of_treatment_id"], name: "index_tooth_chart_entries_on_course_of_treatment_id"
+    t.index ["patient_id", "tooth_number"], name: "index_tooth_chart_entries_on_patient_id_and_tooth_number"
+  end
+
+  create_table "treatment_items", force: :cascade do |t|
+    t.date "completed_date"
+    t.bigint "course_of_treatment_id", null: false
+    t.datetime "created_at", null: false
+    t.integer "fee_cents"
+    t.text "notes"
+    t.date "planned_date"
+    t.bigint "procedure_code_id", null: false
+    t.string "provider_name"
+    t.string "status", default: "planned", null: false
+    t.string "surface"
+    t.string "tooth_number"
+    t.datetime "updated_at", null: false
+    t.string "vat_treatment", default: "zero_rated", null: false
+    t.index ["course_of_treatment_id"], name: "index_treatment_items_on_course_of_treatment_id"
+    t.index ["procedure_code_id"], name: "index_treatment_items_on_procedure_code_id"
+    t.index ["status"], name: "index_treatment_items_on_status"
+  end
+
   create_table "treatment_macro_items", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "more_info"
@@ -500,8 +571,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000002) do
   add_foreign_key "billing_accounts", "patients", column: "head_patient_id"
   add_foreign_key "call_logs", "patients"
   add_foreign_key "cancellation_reasons", "appointments"
+  add_foreign_key "clinical_notes", "clinical_notes", column: "supersedes_id"
+  add_foreign_key "clinical_notes", "courses_of_treatment", column: "course_of_treatment_id"
+  add_foreign_key "clinical_notes", "patients"
   add_foreign_key "confirmation_logs", "appointments"
   add_foreign_key "conversations", "patients"
+  add_foreign_key "courses_of_treatment", "billing_accounts"
+  add_foreign_key "courses_of_treatment", "patients"
+  add_foreign_key "courses_of_treatment", "scheme_memberships"
   add_foreign_key "fee_schedule_items", "fee_schedules"
   add_foreign_key "fee_schedule_items", "procedure_codes"
   add_foreign_key "fee_schedules", "medical_schemes"
@@ -519,6 +596,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000002) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "tooth_chart_entries", "courses_of_treatment", column: "course_of_treatment_id"
+  add_foreign_key "tooth_chart_entries", "patients"
+  add_foreign_key "tooth_chart_entries", "treatment_items"
+  add_foreign_key "treatment_items", "courses_of_treatment", column: "course_of_treatment_id"
+  add_foreign_key "treatment_items", "procedure_codes"
   add_foreign_key "treatment_macro_items", "procedure_codes"
   add_foreign_key "treatment_macro_items", "treatment_macros"
 end
