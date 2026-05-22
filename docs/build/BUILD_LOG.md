@@ -107,8 +107,9 @@ now (Paul connects live at end); name=Ivory; VAT 4260308871 + BHF 0992801 (confi
 - [x] P8.2 Lines: medical_cents + self_cents on invoice/estimate lines (BillableLine), Invoice/Estimate
   medical_total/self_total, `visit` on treatment_items/estimate_lines, Estimate#lines_by_visit. Verified
   split (R699.30=R400+R299.30) + visit grouping; 43/43 scenarios pass. Commit ce3e8a8.
-- [ ] P8.3 Documents: invoice + estimate show Medical|Self|Total; estimate grouped by Visit + explainer;
-  "ESTIMATE VALID FOR 14 DAYS" footer; match the familiar layout.
+- [x] P8.3 Documents: invoice has Medical|Self|Total; new EstimateShow groups by Visit 1/2 + explainer,
+  14-day footer, brand wordmark, print-friendly; estimates list links to it. Verified HTTP 200 + content;
+  43/43 scenarios pass. Commit 65ff38b.
 - [ ] P8.4 Logo: embed the real logo image (Marketing logo → PNG/SVG) on docs + sidebar.
 - [ ] P8.5 Usability (beat Exact/GoodX/Elixir — docs/research/usability-*.md): global search over PMS
   entities; "/" focuses search; responsive; empty states; fewer clicks. Write docs/USABILITY_SCORECARD.md.
