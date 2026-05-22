@@ -4,6 +4,9 @@ class BillingAccount < ApplicationRecord
   has_many :account_patients, dependent: :destroy
   has_many :patients, through: :account_patients
   belongs_to :head_patient, class_name: "Patient", optional: true
+  has_many :invoices, dependent: :nullify
+  has_many :payments, dependent: :nullify
+  has_many :statements, dependent: :destroy
 
   validates :billing_name, presence: true
   validates :account_code, uniqueness: true, allow_nil: true

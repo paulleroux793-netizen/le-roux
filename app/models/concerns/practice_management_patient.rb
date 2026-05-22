@@ -17,6 +17,10 @@ module PracticeManagementPatient
     has_many :courses_of_treatment, class_name: "CourseOfTreatment", dependent: :destroy
     has_many :clinical_notes, dependent: :destroy
     has_many :tooth_chart_entries, dependent: :destroy
+
+    # Phase 3 — money.
+    has_many :invoices, dependent: :destroy
+    has_many :estimates, dependent: :destroy
   end
 
   # The account that pays for this patient (first linked account, if any).

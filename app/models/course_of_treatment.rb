@@ -13,6 +13,8 @@ class CourseOfTreatment < ApplicationRecord
   has_many :treatment_items, dependent: :destroy
   has_many :clinical_notes, dependent: :nullify
   has_many :tooth_chart_entries, dependent: :nullify
+  has_many :estimates, dependent: :nullify
+  has_many :invoices, dependent: :nullify
 
   validates :setting, inclusion: { in: SETTINGS }
   validates :status, inclusion: { in: STATUSES }

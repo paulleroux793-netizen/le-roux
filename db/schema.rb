@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000003) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000004) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -214,6 +214,52 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000003) do
     t.index ["day_of_week"], name: "index_doctor_schedules_on_day_of_week", unique: true
   end
 
+  create_table "document_sequences", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "current_value", default: 0, null: false
+    t.string "key", null: false
+    t.datetime "updated_at", null: false
+    t.index ["key"], name: "index_document_sequences_on_key", unique: true
+  end
+
+  create_table "estimate_lines", force: :cascade do |t|
+    t.string "code"
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.bigint "estimate_id", null: false
+    t.integer "line_total_cents", default: 0, null: false
+    t.bigint "procedure_code_id"
+    t.integer "quantity", default: 1, null: false
+    t.string "tooth_number"
+    t.bigint "treatment_item_id"
+    t.integer "unit_fee_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "vat_cents", default: 0, null: false
+    t.string "vat_treatment", default: "zero_rated", null: false
+    t.index ["estimate_id"], name: "index_estimate_lines_on_estimate_id"
+  end
+
+  create_table "estimates", force: :cascade do |t|
+    t.datetime "accepted_at"
+    t.bigint "billing_account_id"
+    t.bigint "course_of_treatment_id"
+    t.datetime "created_at", null: false
+    t.string "estimate_number", null: false
+    t.text "notes"
+    t.bigint "patient_id", null: false
+    t.datetime "sent_at"
+    t.string "status", default: "draft", null: false
+    t.integer "subtotal_cents", default: 0, null: false
+    t.integer "total_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.date "valid_until"
+    t.integer "vat_cents", default: 0, null: false
+    t.index ["course_of_treatment_id"], name: "index_estimates_on_course_of_treatment_id"
+    t.index ["estimate_number"], name: "index_estimates_on_estimate_number", unique: true
+    t.index ["patient_id"], name: "index_estimates_on_patient_id"
+    t.index ["status"], name: "index_estimates_on_status"
+  end
+
   create_table "fee_schedule_items", force: :cascade do |t|
     t.integer "allowed_amount_cents"
     t.datetime "created_at", null: false
@@ -235,6 +281,44 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000003) do
     t.integer "year"
     t.index ["medical_scheme_id"], name: "index_fee_schedules_on_medical_scheme_id"
     t.index ["name", "year"], name: "index_fee_schedules_on_name_and_year"
+  end
+
+  create_table "invoice_lines", force: :cascade do |t|
+    t.string "code"
+    t.datetime "created_at", null: false
+    t.string "description"
+    t.bigint "invoice_id", null: false
+    t.integer "line_total_cents", default: 0, null: false
+    t.bigint "procedure_code_id"
+    t.integer "quantity", default: 1, null: false
+    t.string "tooth_number"
+    t.bigint "treatment_item_id"
+    t.integer "unit_fee_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "vat_cents", default: 0, null: false
+    t.string "vat_treatment", default: "zero_rated", null: false
+    t.index ["invoice_id"], name: "index_invoice_lines_on_invoice_id"
+  end
+
+  create_table "invoices", force: :cascade do |t|
+    t.bigint "billing_account_id"
+    t.bigint "course_of_treatment_id"
+    t.datetime "created_at", null: false
+    t.date "invoice_date", null: false
+    t.string "invoice_number", null: false
+    t.text "notes"
+    t.integer "paid_cents", default: 0, null: false
+    t.bigint "patient_id", null: false
+    t.string "status", default: "open", null: false
+    t.integer "subtotal_cents", default: 0, null: false
+    t.integer "total_cents", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.integer "vat_cents", default: 0, null: false
+    t.boolean "void", default: false, null: false
+    t.index ["billing_account_id"], name: "index_invoices_on_billing_account_id"
+    t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
+    t.index ["patient_id"], name: "index_invoices_on_patient_id"
+    t.index ["status"], name: "index_invoices_on_status"
   end
 
   create_table "medical_schemes", force: :cascade do |t|
@@ -298,6 +382,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000003) do
     t.index ["last_name", "first_name"], name: "index_patients_on_last_name_and_first_name"
     t.index ["phone"], name: "index_patients_on_phone", unique: true
     t.index ["preferred_language"], name: "index_patients_on_preferred_language"
+  end
+
+  create_table "payments", force: :cascade do |t|
+    t.integer "amount_cents", null: false
+    t.bigint "billing_account_id"
+    t.datetime "created_at", null: false
+    t.bigint "invoice_id"
+    t.boolean "is_deposit", default: false, null: false
+    t.string "method", default: "card", null: false
+    t.text "notes"
+    t.bigint "patient_id"
+    t.datetime "received_at", null: false
+    t.string "reference"
+    t.datetime "updated_at", null: false
+    t.index ["billing_account_id"], name: "index_payments_on_billing_account_id"
+    t.index ["invoice_id"], name: "index_payments_on_invoice_id"
+    t.index ["received_at"], name: "index_payments_on_received_at"
   end
 
   create_table "practice_settings", force: :cascade do |t|
@@ -507,6 +608,20 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000003) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "statements", force: :cascade do |t|
+    t.bigint "billing_account_id", null: false
+    t.integer "closing_balance_cents", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "generated_at", null: false
+    t.integer "opening_balance_cents", default: 0, null: false
+    t.date "period_end"
+    t.date "period_start"
+    t.string "statement_number", null: false
+    t.datetime "updated_at", null: false
+    t.index ["billing_account_id"], name: "index_statements_on_billing_account_id"
+    t.index ["statement_number"], name: "index_statements_on_statement_number", unique: true
+  end
+
   create_table "tooth_chart_entries", force: :cascade do |t|
     t.string "condition", null: false
     t.bigint "course_of_treatment_id"
@@ -579,13 +694,23 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000003) do
   add_foreign_key "courses_of_treatment", "billing_accounts"
   add_foreign_key "courses_of_treatment", "patients"
   add_foreign_key "courses_of_treatment", "scheme_memberships"
+  add_foreign_key "estimate_lines", "estimates"
+  add_foreign_key "estimates", "billing_accounts"
+  add_foreign_key "estimates", "courses_of_treatment", column: "course_of_treatment_id"
+  add_foreign_key "estimates", "patients"
   add_foreign_key "fee_schedule_items", "fee_schedules"
   add_foreign_key "fee_schedule_items", "procedure_codes"
   add_foreign_key "fee_schedules", "medical_schemes"
+  add_foreign_key "invoice_lines", "invoices"
+  add_foreign_key "invoices", "billing_accounts"
+  add_foreign_key "invoices", "courses_of_treatment", column: "course_of_treatment_id"
+  add_foreign_key "invoices", "patients"
   add_foreign_key "notifications", "appointments"
   add_foreign_key "notifications", "conversations"
   add_foreign_key "notifications", "patients"
   add_foreign_key "patient_medical_histories", "patients"
+  add_foreign_key "payments", "billing_accounts"
+  add_foreign_key "payments", "invoices"
   add_foreign_key "scheme_membership_patients", "patients"
   add_foreign_key "scheme_membership_patients", "scheme_memberships"
   add_foreign_key "scheme_memberships", "medical_schemes"
@@ -596,6 +721,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000003) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "statements", "billing_accounts"
   add_foreign_key "tooth_chart_entries", "courses_of_treatment", column: "course_of_treatment_id"
   add_foreign_key "tooth_chart_entries", "patients"
   add_foreign_key "tooth_chart_entries", "treatment_items"
