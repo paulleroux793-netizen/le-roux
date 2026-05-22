@@ -21,8 +21,19 @@ module BillableLine
       else
         0
       end
+
+    # Medical = the medical-aid (Discovery) portion (rate × qty), capped at the line total.
+    # Self = what the patient pays out of pocket = line total − medical. When the Discovery rate is
+    # unknown (medical_fee_cents nil), medical = 0 and the patient is liable for the whole line.
+    if respond_to?(:medical_cents)
+      med_unit = (respond_to?(:procedure_code) && procedure_code ? procedure_code.medical_fee_cents.to_i : 0)
+      self.medical_cents = [ quantity.to_i * med_unit, line_total_cents ].min
+      self.self_cents = line_total_cents - medical_cents
+    end
   end
 
   def line_total = line_total_cents.to_i / 100.0
   def vat        = vat_cents.to_i / 100.0
+  def medical    = respond_to?(:medical_cents) ? medical_cents.to_i / 100.0 : 0.0
+  def self_portion = respond_to?(:self_cents) ? self_cents.to_i / 100.0 : line_total
 end

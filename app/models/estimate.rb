@@ -20,7 +20,8 @@ class Estimate < ApplicationRecord
       est.estimate_lines.build(
         procedure_code_id: pc&.id, treatment_item_id: item.id,
         code: pc&.code, description: pc&.description, tooth_number: item.tooth_number,
-        quantity: 1, unit_fee_cents: item.fee_cents.to_i, vat_treatment: item.vat_treatment
+        quantity: 1, unit_fee_cents: item.fee_cents.to_i, vat_treatment: item.vat_treatment,
+        visit: item.visit
       )
     end
     est.recalculate
@@ -55,6 +56,9 @@ class Estimate < ApplicationRecord
   end
 
   def total = total_cents.to_i / 100.0
+  def medical_total = estimate_lines.sum(&:medical_cents) / 100.0
+  def self_total    = estimate_lines.sum(&:self_cents) / 100.0
+  def lines_by_visit = estimate_lines.group_by { |l| l.visit.to_i }.sort.to_h
 
   private
 

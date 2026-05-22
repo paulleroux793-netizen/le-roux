@@ -55,6 +55,8 @@ class Invoice < ApplicationRecord
 
   def total = total_cents.to_i / 100.0
   def balance = (total_cents.to_i - paid_cents.to_i) / 100.0
+  def medical_total = invoice_lines.sum(&:medical_cents) / 100.0
+  def self_total    = invoice_lines.sum(&:self_cents) / 100.0
 
   private
 

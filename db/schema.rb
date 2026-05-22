@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000011) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -250,14 +250,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000011) do
     t.string "description"
     t.bigint "estimate_id", null: false
     t.integer "line_total_cents", default: 0, null: false
+    t.integer "medical_cents", default: 0, null: false
     t.bigint "procedure_code_id"
     t.integer "quantity", default: 1, null: false
+    t.integer "self_cents", default: 0, null: false
     t.string "tooth_number"
     t.bigint "treatment_item_id"
     t.integer "unit_fee_cents", default: 0, null: false
     t.datetime "updated_at", null: false
     t.integer "vat_cents", default: 0, null: false
     t.string "vat_treatment", default: "zero_rated", null: false
+    t.integer "visit", default: 1, null: false
     t.index ["estimate_id"], name: "index_estimate_lines_on_estimate_id"
   end
 
@@ -360,8 +363,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000011) do
     t.string "description"
     t.bigint "invoice_id", null: false
     t.integer "line_total_cents", default: 0, null: false
+    t.integer "medical_cents", default: 0, null: false
     t.bigint "procedure_code_id"
     t.integer "quantity", default: 1, null: false
+    t.integer "self_cents", default: 0, null: false
     t.string "tooth_number"
     t.bigint "treatment_item_id"
     t.integer "unit_fee_cents", default: 0, null: false
@@ -792,6 +797,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000011) do
     t.string "tooth_number"
     t.datetime "updated_at", null: false
     t.string "vat_treatment", default: "zero_rated", null: false
+    t.integer "visit", default: 1, null: false
     t.index ["course_of_treatment_id"], name: "index_treatment_items_on_course_of_treatment_id"
     t.index ["procedure_code_id"], name: "index_treatment_items_on_procedure_code_id"
     t.index ["status"], name: "index_treatment_items_on_status"
