@@ -9,6 +9,11 @@
 ## Guardrails (read every session)
 - Additive only. New tables/models/controllers/pages. Do not alter `patients`, `appointments`,
   `conversations`, `call_logs`, `doctor_schedules`, `practice_settings` in breaking ways.
+- **System name: "Ivory"** (working codename — UNCERTAINTIES #16).
+- **Migration timestamps**: Rails 8.1 rejects timestamps >~1 day in the future. System clock is
+  2026-05-22; use `20260523NNNNNN`-dated migrations (NOT the 24th+). Keep them after the last applied.
+- **Irregular plurals**: `courses_of_treatment` — set `self.table_name` on the model, pass `column:`
+  to `add_foreign_key`, and `class_name:` on `has_many :courses_of_treatment`. (Learned in P2.1.)
 - New routes namespaced where possible; never touch `webhooks/*` or existing booking/calendar routes.
 - Migrate + verify in the local Docker stack (`docker compose up`); never touch production/Railway.
 - Commit after each working chunk with a clear message. Don't push unless asked.
@@ -33,9 +38,9 @@
 **PHASE 1 COMPLETE.**
 
 ### Phase 2 — Clinical core: Course of Treatment + tooth chart
-- [ ] P2.1 Migrations: courses_of_treatment, treatment_items, clinical_notes, tooth_chart_entries
-- [ ] P2.2 Models + state machine (planned→completed)
-- [ ] P2.3 Tooth chart (odontogram) component + COT page
+- [x] P2.1 Migrations: courses_of_treatment, treatment_items, clinical_notes, tooth_chart_entries
+- [x] P2.2 Models + state machine (planned→completed), immutable signed notes — verified in Docker
+- [ ] P2.3 Tooth chart (odontogram) component + COT page (Inertia)
 - [ ] P2.4 Verify
 
 ### Phase 3 — Money: estimates → invoices → payments → statements
@@ -69,7 +74,11 @@
 ---
 
 ## Current status
-**PHASE 1 COMPLETE. Next: Phase 2 — clinical core (Course of Treatment + tooth chart).** NEXT (P2.1):
+**Phase 2 data layer done. Next: P2.3 — odontogram (tooth chart) component + Course-of-Treatment page
+(Inertia), then P2.4 verify. Then Phase 3 (money).** Accelerating per Paul (finish all phases ASAP).
+Review artifact created: docs/COMPARISON_IVORY_VS_GOODX_VS_EXACT.md (keep ticking it each phase).
+
+(historical) NEXT (P2.1):
 migrations for courses_of_treatment (patient_id, optional scheme_membership_id, setting enum:
 in_chair/hospital_chair/hospital_theatre/sedation, status, authorisation_number),
 treatment_items (cot_id, procedure_code_id, provider, tooth_number FDI, surface, planned/completed
@@ -104,3 +113,8 @@ Park anything uncertain in UNCERTAINTIES.md.
   BillingAccounts controllers + 4 Inertia pages + additive routes + a "Practice" sidebar group.
   Verified all 3 pages HTTP 200 with real seeded data (8101, BRIDGE 3). Parked #15 (nav labels not yet
   localised to AF). Next: Phase 2 clinical core.
+- **2026-05-22 ~18:55** — Phase 2 data layer DONE (P2.1, P2.2). 4 clinical tables + models;
+  planned→completed state machine, fee/VAT snapshot, immutable signed SOAP notes w/ amendment chain,
+  FDI tooth chart. Hit + fixed two Rails gotchas (future migration timestamp; irregular-plural
+  FK/association) — now in Guardrails. Named the system **Ivory** (UNCERTAINTIES #16) and wrote
+  docs/COMPARISON_IVORY_VS_GOODX_VS_EXACT.md (the review scorecard). Committed a52684c. Next: P2.3 odontogram UI.

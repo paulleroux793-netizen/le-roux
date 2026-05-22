@@ -71,5 +71,9 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
     literal English labels to avoid touching the shared i18n system. → **Want these (and the new pages)
     localised to Afrikaans too? I'll add the keys if so.**
 
+16. **[decided] System name = "Ivory" (working codename).** Paul said he'll give it a cool name; I'm
+    using **Ivory** so the build + comparison doc have something to refer to (clean, dental, brandable —
+    reads well as "Exact · GoodX · Ivory"). → **Keep "Ivory" or rename?** One place to change it.
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*
