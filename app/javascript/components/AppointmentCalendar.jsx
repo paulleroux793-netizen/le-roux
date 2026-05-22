@@ -49,11 +49,12 @@ export default function AppointmentCalendar({
   // Height of the scrollable calendar body for the inline dashboard view,
   // which leaves room for the page header + stat cards (~210px).
   heightClass = 'h-[calc(100vh-210px)]',
-  // Fullscreen /calendar page: render every slot at a fixed compact
-  // height (height="auto", no expandRows) so the whole 08:00–17:00 day
-  // is visible at once without scrolling. expandRows would otherwise
-  // apply its own inline row heights and oversize the grid.
-  autoHeight = false,
+  // Fullscreen /calendar page: make the whole component fill its parent
+  // (h-full flex column) so FullCalendar's own toolbar stays pinned at
+  // the top — week nav + view switch are always visible — while only the
+  // time-grid scrolls internally on short screens. Compact slot CSS keeps
+  // the full 08:00–17:00 day on one screen on a normal monitor.
+  fillHeight = false,
 }) {
   const calendarRef = useRef(null)
   // `loadedRangeKeyRef` tracks the last visible range we've already
@@ -209,9 +210,9 @@ export default function AppointmentCalendar({
   }
 
   return (
-    <div className="appointment-calendar overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm">
+    <div className={`appointment-calendar overflow-hidden rounded-xl border border-brand-border bg-white shadow-sm ${fillHeight ? 'flex h-full flex-col' : ''}`}>
       {/* Compact toolbar: search + legend */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-border bg-brand-surface px-4 py-3">
+      <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-b border-brand-border bg-brand-surface px-4 py-3">
         {/* Search */}
         <div className="relative w-full max-w-xs">
           <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted" />
@@ -253,7 +254,7 @@ export default function AppointmentCalendar({
         </div>
       </div>
 
-      <div className={`flex flex-col px-3 pb-3 pt-2 md:px-4 ${autoHeight ? '' : heightClass}`}>
+      <div className={`flex flex-col px-3 pb-3 pt-2 md:px-4 ${fillHeight ? 'min-h-0 flex-1' : heightClass}`}>
         {search && filtered.length === 0 && (
           <div className="mb-3 rounded-lg border border-dashed border-brand-border bg-brand-surface px-4 py-2.5 text-sm text-brand-muted">
             No appointments match your search.
@@ -287,8 +288,8 @@ export default function AppointmentCalendar({
         slotMaxTime="17:00:00"
         allDaySlot={false}
         nowIndicator
-        expandRows={!autoHeight}
-        height={autoHeight ? 'auto' : '100%'}
+        expandRows
+        height="100%"
         stickyHeaderDates
         slotDuration="00:15:00"
         slotLabelInterval="01:00:00"

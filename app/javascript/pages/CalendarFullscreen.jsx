@@ -81,15 +81,15 @@ export default function CalendarFullscreen({
         </button>
       </header>
 
-      {/* Calendar fills the rest of the viewport. autoHeight renders every
-          15-min slot at a fixed compact height so the whole 08:00–17:00 day
-          is visible at once; overflow-auto is a safety net for short screens. */}
-      <main className="flex-1 overflow-auto p-3">
+      {/* Calendar fills the rest of the viewport. fillHeight keeps the
+          FullCalendar toolbar (week nav + view switch) pinned at the top;
+          only the time-grid scrolls internally if a screen is too short. */}
+      <main className="min-h-0 flex-1 overflow-hidden p-3">
         <AppointmentCalendar
           appointments={calendar_appointments}
           calendarMeta={calendar_meta}
           onEventClick={handleEventClick}
-          autoHeight
+          fillHeight
         />
       </main>
 
