@@ -115,5 +115,17 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
     Playwright once Paul provides access, then re-seed the catalogue with Discovery base + 30% markup
     (replacing the interim median-from-transactions fees).
 
+### From reviewing the practice's real documents (2026-05-22)
+23. **[found-confirm] VAT number `4260308871` + BHF practice number `0992801`** — pulled from your 2023
+    estimates and now on the invoice. → **Confirm these are still current.**
+24. **[needs-decision] Banking changed.** Old estimates show **FNB**; current config says **Investec**.
+    Using Investec. → **Confirm Investec for new invoices.**
+25. **[planned] Estimate "phases" confuse patients.** Plan: keep grouping but relabel "1st/2nd phase" →
+    **"Visit 1 / Visit 2" + a one-line note** that phases = separate appointments. → Confirm wording.
+26. **[decision] Medical/Self split.** Your estimates show Medical (≈ Discovery rate) + Self (private
+    top-up) columns. Once Discovery rates load (#22) I can replicate this. → Want it?
+27. **[planned] Logo image.** Using a gold **wordmark** now; the real logo (Marketing/19. Logo) can be
+    embedded as PNG/SVG. → Wordmark OK, or embed the exact logo?
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*
