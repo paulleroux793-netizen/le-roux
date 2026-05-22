@@ -18,6 +18,11 @@ class ProcedureCode < ApplicationRecord
     default_fee_cents.to_i / 100.0
   end
 
+  # The medical-aid (Discovery) rate, if known. Self portion = practice fee − medical.
+  def medical_fee
+    medical_fee_cents.to_i / 100.0
+  end
+
   def standard_rated?
     vat_treatment == "standard"
   end

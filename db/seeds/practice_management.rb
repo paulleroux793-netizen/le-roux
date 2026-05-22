@@ -22,6 +22,7 @@ CSV.foreach(SEED_DIR.join("procedure_codes.csv"), headers: true) do |row|
   pc.vat_treatment        = %w[zero_rated standard].include?(row["vat_treatment"]) ? row["vat_treatment"] : "zero_rated"
   pc.tooth_specific       = row["tooth_specific"].to_s.upcase == "Y"
   pc.default_fee_cents    = row["default_fee_cents"].presence&.to_i
+  pc.medical_fee_cents    = row["medical_fee_cents"].presence&.to_i
   pc.save!
   pc_count += 1
 end

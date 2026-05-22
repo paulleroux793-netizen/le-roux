@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000010) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000011) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -540,6 +540,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000010) do
     t.boolean "lab_fee_applicable", default: false, null: false
     t.boolean "material_fee_applicable", default: false, null: false
     t.integer "max_per_year"
+    t.integer "medical_fee_cents"
     t.boolean "requires_authorisation", default: false, null: false
     t.boolean "tooth_specific", default: false, null: false
     t.datetime "updated_at", null: false
