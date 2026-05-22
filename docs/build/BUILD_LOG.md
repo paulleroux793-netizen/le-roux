@@ -104,8 +104,9 @@ Perplexity where possible — tx Medical/Patient-due cols are EMPTY); use the RE
 now (Paul connects live at end); name=Ivory; VAT 4260308871 + BHF 0992801 (confirm current).
 - [x] P8.1 Pricing: practice fee = LATEST tx Debit per code (172 updated, 8101=R699.30); added
   medical_fee_cents (nil until SADA Discovery rates). Commit 964acee.
-- [ ] P8.2 Lines: add medical_cents + self_cents to invoice_lines & estimate_lines (self=total−medical);
-  add `visit` to treatment_items/estimate_lines for Visit 1/2 grouping.
+- [x] P8.2 Lines: medical_cents + self_cents on invoice/estimate lines (BillableLine), Invoice/Estimate
+  medical_total/self_total, `visit` on treatment_items/estimate_lines, Estimate#lines_by_visit. Verified
+  split (R699.30=R400+R299.30) + visit grouping; 43/43 scenarios pass. Commit ce3e8a8.
 - [ ] P8.3 Documents: invoice + estimate show Medical|Self|Total; estimate grouped by Visit + explainer;
   "ESTIMATE VALID FOR 14 DAYS" footer; match the familiar layout.
 - [ ] P8.4 Logo: embed the real logo image (Marketing logo → PNG/SVG) on docs + sidebar.
