@@ -113,8 +113,9 @@ now (Paul connects live at end); name=Ivory; VAT 4260308871 + BHF 0992801 (confi
 - [x] P8.4 Logo: swappable BrandLogo on documents — real logo shows when public/brand/logo.png is
   dropped in (no rebuild), gold wordmark fallback until then. No PDF rasteriser in env to auto-convert.
   Commit a2e5952. (Paul: drop the logo PNG at public/brand/logo.png — see UNCERTAINTIES #27.)
-- [ ] P8.5 Usability (beat Exact/GoodX/Elixir — docs/research/usability-*.md): global search over PMS
-  entities; "/" focuses search; responsive; empty states; fewer clicks. Write docs/USABILITY_SCORECARD.md.
+- [x] P8.5 Usability: global search now covers invoices/estimates/procedure-codes; "/" focuses search;
+  empty states + clean layout already in place; docs/USABILITY_SCORECARD.md written. Verified search
+  returns the new groups. Commit 3dc09e8. (Follow-ups: phone-viewport polish, AF localisation, roles.)
 - [ ] P8.6 Stress test + audit MULTIPLE times: expand script/ivory_scenarios.rb; run repeatedly; run CI
   locally (rubocop/brakeman/tests per docs/CLAUDE.md) and fix.
 - [ ] P8.7 docs/build/GO_LIVE_CHECKLIST.md (done vs Paul's to-dos: deploy/merge, prod env vars, real PII
