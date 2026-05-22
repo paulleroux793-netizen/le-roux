@@ -63,4 +63,19 @@ if cot.invoices.none?
   Payment.create!(billing_account: cot.billing_account, invoice: inv, method: "card", amount_cents: 50000) if inv.total_cents.positive?
 end
 
-puts "Demo ready: patient=#{patient.id} cot=#{cot.id} items=#{cot.treatment_items.count} chart=#{ToothChartEntry.where(patient: patient).count} notes=#{cot.clinical_notes.count} estimates=#{cot.estimates.count} invoices=#{cot.invoices.count}"
+# Phase 4 — demo digital file: documents across folders, a completed WhatsApp form, a notepad page.
+if patient.documents.none?
+  Document.create!(patient: patient, folder: "sidexis_scans", title: "Panoramic OPG 2026-05", doc_type: "xray", source: "sidexis")
+  Document.create!(patient: patient, folder: "befores_afters", title: "Before — upper arch", doc_type: "image", source: "upload")
+  Document.create!(patient: patient, folder: "treatment_plans", title: "Treatment plan (demo)", doc_type: "pdf", source: "generated", course_of_treatment: cot)
+end
+tpl = FormTemplate.find_or_create_by!(key: "consent_treatment", version: 1) { |t| t.name = "Treatment Consent"; t.schema = { fields: %w[understands_risks consents] } }
+if patient.form_submissions.none?
+  sub = FormSubmission.create!(form_template: tpl, patient: patient); sub.mark_sent!
+  sub.complete!(data: { consents: true }, signature_data: "data:image/png;base64,iVBORw0KGgo=")
+end
+if patient.notepad_pages.none?
+  NotepadPage.create!(patient: patient, course_of_treatment: cot, title: "Chairside note", content: "Patient tolerated procedure well; review 6 weeks.", created_by: "Dr le Roux")
+end
+
+puts "Demo ready: patient=#{patient.id} cot=#{cot.id} items=#{cot.treatment_items.count} chart=#{ToothChartEntry.where(patient: patient).count} notes=#{cot.clinical_notes.count} estimates=#{cot.estimates.count} invoices=#{cot.invoices.count} documents=#{patient.documents.count} forms=#{patient.form_submissions.count}"

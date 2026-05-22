@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000005) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000006) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -222,6 +222,28 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000005) do
     t.index ["key"], name: "index_document_sequences_on_key", unique: true
   end
 
+  create_table "documents", force: :cascade do |t|
+    t.integer "byte_size"
+    t.datetime "captured_at", null: false
+    t.string "content_type"
+    t.bigint "course_of_treatment_id"
+    t.datetime "created_at", null: false
+    t.string "doc_type", default: "file", null: false
+    t.string "file_name"
+    t.string "folder", default: "other", null: false
+    t.text "notes"
+    t.bigint "patient_id", null: false
+    t.boolean "signed", default: false, null: false
+    t.string "source", default: "upload", null: false
+    t.string "storage_key"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.string "uploaded_by"
+    t.index ["course_of_treatment_id"], name: "index_documents_on_course_of_treatment_id"
+    t.index ["patient_id", "folder"], name: "index_documents_on_patient_id_and_folder"
+    t.index ["source"], name: "index_documents_on_source"
+  end
+
   create_table "estimate_lines", force: :cascade do |t|
     t.string "code"
     t.datetime "created_at", null: false
@@ -283,6 +305,37 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000005) do
     t.index ["name", "year"], name: "index_fee_schedules_on_name_and_year"
   end
 
+  create_table "form_submissions", force: :cascade do |t|
+    t.datetime "completed_at"
+    t.datetime "created_at", null: false
+    t.jsonb "data", default: {}, null: false
+    t.bigint "document_id"
+    t.datetime "expires_at"
+    t.bigint "form_template_id", null: false
+    t.datetime "opened_at"
+    t.bigint "patient_id", null: false
+    t.datetime "sent_at"
+    t.text "signature_data"
+    t.string "status", default: "sent", null: false
+    t.string "token", null: false
+    t.datetime "updated_at", null: false
+    t.index ["patient_id"], name: "index_form_submissions_on_patient_id"
+    t.index ["status"], name: "index_form_submissions_on_status"
+    t.index ["token"], name: "index_form_submissions_on_token", unique: true
+  end
+
+  create_table "form_templates", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.string "key", null: false
+    t.string "name", null: false
+    t.boolean "requires_signature", default: true, null: false
+    t.jsonb "schema", default: {}, null: false
+    t.datetime "updated_at", null: false
+    t.integer "version", default: 1, null: false
+    t.index ["key", "version"], name: "index_form_templates_on_key_and_version", unique: true
+  end
+
   create_table "invoice_lines", force: :cascade do |t|
     t.string "code"
     t.datetime "created_at", null: false
@@ -330,6 +383,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000005) do
     t.datetime "updated_at", null: false
     t.index ["name"], name: "index_medical_schemes_on_name"
     t.index ["scheme_code"], name: "index_medical_schemes_on_scheme_code", unique: true, where: "(scheme_code IS NOT NULL)"
+  end
+
+  create_table "notepad_pages", force: :cascade do |t|
+    t.text "content"
+    t.bigint "course_of_treatment_id"
+    t.datetime "created_at", null: false
+    t.string "created_by"
+    t.bigint "document_id"
+    t.bigint "patient_id", null: false
+    t.string "title", default: "Note", null: false
+    t.datetime "updated_at", null: false
+    t.index ["patient_id"], name: "index_notepad_pages_on_patient_id"
   end
 
   create_table "notifications", force: :cascade do |t|
@@ -718,6 +783,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000005) do
   add_foreign_key "courses_of_treatment", "billing_accounts"
   add_foreign_key "courses_of_treatment", "patients"
   add_foreign_key "courses_of_treatment", "scheme_memberships"
+  add_foreign_key "documents", "courses_of_treatment", column: "course_of_treatment_id"
+  add_foreign_key "documents", "patients"
   add_foreign_key "estimate_lines", "estimates"
   add_foreign_key "estimates", "billing_accounts"
   add_foreign_key "estimates", "courses_of_treatment", column: "course_of_treatment_id"
@@ -725,10 +792,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000005) do
   add_foreign_key "fee_schedule_items", "fee_schedules"
   add_foreign_key "fee_schedule_items", "procedure_codes"
   add_foreign_key "fee_schedules", "medical_schemes"
+  add_foreign_key "form_submissions", "documents"
+  add_foreign_key "form_submissions", "form_templates"
+  add_foreign_key "form_submissions", "patients"
   add_foreign_key "invoice_lines", "invoices"
   add_foreign_key "invoices", "billing_accounts"
   add_foreign_key "invoices", "courses_of_treatment", column: "course_of_treatment_id"
   add_foreign_key "invoices", "patients"
+  add_foreign_key "notepad_pages", "courses_of_treatment", column: "course_of_treatment_id"
+  add_foreign_key "notepad_pages", "documents"
+  add_foreign_key "notepad_pages", "patients"
   add_foreign_key "notifications", "appointments"
   add_foreign_key "notifications", "conversations"
   add_foreign_key "notifications", "patients"

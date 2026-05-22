@@ -21,6 +21,11 @@ module PracticeManagementPatient
     # Phase 3 — money.
     has_many :invoices, dependent: :destroy
     has_many :estimates, dependent: :destroy
+
+    # Phase 4 — digital file.
+    has_many :documents, dependent: :destroy
+    has_many :form_submissions, dependent: :destroy
+    has_many :notepad_pages, dependent: :destroy
   end
 
   # The account that pays for this patient (first linked account, if any).

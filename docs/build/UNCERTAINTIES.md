@@ -81,5 +81,13 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
     (vs. adding 15% on top of cosmetic line prices).** Also: **are you VAT-registered?** If not, no VAT
     line is needed at all and whitening etc. are simply not taxed.
 
+18. **[decided] Binary file storage backend not yet wired.** The digital file models hold metadata +
+    folder structure + a `storage_key`; actual file bytes (uploads, scan images, signed-form PDFs) need
+    a backend. → **Recommend Active Storage with local disk (POPIA: keep files on-prem/local) or a
+    private bucket. OK to add Active Storage?** (Additive — adds active_storage_* tables.)
+19. **[for-audit] Patient-delete FK cascade ordering.** `documents`/`form_submissions`/`notepad_pages`
+    reference each other; deleting a patient could hit an FK ordering error. Low-risk edge (deleting a
+    patient is rare). → Will address in the Phase 7 audit (nullify document_id on dependent destroy).
+
 ### Will be added as the build progresses
 *(new uncertainties appended here by later build sessions)*

@@ -77,6 +77,7 @@ Rails.application.routes.draw do
   resources :courses_of_treatment, only: [ :index, :show ], path: "courses-of-treatment"
   resources :estimates, only: [ :index ]
   resources :invoices, only: [ :index, :show ]
+  get "patients/:patient_id/file", to: "patient_files#show", as: :patient_file
   get   "settings",          to: "settings#index"
   post  "settings/language", to: "settings#update_language"
   patch "settings/practice", to: "settings#update_practice", as: :settings_practice

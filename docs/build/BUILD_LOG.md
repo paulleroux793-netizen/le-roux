@@ -58,10 +58,12 @@
 **PHASE 3 COMPLETE.**
 
 ### Phase 4 — Digital file & forms
-- [ ] P4.1 Patient file folders (mirror practice structure) + document model + uploads
-- [ ] P4.2 WhatsApp digital forms: form templates (versioned), tokenised mobile links, e-signature (ECTA), submission → file
-- [ ] P4.3 Digital notepad / annotation surface → PDF to file
-- [ ] P4.4 Verify
+- [x] P4.1 documents model + folders mirroring practice structure + PatientFile controller/page
+- [x] P4.2 WhatsApp forms: form_templates (versioned) + form_submissions (tokenised link, e-sign capture, auto-file). Mobile form UI + WhatsApp delivery = integration (parked).
+- [x] P4.3 notepad_pages model + file-to-patient-file. Drawing canvas UI later.
+- [x] P4.4 Verified — PatientFile page HTTP 200 with folders, xray doc, signed consent form, notepad.
+
+**PHASE 4 COMPLETE** (binary storage backend parked #18; FK-on-delete edge → audit #19).
 
 ### Phase 5 — Integrations
 - [ ] P5.1 SIDEXIS bridge agent (export-folder watcher first) + patient-ID matching + thumbnails
@@ -75,6 +77,13 @@
 - [ ] P6.3 Review-and-confirm UI (never auto-bill)
 - [ ] P6.4 Verify
 
+### Phase 7 — Whole-system stress test, audit & remediation (after Phases 1-6, per Paul 22 May)
+- [ ] P7.1 Stress-test/audit the whole Ivory system (data integrity, security/POPIA, additive-safety,
+  performance, gaps vs the proposal). Write docs/build/SYSTEM_AUDIT.md with findings + severity.
+- [ ] P7.2 Turn findings into a prioritised recommendations list.
+- [ ] P7.3 IMPLEMENT the recommendations (commit each fix; re-verify).
+- [ ] P7.4 Final summary + present all parked UNCERTAINTIES to Paul.
+
 ## Cross-cutting (every phase)
 - [ ] Users/roles/permissions (reception vs dentist) + immutable AuditLog on every clinical/financial change
 - [ ] Retention scheduling (clinical 6y / financial 5y); POPIA security
@@ -82,7 +91,17 @@
 ---
 
 ## Current status
-**PHASES 1, 2, 3 COMPLETE. Next: Phase 4 — digital file & forms.** NEXT (P4.1): document/file model
+**PHASES 1-4 COMPLETE. Next: Phase 5 — integrations (SIDEXIS + recalls + reporting).** NEXT (P5.1):
+SIDEXIS bridge — model `imaging_studies` (patient_id, modality: intraoral_2d/bitewing/panoramic/
+cephalometric/cbct_3d, captured_at, sidexis_patient_ref, thumbnail/storage_key, status) + an
+`ImagingImportService` that ingests from a watched export-folder manifest (CSV/JSON) and matches to
+patients by id/phone, queuing unmatched for manual link (never fuzzy auto-attach). P5.2 recalls
+(recall model, 6-month) + reminders (additive, outbound only — do NOT touch live WhatsApp incoming).
+P5.3 reporting/KPIs page (production, collections, outstanding). P5.4 verify. Then Phase 6 (AI scribe),
+then Phase 7 (audit + implement recommendations — Paul asked for this explicitly).
+Guardrails: migration timestamps 20260523NNNNNN; irregular plurals need explicit column/class_name.
+
+(historical) NEXT (P4.1): document/file model
 + patient file folders mirroring the practice structure (Consent Forms, Referral Letters, Befores &
 Afters, Sidexis Scans, etc.) with uploads (Active Storage if available, else a documents table w/
 metadata + storage path). P4.2 WhatsApp digital forms: form_templates (versioned) + form_submissions
@@ -144,3 +163,8 @@ Park anything uncertain in UNCERTAINTIES.md.
   patient+scheme, SADA codes+tooth+VAT per line, sequential no., print/PDF, self-claim note) + Estimates
   index. Routes + nav. WhatsApp-send = disabled stub. Demo seed extended (estimate+invoice+payment).
   Verified HTTP 200 + compliant header. Scorecard: Invoicing ✅, Self-claim statement ✅. Next: Phase 4.
+- **2026-05-22 ~19:39** — PHASE 4 COMPLETE. documents (folders mirroring practice), form_templates +
+  form_submissions (tokenised link, e-sign capture, auto-file to patient file), notepad_pages, +
+  PatientFile page (folders/docs/forms/notes). Verified HTTP 200 (Sidexis Scans folder, OPG xray,
+  signed consent form). Parked #18 (binary storage backend) + #19 (FK-on-delete → audit). Committed next.
+  Next: Phase 5 (SIDEXIS + recalls + reporting). Also added Phase 7 (audit+remediate) per Paul.

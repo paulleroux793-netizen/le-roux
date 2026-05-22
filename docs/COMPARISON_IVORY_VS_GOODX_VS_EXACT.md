@@ -33,9 +33,9 @@ digital patient file replacing paper, and an AI chair-side scribe that drafts es
 | **VAT logic (zero-rated vs cosmetic 15%)** | ✅ | 🟡 | ✅ | Per-line VAT computed (VAT-inclusive). Phase 3 ✅ |
 | **Payments (card/cash/EFT + deposits)** | ✅ | ✅ | ✅ | Applied to invoices; deposit flag (whitening R2,000). Phase 3 ✅ |
 | **Debtors / statements / age analysis** | ✅ | ✅ | 🟡 | Statements + balances done; age-analysis view P3.3 |
-| **Digital patient file (paperless)** | 🟡 | 🟡 | ⬜ | ⭐ Replaces the 5 physical files. Phase 4 |
-| **WhatsApp digital forms + e-signature** | ⬜ | ⬜ | ⬜ | ⭐⭐ Neither incumbent does this. Phase 4 |
-| **Digital notepad / annotate on forms** | ⬜ | 🟡 | ⬜ | ⭐ Phase 4 |
+| **Digital patient file (paperless)** | 🟡 | 🟡 | ✅ | ⭐ Folders mirror the real practice; docs/forms/notes filed. Phase 4 ✅ (binary store backend parked #18) |
+| **WhatsApp digital forms + e-signature** | ⬜ | ⬜ | 🟡 | ⭐⭐ Versioned templates, tokenised link, e-sign capture, auto-file. Mobile form UI + WhatsApp delivery = integration. Phase 4 |
+| **Digital notepad / annotate on forms** | ⬜ | 🟡 | 🟡 | ⭐ Notepad model + file-to-patient done; drawing canvas UI later. Phase 4 |
 | **Imaging integration (X-ray/scan)** | ✅ | ✅ | ⬜ | SIDEXIS bridge. Phase 5 |
 | **Recalls (6-month) + reminders** | ✅ | ✅ (best) | ⬜ | Phase 5 |
 | **Reporting / KPIs** | ✅ | ✅ | ⬜ | Phase 5 |
