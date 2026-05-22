@@ -5,6 +5,7 @@ import {
   BellRing, Settings, ChevronDown, HelpCircle, Globe,
   User, LogOut, KeyRound, ClipboardList,
   Stethoscope, Layers, Wallet, ClipboardPlus, Receipt, FileText,
+  Scan, Mic, BarChart3,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -27,6 +28,10 @@ const PMS_NAV_ITEMS = [
   { label: 'Courses of Treatment', href: '/courses-of-treatment', icon: ClipboardPlus },
   { label: 'Estimates',            href: '/estimates',            icon: FileText },
   { label: 'Invoices',             href: '/invoices',             icon: Receipt },
+  { label: 'Imaging (SIDEXIS)',    href: '/imaging',              icon: Scan },
+  { label: 'Chair-side Scribe',    href: '/scribe-sessions',      icon: Mic },
+  { label: 'Recalls',              href: '/recalls',              icon: BellRing },
+  { label: 'Reporting',            href: '/reporting',            icon: BarChart3 },
   { label: 'Procedure Codes',      href: '/procedure-codes',      icon: Stethoscope },
   { label: 'Treatment Macros',     href: '/treatment-macros',     icon: Layers },
 ]

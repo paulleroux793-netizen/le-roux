@@ -26,6 +26,11 @@ module PracticeManagementPatient
     has_many :documents, dependent: :destroy
     has_many :form_submissions, dependent: :destroy
     has_many :notepad_pages, dependent: :destroy
+
+    # Phase 5/6 — imaging, recalls, scribe.
+    has_many :imaging_studies, dependent: :nullify
+    has_many :recalls, dependent: :destroy
+    has_many :scribe_sessions, dependent: :destroy
   end
 
   # The account that pays for this patient (first linked account, if any).

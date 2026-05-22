@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000006) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000008) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -336,6 +336,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000006) do
     t.index ["key", "version"], name: "index_form_templates_on_key_and_version", unique: true
   end
 
+  create_table "imaging_studies", force: :cascade do |t|
+    t.datetime "captured_at"
+    t.datetime "created_at", null: false
+    t.string "modality", default: "other", null: false
+    t.text "notes"
+    t.bigint "patient_id"
+    t.string "sidexis_patient_name"
+    t.string "source_file"
+    t.string "source_folder"
+    t.string "status", default: "needs_match", null: false
+    t.string "storage_key"
+    t.datetime "updated_at", null: false
+    t.index ["modality"], name: "index_imaging_studies_on_modality"
+    t.index ["patient_id"], name: "index_imaging_studies_on_patient_id"
+    t.index ["source_folder", "source_file"], name: "idx_imaging_unique_source", unique: true
+    t.index ["status"], name: "index_imaging_studies_on_status"
+  end
+
   create_table "invoice_lines", force: :cascade do |t|
     t.string "code"
     t.datetime "created_at", null: false
@@ -529,6 +547,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000006) do
     t.index ["code"], name: "index_procedure_codes_on_code", unique: true
   end
 
+  create_table "recalls", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.date "due_on", null: false
+    t.datetime "last_contacted_at"
+    t.text "notes"
+    t.bigint "patient_id", null: false
+    t.string "recall_type", default: "checkup", null: false
+    t.string "status", default: "due", null: false
+    t.datetime "updated_at", null: false
+    t.index ["patient_id", "due_on"], name: "index_recalls_on_patient_id_and_due_on"
+    t.index ["status"], name: "index_recalls_on_status"
+  end
+
   create_table "scheme_membership_patients", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "dependant_code"
@@ -553,6 +584,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000006) do
     t.index ["main_member_patient_id"], name: "index_scheme_memberships_on_main_member_patient_id"
     t.index ["medical_scheme_id"], name: "index_scheme_memberships_on_medical_scheme_id"
     t.index ["member_number"], name: "index_scheme_memberships_on_member_number"
+  end
+
+  create_table "scribe_sessions", force: :cascade do |t|
+    t.bigint "appointment_id"
+    t.bigint "course_of_treatment_id"
+    t.datetime "created_at", null: false
+    t.jsonb "draft", default: {}, null: false
+    t.datetime "ended_at"
+    t.bigint "estimate_id"
+    t.text "notes"
+    t.bigint "patient_id", null: false
+    t.datetime "started_at"
+    t.string "status", default: "recording", null: false
+    t.text "transcript"
+    t.datetime "updated_at", null: false
+    t.index ["appointment_id"], name: "index_scribe_sessions_on_appointment_id"
+    t.index ["patient_id"], name: "index_scribe_sessions_on_patient_id"
+    t.index ["status"], name: "index_scribe_sessions_on_status"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
@@ -795,6 +844,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000006) do
   add_foreign_key "form_submissions", "documents"
   add_foreign_key "form_submissions", "form_templates"
   add_foreign_key "form_submissions", "patients"
+  add_foreign_key "imaging_studies", "patients"
   add_foreign_key "invoice_lines", "invoices"
   add_foreign_key "invoices", "billing_accounts"
   add_foreign_key "invoices", "courses_of_treatment", column: "course_of_treatment_id"
@@ -808,10 +858,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000006) do
   add_foreign_key "patient_medical_histories", "patients"
   add_foreign_key "payments", "billing_accounts"
   add_foreign_key "payments", "invoices"
+  add_foreign_key "recalls", "patients"
   add_foreign_key "scheme_membership_patients", "patients"
   add_foreign_key "scheme_membership_patients", "scheme_memberships"
   add_foreign_key "scheme_memberships", "medical_schemes"
   add_foreign_key "scheme_memberships", "patients", column: "main_member_patient_id"
+  add_foreign_key "scribe_sessions", "appointments"
+  add_foreign_key "scribe_sessions", "courses_of_treatment", column: "course_of_treatment_id"
+  add_foreign_key "scribe_sessions", "estimates"
+  add_foreign_key "scribe_sessions", "patients"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

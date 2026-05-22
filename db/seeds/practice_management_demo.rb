@@ -78,4 +78,14 @@ if patient.notepad_pages.none?
   NotepadPage.create!(patient: patient, course_of_treatment: cot, title: "Chairside note", content: "Patient tolerated procedure well; review 6 weeks.", created_by: "Dr le Roux")
 end
 
-puts "Demo ready: patient=#{patient.id} cot=#{cot.id} items=#{cot.treatment_items.count} chart=#{ToothChartEntry.where(patient: patient).count} notes=#{cot.clinical_notes.count} estimates=#{cot.estimates.count} invoices=#{cot.invoices.count} documents=#{patient.documents.count} forms=#{patient.form_submissions.count}"
+# Phase 5/6 — a demo recall + a scribe session with a drafted estimate.
+if patient.recalls.none?
+  Recall.create!(patient: patient, recall_type: "checkup", due_on: 2.weeks.from_now.to_date, status: "due")
+end
+if patient.scribe_sessions.none?
+  s = ScribeSession.create!(patient: patient, status: "recording", started_at: Time.current)
+  s.draft_from_transcript!("Tooth 16 has deep caries and needs a filling. Tooth 28 is unrestorable; we should extract 28. Routine examination done today.")
+  s.build_proposal!
+end
+
+puts "Demo ready: patient=#{patient.id} cot=#{cot.id} items=#{cot.treatment_items.count} chart=#{ToothChartEntry.where(patient: patient).count} notes=#{cot.clinical_notes.count} estimates=#{patient.estimates.count} invoices=#{cot.invoices.count} documents=#{patient.documents.count} forms=#{patient.form_submissions.count} recalls=#{patient.recalls.count} scribe=#{patient.scribe_sessions.count}"

@@ -1,2 +1,5 @@
 # Real patient PII — never commit. Import reads it locally only.
 patients.csv
+
+# Sidexis manifest contains real patient names (PII) — never commit.
+sidexis_manifest.csv

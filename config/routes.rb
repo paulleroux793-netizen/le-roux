@@ -78,6 +78,10 @@ Rails.application.routes.draw do
   resources :estimates, only: [ :index ]
   resources :invoices, only: [ :index, :show ]
   get "patients/:patient_id/file", to: "patient_files#show", as: :patient_file
+  get "imaging", to: "imaging#index", as: :imaging
+  resources :scribe_sessions, only: [ :index, :show ], path: "scribe-sessions"
+  get "recalls", to: "recalls#index", as: :recalls
+  get "reporting", to: "reporting#index", as: :reporting
   get   "settings",          to: "settings#index"
   post  "settings/language", to: "settings#update_language"
   patch "settings/practice", to: "settings#update_practice", as: :settings_practice
