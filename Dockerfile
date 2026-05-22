@@ -52,11 +52,12 @@ RUN bundle install && \
 # Copy application code
 COPY . .
 
-# Ensure bin/ scripts are executable. Deploying via `railway up` from a
-# Windows machine strips the Unix +x bit (GitHub deploys preserve it), which
-# otherwise causes "We don't have permission to execute your start command"
-# at container start. This makes both deploy paths work. (2026-05-22)
-RUN chmod +x bin/*
+# Normalise + make bin/ scripts runnable on Linux regardless of deploy source.
+# Deploying via `railway up` from a Windows machine (a) strips the Unix +x bit
+# and (b) rewrites line endings to CRLF, so the script shebangs become
+# "#!/usr/bin/env ruby\r" and fail at exec with "/bin/bash: -: invalid option".
+# Strip carriage returns and restore +x. GitHub deploys are unaffected. (2026-05-22)
+RUN sed -i 's/\r$//' bin/* && chmod +x bin/*
 
 # Install JS dependencies and build Vite assets
 RUN npm ci && npm run build
