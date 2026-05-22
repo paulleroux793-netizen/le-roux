@@ -21,8 +21,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.bigint "patient_id", null: false
     t.string "relationship", default: "self", null: false
     t.datetime "updated_at", null: false
-    t.index ["billing_account_id", "patient_id"], name: "idx_account_patients_unique", unique: true
-    t.index ["patient_id"], name: "index_account_patients_on_patient_id"
+    t.index [ "billing_account_id", "patient_id" ], name: "idx_account_patients_unique", unique: true
+    t.index [ "patient_id" ], name: "index_account_patients_on_patient_id"
   end
 
   create_table "analytics_events", force: :cascade do |t|
@@ -33,8 +33,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "request_id"
     t.string "session_id"
     t.datetime "updated_at", null: false
-    t.index ["event_type", "occurred_at"], name: "index_analytics_events_on_event_type_and_occurred_at"
-    t.index ["occurred_at"], name: "index_analytics_events_on_occurred_at"
+    t.index [ "event_type", "occurred_at" ], name: "index_analytics_events_on_event_type_and_occurred_at"
+    t.index [ "occurred_at" ], name: "index_analytics_events_on_occurred_at"
   end
 
   create_table "appointments", force: :cascade do |t|
@@ -47,10 +47,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.datetime "start_time", null: false
     t.integer "status", default: 0, null: false
     t.datetime "updated_at", null: false
-    t.index ["google_event_id"], name: "index_appointments_on_google_event_id", unique: true
-    t.index ["patient_id"], name: "index_appointments_on_patient_id"
-    t.index ["start_time"], name: "index_appointments_on_start_time"
-    t.index ["status"], name: "index_appointments_on_status"
+    t.index [ "google_event_id" ], name: "index_appointments_on_google_event_id", unique: true
+    t.index [ "patient_id" ], name: "index_appointments_on_patient_id"
+    t.index [ "start_time" ], name: "index_appointments_on_start_time"
+    t.index [ "status" ], name: "index_appointments_on_status"
     t.exclusion_constraint "tsrange(start_time, end_time) WITH &&", where: "status <> 3", using: :gist, name: "no_overlapping_active_appointments"
   end
 
@@ -64,10 +64,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "resource_type"
     t.string "summary", null: false
     t.datetime "updated_at", null: false
-    t.index ["action"], name: "index_audit_logs_on_action"
-    t.index ["created_at"], name: "index_audit_logs_on_created_at"
-    t.index ["performed_by"], name: "index_audit_logs_on_performed_by"
-    t.index ["resource_type", "resource_id"], name: "index_audit_logs_on_resource_type_and_resource_id"
+    t.index [ "action" ], name: "index_audit_logs_on_action"
+    t.index [ "created_at" ], name: "index_audit_logs_on_created_at"
+    t.index [ "performed_by" ], name: "index_audit_logs_on_performed_by"
+    t.index [ "resource_type", "resource_id" ], name: "index_audit_logs_on_resource_type_and_resource_id"
   end
 
   create_table "billing_accounts", force: :cascade do |t|
@@ -83,9 +83,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "phone"
     t.string "postal_code"
     t.datetime "updated_at", null: false
-    t.index ["account_code"], name: "index_billing_accounts_on_account_code", unique: true, where: "(account_code IS NOT NULL)"
-    t.index ["billing_name"], name: "index_billing_accounts_on_billing_name"
-    t.index ["head_patient_id"], name: "index_billing_accounts_on_head_patient_id"
+    t.index [ "account_code" ], name: "index_billing_accounts_on_account_code", unique: true, where: "(account_code IS NOT NULL)"
+    t.index [ "billing_name" ], name: "index_billing_accounts_on_billing_name"
+    t.index [ "head_patient_id" ], name: "index_billing_accounts_on_head_patient_id"
   end
 
   create_table "calendar_notes", force: :cascade do |t|
@@ -95,7 +95,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "note", null: false
     t.datetime "starts_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["starts_at"], name: "index_calendar_notes_on_starts_at"
+    t.index [ "starts_at" ], name: "index_calendar_notes_on_starts_at"
   end
 
   create_table "call_logs", force: :cascade do |t|
@@ -109,9 +109,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.text "transcript"
     t.string "twilio_call_sid"
     t.datetime "updated_at", null: false
-    t.index ["caller_number"], name: "index_call_logs_on_caller_number"
-    t.index ["patient_id"], name: "index_call_logs_on_patient_id"
-    t.index ["twilio_call_sid"], name: "index_call_logs_on_twilio_call_sid", unique: true
+    t.index [ "caller_number" ], name: "index_call_logs_on_caller_number"
+    t.index [ "patient_id" ], name: "index_call_logs_on_patient_id"
+    t.index [ "twilio_call_sid" ], name: "index_call_logs_on_twilio_call_sid", unique: true
   end
 
   create_table "cancellation_reasons", force: :cascade do |t|
@@ -120,8 +120,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.text "details"
     t.string "reason_category", null: false
     t.datetime "updated_at", null: false
-    t.index ["appointment_id"], name: "index_cancellation_reasons_on_appointment_id"
-    t.index ["reason_category"], name: "index_cancellation_reasons_on_reason_category"
+    t.index [ "appointment_id" ], name: "index_cancellation_reasons_on_appointment_id"
+    t.index [ "reason_category" ], name: "index_cancellation_reasons_on_reason_category"
   end
 
   create_table "clinical_notes", force: :cascade do |t|
@@ -137,9 +137,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.text "subjective"
     t.bigint "supersedes_id"
     t.datetime "updated_at", null: false
-    t.index ["course_of_treatment_id"], name: "index_clinical_notes_on_course_of_treatment_id"
-    t.index ["locked"], name: "index_clinical_notes_on_locked"
-    t.index ["patient_id"], name: "index_clinical_notes_on_patient_id"
+    t.index [ "course_of_treatment_id" ], name: "index_clinical_notes_on_course_of_treatment_id"
+    t.index [ "locked" ], name: "index_clinical_notes_on_locked"
+    t.index [ "patient_id" ], name: "index_clinical_notes_on_patient_id"
   end
 
   create_table "confirmation_logs", force: :cascade do |t|
@@ -151,9 +151,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.text "notes"
     t.string "outcome"
     t.datetime "updated_at", null: false
-    t.index ["appointment_id"], name: "index_confirmation_logs_on_appointment_id"
-    t.index ["flagged"], name: "index_confirmation_logs_on_flagged"
-    t.index ["outcome"], name: "index_confirmation_logs_on_outcome"
+    t.index [ "appointment_id" ], name: "index_confirmation_logs_on_appointment_id"
+    t.index [ "flagged" ], name: "index_confirmation_logs_on_flagged"
+    t.index [ "outcome" ], name: "index_confirmation_logs_on_outcome"
   end
 
   create_table "conversations", force: :cascade do |t|
@@ -174,13 +174,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.jsonb "tags", default: [], null: false
     t.string "topic"
     t.datetime "updated_at", null: false
-    t.index ["ai_paused_until"], name: "index_conversations_on_ai_paused_until", where: "(ai_paused_until IS NOT NULL)"
-    t.index ["channel"], name: "index_conversations_on_channel"
-    t.index ["external_id"], name: "index_conversations_on_external_id", unique: true
-    t.index ["follow_up_sent_at"], name: "index_conversations_on_follow_up_sent_at"
-    t.index ["patient_id"], name: "index_conversations_on_patient_id"
-    t.index ["source"], name: "index_conversations_on_source"
-    t.index ["status"], name: "index_conversations_on_status"
+    t.index [ "ai_paused_until" ], name: "index_conversations_on_ai_paused_until", where: "(ai_paused_until IS NOT NULL)"
+    t.index [ "channel" ], name: "index_conversations_on_channel"
+    t.index [ "external_id" ], name: "index_conversations_on_external_id", unique: true
+    t.index [ "follow_up_sent_at" ], name: "index_conversations_on_follow_up_sent_at"
+    t.index [ "patient_id" ], name: "index_conversations_on_patient_id"
+    t.index [ "source" ], name: "index_conversations_on_source"
+    t.index [ "status" ], name: "index_conversations_on_status"
   end
 
   create_table "courses_of_treatment", force: :cascade do |t|
@@ -196,10 +196,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.date "start_date"
     t.string "status", default: "planned", null: false
     t.datetime "updated_at", null: false
-    t.index ["billing_account_id"], name: "index_courses_of_treatment_on_billing_account_id"
-    t.index ["patient_id"], name: "index_courses_of_treatment_on_patient_id"
-    t.index ["setting"], name: "index_courses_of_treatment_on_setting"
-    t.index ["status"], name: "index_courses_of_treatment_on_status"
+    t.index [ "billing_account_id" ], name: "index_courses_of_treatment_on_billing_account_id"
+    t.index [ "patient_id" ], name: "index_courses_of_treatment_on_patient_id"
+    t.index [ "setting" ], name: "index_courses_of_treatment_on_setting"
+    t.index [ "status" ], name: "index_courses_of_treatment_on_status"
   end
 
   create_table "doctor_schedules", force: :cascade do |t|
@@ -211,7 +211,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.time "end_time"
     t.time "start_time"
     t.datetime "updated_at", null: false
-    t.index ["day_of_week"], name: "index_doctor_schedules_on_day_of_week", unique: true
+    t.index [ "day_of_week" ], name: "index_doctor_schedules_on_day_of_week", unique: true
   end
 
   create_table "document_sequences", force: :cascade do |t|
@@ -219,7 +219,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.integer "current_value", default: 0, null: false
     t.string "key", null: false
     t.datetime "updated_at", null: false
-    t.index ["key"], name: "index_document_sequences_on_key", unique: true
+    t.index [ "key" ], name: "index_document_sequences_on_key", unique: true
   end
 
   create_table "documents", force: :cascade do |t|
@@ -239,9 +239,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.string "uploaded_by"
-    t.index ["course_of_treatment_id"], name: "index_documents_on_course_of_treatment_id"
-    t.index ["patient_id", "folder"], name: "index_documents_on_patient_id_and_folder"
-    t.index ["source"], name: "index_documents_on_source"
+    t.index [ "course_of_treatment_id" ], name: "index_documents_on_course_of_treatment_id"
+    t.index [ "patient_id", "folder" ], name: "index_documents_on_patient_id_and_folder"
+    t.index [ "source" ], name: "index_documents_on_source"
   end
 
   create_table "estimate_lines", force: :cascade do |t|
@@ -261,7 +261,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.integer "vat_cents", default: 0, null: false
     t.string "vat_treatment", default: "zero_rated", null: false
     t.integer "visit", default: 1, null: false
-    t.index ["estimate_id"], name: "index_estimate_lines_on_estimate_id"
+    t.index [ "estimate_id" ], name: "index_estimate_lines_on_estimate_id"
   end
 
   create_table "estimates", force: :cascade do |t|
@@ -279,10 +279,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.datetime "updated_at", null: false
     t.date "valid_until"
     t.integer "vat_cents", default: 0, null: false
-    t.index ["course_of_treatment_id"], name: "index_estimates_on_course_of_treatment_id"
-    t.index ["estimate_number"], name: "index_estimates_on_estimate_number", unique: true
-    t.index ["patient_id"], name: "index_estimates_on_patient_id"
-    t.index ["status"], name: "index_estimates_on_status"
+    t.index [ "course_of_treatment_id" ], name: "index_estimates_on_course_of_treatment_id"
+    t.index [ "estimate_number" ], name: "index_estimates_on_estimate_number", unique: true
+    t.index [ "patient_id" ], name: "index_estimates_on_patient_id"
+    t.index [ "status" ], name: "index_estimates_on_status"
   end
 
   create_table "fee_schedule_items", force: :cascade do |t|
@@ -292,8 +292,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.integer "practice_fee_cents", default: 0, null: false
     t.bigint "procedure_code_id", null: false
     t.datetime "updated_at", null: false
-    t.index ["fee_schedule_id", "procedure_code_id"], name: "idx_fee_schedule_items_unique", unique: true
-    t.index ["procedure_code_id"], name: "index_fee_schedule_items_on_procedure_code_id"
+    t.index [ "fee_schedule_id", "procedure_code_id" ], name: "idx_fee_schedule_items_unique", unique: true
+    t.index [ "procedure_code_id" ], name: "index_fee_schedule_items_on_procedure_code_id"
   end
 
   create_table "fee_schedules", force: :cascade do |t|
@@ -304,8 +304,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "plan_option"
     t.datetime "updated_at", null: false
     t.integer "year"
-    t.index ["medical_scheme_id"], name: "index_fee_schedules_on_medical_scheme_id"
-    t.index ["name", "year"], name: "index_fee_schedules_on_name_and_year"
+    t.index [ "medical_scheme_id" ], name: "index_fee_schedules_on_medical_scheme_id"
+    t.index [ "name", "year" ], name: "index_fee_schedules_on_name_and_year"
   end
 
   create_table "form_submissions", force: :cascade do |t|
@@ -322,9 +322,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "status", default: "sent", null: false
     t.string "token", null: false
     t.datetime "updated_at", null: false
-    t.index ["patient_id"], name: "index_form_submissions_on_patient_id"
-    t.index ["status"], name: "index_form_submissions_on_status"
-    t.index ["token"], name: "index_form_submissions_on_token", unique: true
+    t.index [ "patient_id" ], name: "index_form_submissions_on_patient_id"
+    t.index [ "status" ], name: "index_form_submissions_on_status"
+    t.index [ "token" ], name: "index_form_submissions_on_token", unique: true
   end
 
   create_table "form_templates", force: :cascade do |t|
@@ -336,7 +336,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.jsonb "schema", default: {}, null: false
     t.datetime "updated_at", null: false
     t.integer "version", default: 1, null: false
-    t.index ["key", "version"], name: "index_form_templates_on_key_and_version", unique: true
+    t.index [ "key", "version" ], name: "index_form_templates_on_key_and_version", unique: true
   end
 
   create_table "imaging_studies", force: :cascade do |t|
@@ -351,10 +351,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "status", default: "needs_match", null: false
     t.string "storage_key"
     t.datetime "updated_at", null: false
-    t.index ["modality"], name: "index_imaging_studies_on_modality"
-    t.index ["patient_id"], name: "index_imaging_studies_on_patient_id"
-    t.index ["source_folder", "source_file"], name: "idx_imaging_unique_source", unique: true
-    t.index ["status"], name: "index_imaging_studies_on_status"
+    t.index [ "modality" ], name: "index_imaging_studies_on_modality"
+    t.index [ "patient_id" ], name: "index_imaging_studies_on_patient_id"
+    t.index [ "source_folder", "source_file" ], name: "idx_imaging_unique_source", unique: true
+    t.index [ "status" ], name: "index_imaging_studies_on_status"
   end
 
   create_table "invoice_lines", force: :cascade do |t|
@@ -373,7 +373,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.datetime "updated_at", null: false
     t.integer "vat_cents", default: 0, null: false
     t.string "vat_treatment", default: "zero_rated", null: false
-    t.index ["invoice_id"], name: "index_invoice_lines_on_invoice_id"
+    t.index [ "invoice_id" ], name: "index_invoice_lines_on_invoice_id"
   end
 
   create_table "invoices", force: :cascade do |t|
@@ -391,10 +391,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.datetime "updated_at", null: false
     t.integer "vat_cents", default: 0, null: false
     t.boolean "void", default: false, null: false
-    t.index ["billing_account_id"], name: "index_invoices_on_billing_account_id"
-    t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
-    t.index ["patient_id"], name: "index_invoices_on_patient_id"
-    t.index ["status"], name: "index_invoices_on_status"
+    t.index [ "billing_account_id" ], name: "index_invoices_on_billing_account_id"
+    t.index [ "invoice_number" ], name: "index_invoices_on_invoice_number", unique: true
+    t.index [ "patient_id" ], name: "index_invoices_on_patient_id"
+    t.index [ "status" ], name: "index_invoices_on_status"
   end
 
   create_table "medical_schemes", force: :cascade do |t|
@@ -404,8 +404,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "name", null: false
     t.string "scheme_code"
     t.datetime "updated_at", null: false
-    t.index ["name"], name: "index_medical_schemes_on_name"
-    t.index ["scheme_code"], name: "index_medical_schemes_on_scheme_code", unique: true, where: "(scheme_code IS NOT NULL)"
+    t.index [ "name" ], name: "index_medical_schemes_on_name"
+    t.index [ "scheme_code" ], name: "index_medical_schemes_on_scheme_code", unique: true, where: "(scheme_code IS NOT NULL)"
   end
 
   create_table "notepad_pages", force: :cascade do |t|
@@ -417,7 +417,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.bigint "patient_id", null: false
     t.string "title", default: "Note", null: false
     t.datetime "updated_at", null: false
-    t.index ["patient_id"], name: "index_notepad_pages_on_patient_id"
+    t.index [ "patient_id" ], name: "index_notepad_pages_on_patient_id"
   end
 
   create_table "notifications", force: :cascade do |t|
@@ -432,12 +432,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.string "url"
-    t.index ["appointment_id"], name: "index_notifications_on_appointment_id"
-    t.index ["category"], name: "index_notifications_on_category"
-    t.index ["conversation_id"], name: "index_notifications_on_conversation_id"
-    t.index ["created_at"], name: "index_notifications_on_created_at"
-    t.index ["patient_id"], name: "index_notifications_on_patient_id"
-    t.index ["read_at"], name: "index_notifications_on_unread", where: "(read_at IS NULL)"
+    t.index [ "appointment_id" ], name: "index_notifications_on_appointment_id"
+    t.index [ "category" ], name: "index_notifications_on_category"
+    t.index [ "conversation_id" ], name: "index_notifications_on_conversation_id"
+    t.index [ "created_at" ], name: "index_notifications_on_created_at"
+    t.index [ "patient_id" ], name: "index_notifications_on_patient_id"
+    t.index [ "read_at" ], name: "index_notifications_on_unread", where: "(read_at IS NULL)"
   end
 
   create_table "patient_medical_histories", force: :cascade do |t|
@@ -454,7 +454,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.date "last_dental_visit"
     t.bigint "patient_id", null: false
     t.datetime "updated_at", null: false
-    t.index ["patient_id"], name: "index_patient_medical_histories_on_patient_id", unique: true
+    t.index [ "patient_id" ], name: "index_patient_medical_histories_on_patient_id", unique: true
   end
 
   create_table "patients", force: :cascade do |t|
@@ -468,10 +468,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "phone"
     t.string "preferred_language", limit: 5
     t.datetime "updated_at", null: false
-    t.index ["id_number"], name: "index_patients_on_id_number", where: "(id_number IS NOT NULL)"
-    t.index ["last_name", "first_name"], name: "index_patients_on_last_name_and_first_name"
-    t.index ["phone"], name: "index_patients_on_phone", unique: true
-    t.index ["preferred_language"], name: "index_patients_on_preferred_language"
+    t.index [ "id_number" ], name: "index_patients_on_id_number", where: "(id_number IS NOT NULL)"
+    t.index [ "last_name", "first_name" ], name: "index_patients_on_last_name_and_first_name"
+    t.index [ "phone" ], name: "index_patients_on_phone", unique: true
+    t.index [ "preferred_language" ], name: "index_patients_on_preferred_language"
   end
 
   create_table "payments", force: :cascade do |t|
@@ -486,9 +486,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.datetime "received_at", null: false
     t.string "reference"
     t.datetime "updated_at", null: false
-    t.index ["billing_account_id"], name: "index_payments_on_billing_account_id"
-    t.index ["invoice_id"], name: "index_payments_on_invoice_id"
-    t.index ["received_at"], name: "index_payments_on_received_at"
+    t.index [ "billing_account_id" ], name: "index_payments_on_billing_account_id"
+    t.index [ "invoice_id" ], name: "index_payments_on_invoice_id"
+    t.index [ "received_at" ], name: "index_payments_on_received_at"
   end
 
   create_table "practice_billing_profiles", force: :cascade do |t|
@@ -550,9 +550,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.boolean "tooth_specific", default: false, null: false
     t.datetime "updated_at", null: false
     t.string "vat_treatment", default: "zero_rated", null: false
-    t.index ["active"], name: "index_procedure_codes_on_active"
-    t.index ["category"], name: "index_procedure_codes_on_category"
-    t.index ["code"], name: "index_procedure_codes_on_code", unique: true
+    t.index [ "active" ], name: "index_procedure_codes_on_active"
+    t.index [ "category" ], name: "index_procedure_codes_on_category"
+    t.index [ "code" ], name: "index_procedure_codes_on_code", unique: true
   end
 
   create_table "recalls", force: :cascade do |t|
@@ -564,8 +564,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "recall_type", default: "checkup", null: false
     t.string "status", default: "due", null: false
     t.datetime "updated_at", null: false
-    t.index ["patient_id", "due_on"], name: "index_recalls_on_patient_id_and_due_on"
-    t.index ["status"], name: "index_recalls_on_status"
+    t.index [ "patient_id", "due_on" ], name: "index_recalls_on_patient_id_and_due_on"
+    t.index [ "status" ], name: "index_recalls_on_status"
   end
 
   create_table "scheme_membership_patients", force: :cascade do |t|
@@ -575,8 +575,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "role", default: "dependant", null: false
     t.bigint "scheme_membership_id", null: false
     t.datetime "updated_at", null: false
-    t.index ["patient_id"], name: "index_scheme_membership_patients_on_patient_id"
-    t.index ["scheme_membership_id", "patient_id"], name: "idx_scheme_membership_patients_unique", unique: true
+    t.index [ "patient_id" ], name: "index_scheme_membership_patients_on_patient_id"
+    t.index [ "scheme_membership_id", "patient_id" ], name: "idx_scheme_membership_patients_unique", unique: true
   end
 
   create_table "scheme_memberships", force: :cascade do |t|
@@ -589,9 +589,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "member_number", null: false
     t.string "plan_option"
     t.datetime "updated_at", null: false
-    t.index ["main_member_patient_id"], name: "index_scheme_memberships_on_main_member_patient_id"
-    t.index ["medical_scheme_id"], name: "index_scheme_memberships_on_medical_scheme_id"
-    t.index ["member_number"], name: "index_scheme_memberships_on_member_number"
+    t.index [ "main_member_patient_id" ], name: "index_scheme_memberships_on_main_member_patient_id"
+    t.index [ "medical_scheme_id" ], name: "index_scheme_memberships_on_medical_scheme_id"
+    t.index [ "member_number" ], name: "index_scheme_memberships_on_member_number"
   end
 
   create_table "scribe_sessions", force: :cascade do |t|
@@ -607,9 +607,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "status", default: "recording", null: false
     t.text "transcript"
     t.datetime "updated_at", null: false
-    t.index ["appointment_id"], name: "index_scribe_sessions_on_appointment_id"
-    t.index ["patient_id"], name: "index_scribe_sessions_on_patient_id"
-    t.index ["status"], name: "index_scribe_sessions_on_status"
+    t.index [ "appointment_id" ], name: "index_scribe_sessions_on_appointment_id"
+    t.index [ "patient_id" ], name: "index_scribe_sessions_on_patient_id"
+    t.index [ "status" ], name: "index_scribe_sessions_on_status"
   end
 
   create_table "solid_cable_messages", force: :cascade do |t|
@@ -617,9 +617,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.bigint "channel_hash", null: false
     t.datetime "created_at", null: false
     t.binary "payload", null: false
-    t.index ["channel"], name: "index_solid_cable_messages_on_channel"
-    t.index ["channel_hash"], name: "index_solid_cable_messages_on_channel_hash"
-    t.index ["created_at"], name: "index_solid_cable_messages_on_created_at"
+    t.index [ "channel" ], name: "index_solid_cable_messages_on_channel"
+    t.index [ "channel_hash" ], name: "index_solid_cable_messages_on_channel_hash"
+    t.index [ "created_at" ], name: "index_solid_cable_messages_on_created_at"
   end
 
   create_table "solid_cache_entries", force: :cascade do |t|
@@ -628,9 +628,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.binary "key", null: false
     t.bigint "key_hash", null: false
     t.binary "value", null: false
-    t.index ["byte_size"], name: "index_solid_cache_entries_on_byte_size"
-    t.index ["key_hash", "byte_size"], name: "index_solid_cache_entries_on_key_hash_and_byte_size"
-    t.index ["key_hash"], name: "index_solid_cache_entries_on_key_hash", unique: true
+    t.index [ "byte_size" ], name: "index_solid_cache_entries_on_byte_size"
+    t.index [ "key_hash", "byte_size" ], name: "index_solid_cache_entries_on_key_hash_and_byte_size"
+    t.index [ "key_hash" ], name: "index_solid_cache_entries_on_key_hash", unique: true
   end
 
   create_table "solid_queue_blocked_executions", force: :cascade do |t|
@@ -640,24 +640,24 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.bigint "job_id", null: false
     t.integer "priority", default: 0, null: false
     t.string "queue_name", null: false
-    t.index ["concurrency_key", "priority", "job_id"], name: "index_solid_queue_blocked_executions_for_release"
-    t.index ["expires_at", "concurrency_key"], name: "index_solid_queue_blocked_executions_for_maintenance"
-    t.index ["job_id"], name: "index_solid_queue_blocked_executions_on_job_id", unique: true
+    t.index [ "concurrency_key", "priority", "job_id" ], name: "index_solid_queue_blocked_executions_for_release"
+    t.index [ "expires_at", "concurrency_key" ], name: "index_solid_queue_blocked_executions_for_maintenance"
+    t.index [ "job_id" ], name: "index_solid_queue_blocked_executions_on_job_id", unique: true
   end
 
   create_table "solid_queue_claimed_executions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.bigint "job_id", null: false
     t.bigint "process_id"
-    t.index ["job_id"], name: "index_solid_queue_claimed_executions_on_job_id", unique: true
-    t.index ["process_id", "job_id"], name: "index_solid_queue_claimed_executions_on_process_id_and_job_id"
+    t.index [ "job_id" ], name: "index_solid_queue_claimed_executions_on_job_id", unique: true
+    t.index [ "process_id", "job_id" ], name: "index_solid_queue_claimed_executions_on_process_id_and_job_id"
   end
 
   create_table "solid_queue_failed_executions", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.text "error"
     t.bigint "job_id", null: false
-    t.index ["job_id"], name: "index_solid_queue_failed_executions_on_job_id", unique: true
+    t.index [ "job_id" ], name: "index_solid_queue_failed_executions_on_job_id", unique: true
   end
 
   create_table "solid_queue_jobs", force: :cascade do |t|
@@ -671,17 +671,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "queue_name", null: false
     t.datetime "scheduled_at"
     t.datetime "updated_at", null: false
-    t.index ["active_job_id"], name: "index_solid_queue_jobs_on_active_job_id"
-    t.index ["class_name"], name: "index_solid_queue_jobs_on_class_name"
-    t.index ["finished_at"], name: "index_solid_queue_jobs_on_finished_at"
-    t.index ["queue_name", "finished_at"], name: "index_solid_queue_jobs_for_filtering"
-    t.index ["scheduled_at", "finished_at"], name: "index_solid_queue_jobs_for_alerting"
+    t.index [ "active_job_id" ], name: "index_solid_queue_jobs_on_active_job_id"
+    t.index [ "class_name" ], name: "index_solid_queue_jobs_on_class_name"
+    t.index [ "finished_at" ], name: "index_solid_queue_jobs_on_finished_at"
+    t.index [ "queue_name", "finished_at" ], name: "index_solid_queue_jobs_for_filtering"
+    t.index [ "scheduled_at", "finished_at" ], name: "index_solid_queue_jobs_for_alerting"
   end
 
   create_table "solid_queue_pauses", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "queue_name", null: false
-    t.index ["queue_name"], name: "index_solid_queue_pauses_on_queue_name", unique: true
+    t.index [ "queue_name" ], name: "index_solid_queue_pauses_on_queue_name", unique: true
   end
 
   create_table "solid_queue_processes", force: :cascade do |t|
@@ -693,9 +693,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "name", null: false
     t.integer "pid", null: false
     t.bigint "supervisor_id"
-    t.index ["last_heartbeat_at"], name: "index_solid_queue_processes_on_last_heartbeat_at"
-    t.index ["name", "supervisor_id"], name: "index_solid_queue_processes_on_name_and_supervisor_id", unique: true
-    t.index ["supervisor_id"], name: "index_solid_queue_processes_on_supervisor_id"
+    t.index [ "last_heartbeat_at" ], name: "index_solid_queue_processes_on_last_heartbeat_at"
+    t.index [ "name", "supervisor_id" ], name: "index_solid_queue_processes_on_name_and_supervisor_id", unique: true
+    t.index [ "supervisor_id" ], name: "index_solid_queue_processes_on_supervisor_id"
   end
 
   create_table "solid_queue_ready_executions", force: :cascade do |t|
@@ -703,9 +703,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.bigint "job_id", null: false
     t.integer "priority", default: 0, null: false
     t.string "queue_name", null: false
-    t.index ["job_id"], name: "index_solid_queue_ready_executions_on_job_id", unique: true
-    t.index ["priority", "job_id"], name: "index_solid_queue_poll_all"
-    t.index ["queue_name", "priority", "job_id"], name: "index_solid_queue_poll_by_queue"
+    t.index [ "job_id" ], name: "index_solid_queue_ready_executions_on_job_id", unique: true
+    t.index [ "priority", "job_id" ], name: "index_solid_queue_poll_all"
+    t.index [ "queue_name", "priority", "job_id" ], name: "index_solid_queue_poll_by_queue"
   end
 
   create_table "solid_queue_recurring_executions", force: :cascade do |t|
@@ -713,8 +713,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.bigint "job_id", null: false
     t.datetime "run_at", null: false
     t.string "task_key", null: false
-    t.index ["job_id"], name: "index_solid_queue_recurring_executions_on_job_id", unique: true
-    t.index ["task_key", "run_at"], name: "index_solid_queue_recurring_executions_on_task_key_and_run_at", unique: true
+    t.index [ "job_id" ], name: "index_solid_queue_recurring_executions_on_job_id", unique: true
+    t.index [ "task_key", "run_at" ], name: "index_solid_queue_recurring_executions_on_task_key_and_run_at", unique: true
   end
 
   create_table "solid_queue_recurring_tasks", force: :cascade do |t|
@@ -729,8 +729,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "schedule", null: false
     t.boolean "static", default: true, null: false
     t.datetime "updated_at", null: false
-    t.index ["key"], name: "index_solid_queue_recurring_tasks_on_key", unique: true
-    t.index ["static"], name: "index_solid_queue_recurring_tasks_on_static"
+    t.index [ "key" ], name: "index_solid_queue_recurring_tasks_on_key", unique: true
+    t.index [ "static" ], name: "index_solid_queue_recurring_tasks_on_static"
   end
 
   create_table "solid_queue_scheduled_executions", force: :cascade do |t|
@@ -739,8 +739,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.integer "priority", default: 0, null: false
     t.string "queue_name", null: false
     t.datetime "scheduled_at", null: false
-    t.index ["job_id"], name: "index_solid_queue_scheduled_executions_on_job_id", unique: true
-    t.index ["scheduled_at", "priority", "job_id"], name: "index_solid_queue_dispatch_all"
+    t.index [ "job_id" ], name: "index_solid_queue_scheduled_executions_on_job_id", unique: true
+    t.index [ "scheduled_at", "priority", "job_id" ], name: "index_solid_queue_dispatch_all"
   end
 
   create_table "solid_queue_semaphores", force: :cascade do |t|
@@ -749,9 +749,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "key", null: false
     t.datetime "updated_at", null: false
     t.integer "value", default: 1, null: false
-    t.index ["expires_at"], name: "index_solid_queue_semaphores_on_expires_at"
-    t.index ["key", "value"], name: "index_solid_queue_semaphores_on_key_and_value"
-    t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
+    t.index [ "expires_at" ], name: "index_solid_queue_semaphores_on_expires_at"
+    t.index [ "key", "value" ], name: "index_solid_queue_semaphores_on_key_and_value"
+    t.index [ "key" ], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
   create_table "statements", force: :cascade do |t|
@@ -764,8 +764,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.date "period_start"
     t.string "statement_number", null: false
     t.datetime "updated_at", null: false
-    t.index ["billing_account_id"], name: "index_statements_on_billing_account_id"
-    t.index ["statement_number"], name: "index_statements_on_statement_number", unique: true
+    t.index [ "billing_account_id" ], name: "index_statements_on_billing_account_id"
+    t.index [ "statement_number" ], name: "index_statements_on_statement_number", unique: true
   end
 
   create_table "tooth_chart_entries", force: :cascade do |t|
@@ -779,8 +779,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "tooth_number", null: false
     t.bigint "treatment_item_id"
     t.datetime "updated_at", null: false
-    t.index ["course_of_treatment_id"], name: "index_tooth_chart_entries_on_course_of_treatment_id"
-    t.index ["patient_id", "tooth_number"], name: "index_tooth_chart_entries_on_patient_id_and_tooth_number"
+    t.index [ "course_of_treatment_id" ], name: "index_tooth_chart_entries_on_course_of_treatment_id"
+    t.index [ "patient_id", "tooth_number" ], name: "index_tooth_chart_entries_on_patient_id_and_tooth_number"
   end
 
   create_table "treatment_items", force: :cascade do |t|
@@ -798,9 +798,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.datetime "updated_at", null: false
     t.string "vat_treatment", default: "zero_rated", null: false
     t.integer "visit", default: 1, null: false
-    t.index ["course_of_treatment_id"], name: "index_treatment_items_on_course_of_treatment_id"
-    t.index ["procedure_code_id"], name: "index_treatment_items_on_procedure_code_id"
-    t.index ["status"], name: "index_treatment_items_on_status"
+    t.index [ "course_of_treatment_id" ], name: "index_treatment_items_on_course_of_treatment_id"
+    t.index [ "procedure_code_id" ], name: "index_treatment_items_on_procedure_code_id"
+    t.index [ "status" ], name: "index_treatment_items_on_status"
   end
 
   create_table "treatment_macro_items", force: :cascade do |t|
@@ -812,8 +812,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "tariff_code"
     t.bigint "treatment_macro_id", null: false
     t.datetime "updated_at", null: false
-    t.index ["procedure_code_id"], name: "index_treatment_macro_items_on_procedure_code_id"
-    t.index ["treatment_macro_id"], name: "index_treatment_macro_items_on_treatment_macro_id"
+    t.index [ "procedure_code_id" ], name: "index_treatment_macro_items_on_procedure_code_id"
+    t.index [ "treatment_macro_id" ], name: "index_treatment_macro_items_on_treatment_macro_id"
   end
 
   create_table "treatment_macros", force: :cascade do |t|
@@ -824,7 +824,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000012) do
     t.string "name", null: false
     t.text "notes"
     t.datetime "updated_at", null: false
-    t.index ["access_code"], name: "index_treatment_macros_on_access_code", unique: true
+    t.index [ "access_code" ], name: "index_treatment_macros_on_access_code", unique: true
   end
 
   add_foreign_key "account_patients", "billing_accounts"

@@ -22,7 +22,7 @@ class CreateBilling < ActiveRecord::Migration[8.1]
       t.date    :valid_until
       t.datetime :sent_at
       t.datetime :accepted_at
-      t.text    :notes
+      t.text :notes
       t.timestamps
       t.index :estimate_number, unique: true
       t.index :patient_id
@@ -91,7 +91,7 @@ class CreateBilling < ActiveRecord::Migration[8.1]
       t.boolean :is_deposit, null: false, default: false
       t.string  :reference
       t.datetime :received_at, null: false
-      t.text    :notes
+      t.text :notes
       t.timestamps
       t.index :billing_account_id
       t.index :invoice_id

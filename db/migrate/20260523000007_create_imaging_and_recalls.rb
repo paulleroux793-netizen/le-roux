@@ -11,7 +11,7 @@ class CreateImagingAndRecalls < ActiveRecord::Migration[8.1]
       t.string  :source_file
       t.string  :storage_key                      # on-prem reference / thumbnail key (backend parked #18)
       t.string  :status, null: false, default: "needs_match"  # needs_match / matched / ignored
-      t.text     :notes
+      t.text :notes
       t.timestamps
       t.index :patient_id
       t.index :status

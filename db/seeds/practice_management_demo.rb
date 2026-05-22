@@ -24,7 +24,7 @@ end
 {
   "8101" => { tooth: nil,  status: "completed", visit: 1 }, # oral exam
   "8341" => { tooth: "26", status: "completed", visit: 1 }, # restorative
-  "8201" => { tooth: "28", status: "planned",   visit: 2 }, # extraction (second appointment)
+  "8201" => { tooth: "28", status: "planned",   visit: 2 } # extraction (second appointment)
 }.each do |code, opts|
   pc = ProcedureCode.find_by(code: code)
   next unless pc

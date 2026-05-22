@@ -9,8 +9,8 @@ class CreateScribeSessions < ActiveRecord::Migration[8.1]
       t.bigint  :course_of_treatment_id           # the COT it drafted (once reviewed)
       t.bigint  :estimate_id                       # the proposed estimate (draft) for review
       t.string  :status, null: false, default: "recording"  # recording / transcribing / drafted / reviewed / discarded
-      t.text     :transcript                       # local Whisper transcript (audio never leaves the PC)
-      t.jsonb   :draft, null: false, default: {}    # extracted findings + proposed line items
+      t.text :transcript                       # local Whisper transcript (audio never leaves the PC)
+      t.jsonb :draft, null: false, default: {}    # extracted findings + proposed line items
       t.datetime :started_at
       t.datetime :ended_at
       t.text     :notes

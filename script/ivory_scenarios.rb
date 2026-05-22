@@ -275,6 +275,55 @@ ActiveRecord::Base.transaction do
     assert s.appointment_id == appt.id && s.patient_id == p.id && s.status == "recording", "start_for wrong"
   end
 
+  # ---------- PHASE 8: pricing, medical/self, visit, identity, search ----------
+  check("P8 medical capped at line total; self = total − medical") do
+    pc = ProcedureCode.create!(code: "T#{@seq}", description: "x", vat_treatment: "zero_rated", default_fee_cents: 10000, medical_fee_cents: 30000) # medical > practice
+    p = new_patient; inv = Invoice.create!(patient: p, invoice_date: Date.current)
+    l = inv.invoice_lines.create!(procedure_code: pc, code: pc.code, quantity: 1, unit_fee_cents: 10000, vat_treatment: "zero_rated")
+    assert l.medical_cents == 10000, "medical not capped at line total: #{l.medical_cents}"
+    assert l.self_cents == 0, "self should be 0 when medical caps total"
+  end
+  check("P8 medical unknown → self = whole line") do
+    pc = ProcedureCode.create!(code: "T#{@seq}", description: "x", vat_treatment: "zero_rated", default_fee_cents: 5000, medical_fee_cents: nil)
+    p = new_patient; inv = Invoice.create!(patient: p, invoice_date: Date.current)
+    l = inv.invoice_lines.create!(procedure_code: pc, code: pc.code, quantity: 2, unit_fee_cents: 5000, vat_treatment: "zero_rated")
+    assert l.medical_cents == 0 && l.self_cents == 10000, "self should equal full line when medical unknown"
+  end
+  check("P8 invoice/estimate medical_total + self_total aggregate") do
+    pc = ProcedureCode.create!(code: "T#{@seq}", description: "x", vat_treatment: "zero_rated", default_fee_cents: 20000, medical_fee_cents: 12000)
+    p = new_patient; inv = Invoice.create!(patient: p, invoice_date: Date.current)
+    2.times { inv.invoice_lines.create!(procedure_code: pc, code: pc.code, quantity: 1, unit_fee_cents: 20000, vat_treatment: "zero_rated") }
+    inv.recalculate; inv.save!
+    assert inv.medical_total == 240.0 && inv.self_total == 160.0, "invoice medical/self totals wrong: #{inv.medical_total}/#{inv.self_total}"
+  end
+  check("P8 estimate groups by visit + estimate→invoice carries medical/self") do
+    pc = ProcedureCode.create!(code: "T#{@seq}", description: "x", vat_treatment: "zero_rated", default_fee_cents: 10000, medical_fee_cents: 6000)
+    p = new_patient; cot = CourseOfTreatment.create!(patient: p, setting: "in_chair")
+    cot.treatment_items.create!(procedure_code: pc, status: "planned", visit: 1)
+    cot.treatment_items.create!(procedure_code: pc, status: "planned", visit: 2)
+    est = Estimate.from_course(cot); est.save!
+    assert est.lines_by_visit.keys == [ 1, 2 ], "visit grouping wrong"
+    inv = est.accept_and_invoice!
+    assert inv.medical_total == 120.0, "estimate→invoice lost the medical split"
+  end
+  check("P8 patient with id_number and NO phone is valid") do
+    p = Patient.new(first_name: "Kid", last_name: "NoPhone", id_number: "15010100000#{@seq % 10}")
+    assert p.valid?, "id-only patient invalid: #{p.errors.full_messages}"
+  end
+  check("P8 patient with neither phone nor id_number is invalid") do
+    p = Patient.new(first_name: "No", last_name: "Identity")
+    assert !p.valid?, "patient with no identity should be invalid"
+  end
+  check("P8 two id-only patients can share a (nil) phone") do
+    a = Patient.create!(first_name: "A", last_name: "Fam", id_number: "ID-A#{@seq}")
+    b = Patient.create!(first_name: "B", last_name: "Fam", id_number: "ID-B#{@seq}")
+    assert a.persisted? && b.persisted?, "nil-phone family members collided"
+  end
+  check("P8 procedure fee accessors reflect latest cents") do
+    pc = ProcedureCode.create!(code: "T#{@seq}", description: "x", vat_treatment: "zero_rated", default_fee_cents: 69930, medical_fee_cents: 40000)
+    assert pc.default_fee == 699.30 && pc.medical_fee == 400.0, "fee accessors wrong"
+  end
+
   raise ActiveRecord::Rollback # leave no trace
 end
 

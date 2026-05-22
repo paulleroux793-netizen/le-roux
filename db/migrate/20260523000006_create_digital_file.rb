@@ -17,8 +17,8 @@ class CreateDigitalFile < ActiveRecord::Migration[8.1]
       t.string  :storage_key                              # path/key in the binary store (backend parked)
       t.boolean :signed, null: false, default: false
       t.datetime :captured_at, null: false
-      t.string  :uploaded_by
-      t.text     :notes
+      t.string :uploaded_by
+      t.text :notes
       t.timestamps
       t.index [ :patient_id, :folder ]
       t.index :course_of_treatment_id
@@ -49,7 +49,7 @@ class CreateDigitalFile < ActiveRecord::Migration[8.1]
       t.datetime :opened_at
       t.datetime :completed_at
       t.datetime :expires_at
-      t.bigint  :document_id                      # the filed PDF once completed
+      t.bigint :document_id                      # the filed PDF once completed
       t.timestamps
       t.index :token, unique: true
       t.index :patient_id

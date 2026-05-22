@@ -67,7 +67,7 @@ class CreateClinicalCore < ActiveRecord::Migration[8.1]
       t.bigint  :course_of_treatment_id
       t.bigint  :treatment_item_id
       t.datetime :noted_at, null: false
-      t.string  :noted_by
+      t.string :noted_by
       t.timestamps
       t.index [ :patient_id, :tooth_number ]
       t.index :course_of_treatment_id
