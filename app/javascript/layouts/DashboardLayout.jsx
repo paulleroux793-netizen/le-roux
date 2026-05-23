@@ -5,10 +5,11 @@ import {
   BellRing, Settings, ChevronDown, HelpCircle, Globe,
   User, LogOut, KeyRound, ClipboardList,
   Stethoscope, Layers, Wallet, ClipboardPlus, Receipt, FileText,
-  Scan, Mic, BarChart3,
+  Scan, Mic, BarChart3, Inbox,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
+import GlobalShortcuts from '../components/GlobalShortcuts'
 import NotificationBell from '../components/NotificationBell'
 import { useLanguage } from '../lib/LanguageContext'
 
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
 
 // Practice-management system (Phase 1+). Literal labels for now — localisation parked.
 const PMS_NAV_ITEMS = [
+  { label: 'Mailbox',              href: '/mail',                 icon: Inbox },
   { label: 'Accounts',             href: '/accounts',             icon: Wallet },
   { label: 'Courses of Treatment', href: '/courses-of-treatment', icon: ClipboardPlus },
   { label: 'Estimates',            href: '/estimates',            icon: FileText },
@@ -59,6 +61,8 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-brand-surface text-brand-ink">
+      {/* R4 — Practice-wide keyboard shortcuts */}
+      <GlobalShortcuts />
 
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-brand-border bg-white">

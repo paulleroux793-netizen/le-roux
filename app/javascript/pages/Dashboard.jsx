@@ -41,6 +41,7 @@ export default function Dashboard({
   recent_patients = [],
   reminders = [],
   patients = [],
+  checkout_ready: checkoutReady = [],
 }) {
   const { t, language } = useLanguage()
 
@@ -70,6 +71,7 @@ export default function Dashboard({
         only: [
           'stats', 'todays_appointments', 'upcoming_appointments',
           'weekly_chart', 'recent_patients', 'reminders', 'patients',
+          'checkout_ready',
         ],
         preserveState: true,
         preserveScroll: true,
@@ -98,6 +100,30 @@ export default function Dashboard({
           {t('new_appointment')}
         </button>
       </div>
+
+      {/* N4 — Real-time checkout banners. Patient in chair → draft estimate
+          is ready to hand them at the desk before they leave. */}
+      {checkoutReady.length > 0 && (
+        <div className="mb-6 space-y-2">
+          {checkoutReady.map((c) => (
+            <a key={c.appointment_id}
+              href={`/estimates/${c.estimate_id}`}
+              className="group flex items-center justify-between rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition-colors">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+                  {c.status === 'completed' ? 'Estimate ready for checkout' : 'Estimate ready while in chair'}
+                </p>
+                <p className="text-sm font-medium text-brand-ink">
+                  {c.patient_name} · {c.estimate_number} · <strong>R{c.estimate_total.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</strong>
+                </p>
+              </div>
+              <span className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 group-hover:bg-amber-700 group-hover:text-white">
+                Open estimate →
+              </span>
+            </a>
+          ))}
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

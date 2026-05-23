@@ -112,6 +112,10 @@ Rails.application.routes.draw do
   namespace :admin do
     resources :recording_devices, path: "recording-devices"
   end
+
+  # N2 — Unified inbox (Outlook-style). Provider OAuth flows land later.
+  get  "mail",                to: "mail#index", as: :mail
+  patch "mail/threads/:id/mark_read", to: "mail#mark_read", as: :mail_thread_mark_read
   get "recalls", to: "recalls#index", as: :recalls
   get "reporting", to: "reporting#index", as: :reporting
   get   "settings",          to: "settings#index"

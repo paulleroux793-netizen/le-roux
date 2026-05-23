@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000014) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000015) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -415,6 +415,92 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000014) do
     t.index ["invoice_number"], name: "index_invoices_on_invoice_number", unique: true
     t.index ["patient_id"], name: "index_invoices_on_patient_id"
     t.index ["status"], name: "index_invoices_on_status"
+  end
+
+  create_table "mail_accounts", force: :cascade do |t|
+    t.string "address", null: false
+    t.datetime "created_at", null: false
+    t.string "display_name"
+    t.string "external_account_id"
+    t.datetime "last_synced_at"
+    t.text "oauth_access_token_ciphertext"
+    t.datetime "oauth_expires_at"
+    t.text "oauth_refresh_token_ciphertext"
+    t.string "provider", null: false
+    t.string "status", default: "connecting", null: false
+    t.text "status_message"
+    t.datetime "updated_at", null: false
+    t.string "webhook_secret"
+    t.index ["address"], name: "index_mail_accounts_on_address", unique: true
+    t.index ["status"], name: "index_mail_accounts_on_status"
+  end
+
+  create_table "mail_appointment_drafts", force: :cascade do |t|
+    t.decimal "confidence", precision: 4, scale: 3
+    t.bigint "confirmed_appointment_id"
+    t.datetime "created_at", null: false
+    t.jsonb "extraction_metadata", default: {}, null: false
+    t.bigint "mail_message_id", null: false
+    t.bigint "patient_id"
+    t.integer "requested_duration_minutes"
+    t.string "requested_reason"
+    t.datetime "requested_start_time"
+    t.string "status", default: "pending", null: false
+    t.datetime "updated_at", null: false
+    t.index ["confirmed_appointment_id"], name: "index_mail_appointment_drafts_on_confirmed_appointment_id"
+    t.index ["mail_message_id"], name: "index_mail_appointment_drafts_on_mail_message_id"
+    t.index ["patient_id"], name: "index_mail_appointment_drafts_on_patient_id"
+    t.index ["status"], name: "index_mail_appointment_drafts_on_status"
+  end
+
+  create_table "mail_messages", force: :cascade do |t|
+    t.text "body_html"
+    t.text "body_text"
+    t.string "cc_addresses", default: [], array: true
+    t.datetime "created_at", null: false
+    t.boolean "flagged_phi", default: false, null: false
+    t.string "from_address", null: false
+    t.string "from_name"
+    t.boolean "has_attachments", default: false, null: false
+    t.bigint "mail_account_id", null: false
+    t.bigint "mail_thread_id", null: false
+    t.string "message_id_header"
+    t.string "provider_message_id", null: false
+    t.datetime "read_at"
+    t.datetime "received_at", null: false
+    t.boolean "sent_by_us", default: false, null: false
+    t.text "snippet"
+    t.boolean "starred", default: false, null: false
+    t.string "subject"
+    t.string "to_addresses", default: [], array: true
+    t.datetime "updated_at", null: false
+    t.index ["mail_account_id", "provider_message_id"], name: "idx_mail_messages_on_account_and_provider_id", unique: true
+    t.index ["mail_account_id"], name: "index_mail_messages_on_mail_account_id"
+    t.index ["mail_thread_id"], name: "index_mail_messages_on_mail_thread_id"
+    t.index ["received_at"], name: "index_mail_messages_on_received_at"
+  end
+
+  create_table "mail_threads", force: :cascade do |t|
+    t.boolean "archived", default: false, null: false
+    t.string "clinical_intent"
+    t.datetime "created_at", null: false
+    t.datetime "last_message_at"
+    t.bigint "mail_account_id", null: false
+    t.integer "message_count", default: 0, null: false
+    t.string "participants", default: [], array: true
+    t.bigint "patient_id"
+    t.decimal "patient_match_confidence", precision: 4, scale: 3
+    t.string "provider_thread_id", null: false
+    t.boolean "starred", default: false, null: false
+    t.string "subject"
+    t.boolean "trashed", default: false, null: false
+    t.integer "unread_count", default: 0, null: false
+    t.datetime "updated_at", null: false
+    t.index ["clinical_intent"], name: "index_mail_threads_on_clinical_intent"
+    t.index ["last_message_at"], name: "index_mail_threads_on_last_message_at"
+    t.index ["mail_account_id", "provider_thread_id"], name: "idx_mail_threads_on_account_and_provider_id", unique: true
+    t.index ["mail_account_id"], name: "index_mail_threads_on_mail_account_id"
+    t.index ["patient_id"], name: "index_mail_threads_on_patient_id"
   end
 
   create_table "medical_schemes", force: :cascade do |t|
@@ -894,6 +980,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000014) do
   add_foreign_key "invoices", "billing_accounts"
   add_foreign_key "invoices", "courses_of_treatment", column: "course_of_treatment_id"
   add_foreign_key "invoices", "patients"
+  add_foreign_key "mail_appointment_drafts", "appointments", column: "confirmed_appointment_id"
+  add_foreign_key "mail_appointment_drafts", "mail_messages"
+  add_foreign_key "mail_appointment_drafts", "patients"
+  add_foreign_key "mail_messages", "mail_accounts"
+  add_foreign_key "mail_messages", "mail_threads"
+  add_foreign_key "mail_threads", "mail_accounts"
+  add_foreign_key "mail_threads", "patients"
   add_foreign_key "notepad_pages", "courses_of_treatment", column: "course_of_treatment_id"
   add_foreign_key "notepad_pages", "documents", on_delete: :nullify
   add_foreign_key "notepad_pages", "patients"

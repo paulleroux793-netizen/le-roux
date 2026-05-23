@@ -77,7 +77,12 @@ class PagesController < ApplicationController
         weekly_chart: weekly_chart,
         recent_patients: recent_patients.map { |p| patient_dashboard_props(p) },
         reminders: reminders.map { |a| appointment_props(a) },
-        patients: all_patients.map { |p| { id: p.id, name: p.full_name, phone: p.phone } }
+        patients: all_patients.map { |p| { id: p.id, name: p.full_name, phone: p.phone } },
+        # N4 — Real-time checkout banners. Currently in_chair (in_consultation)
+        # or just-completed appointments where a scribe-drafted estimate is
+        # ready to hand the patient. Reception sees these without polling
+        # other screens.
+        checkout_ready: build_checkout_banners(todays_appointments)
       }
     end
 
@@ -96,6 +101,37 @@ class PagesController < ApplicationController
       status: appointment.status,
       reason: appointment.reason
     }
+  end
+
+  # N4 — Build the "estimate ready at checkout" banners. For each today
+  # appointment that is in_consultation or completed AND has a scribe-
+  # drafted estimate (via the patient's most recent draft estimate), we
+  # surface a one-line card on the dashboard so reception can hand the
+  # document to the patient without going to look for it.
+  def build_checkout_banners(todays_appointments)
+    candidates = todays_appointments.select { |a|
+      %w[in_consultation completed].include?(a.status)
+    }
+    return [] if candidates.empty?
+
+    patient_ids = candidates.map(&:patient_id).uniq
+    latest_drafts = Estimate.where(patient_id: patient_ids, status: %w[draft sent])
+                            .where("created_at >= ?", 12.hours.ago)
+                            .order(created_at: :desc)
+                            .index_by(&:patient_id)
+    candidates.filter_map do |appt|
+      est = latest_drafts[appt.patient_id]
+      next unless est
+      {
+        appointment_id: appt.id,
+        patient_id: appt.patient_id,
+        patient_name: appt.patient.full_name,
+        status: appt.status,
+        estimate_id: est.id,
+        estimate_number: est.estimate_number,
+        estimate_total: est.total
+      }
+    end
   end
 
   def patient_dashboard_props(patient)
