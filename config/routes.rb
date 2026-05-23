@@ -74,7 +74,12 @@ Rails.application.routes.draw do
   get "procedure-codes", to: "procedure_codes#index", as: :procedure_codes
   get "treatment-macros", to: "treatment_macros#index", as: :treatment_macros
   resources :billing_accounts, only: [ :index, :show ], path: "accounts"
-  resources :courses_of_treatment, only: [ :index, :show ], path: "courses-of-treatment"
+  resources :courses_of_treatment, only: [ :index, :show ], path: "courses-of-treatment" do
+    collection do
+      # P9.3 — clickable odontogram → chart entry + planned procedure
+      post :chart_quick_add
+    end
+  end
   resources :estimates, only: [ :index, :show ]
   resources :invoices, only: [ :index, :show ]
   get "patients/:patient_id/file", to: "patient_files#show", as: :patient_file

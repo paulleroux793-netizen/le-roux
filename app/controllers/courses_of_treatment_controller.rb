@@ -41,8 +41,50 @@ class CoursesOfTreatmentController < ApplicationController
           signed_by: n.signed_by, signed_at: n.signed_at&.iso8601, locked: n.locked
         }
       },
-      chart: latest_chart_for(patient)
+      chart: latest_chart_for(patient),
+      # P9.3 — props needed by the clickable odontogram modal.
+      # `procedure_suggestions` is a condition→code map (bake-in, no fetch).
+      # `procedure_codes` lets the user override the suggestion inline.
+      procedure_suggestions: ChartingService.suggestions_for_props,
+      procedure_codes: ProcedureCode.active.order(:code).pluck(:id, :code, :description)
+        .map { |id, code, desc| { id:, code:, description: desc } }
     }
+  end
+
+  # P9.3 — POST /courses-of-treatment/chart_quick_add
+  #
+  # Wired from the odontogram modal. Records a tooth chart entry and
+  # (if a procedure code was picked) a planned treatment item on the
+  # patient's open COT — auto-creating the COT if none exists.
+  # Best-effort; failures bubble up as a redirect_back with alert.
+  def chart_quick_add
+    patient = Patient.find(params[:patient_id])
+    cot, item = ChartingService.add_from_chart(
+      patient:           patient,
+      tooth_number:      params[:tooth_number],
+      condition:         params[:condition],
+      procedure_code_id: params[:procedure_code_id]
+    )
+
+    expire_dev_page_cache("courses-of-treatment")
+    expire_dev_page_cache("patients/show")
+
+    AuditService.log(
+      action: "chart.quick_add",
+      summary: "Charted tooth #{params[:tooth_number]} as #{params[:condition]}" \
+               "#{item ? " + planned #{item.procedure_code.code}" : ''}",
+      resource: cot,
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+
+    redirect_back fallback_location: course_of_treatment_path(cot),
+      notice: "Tooth #{params[:tooth_number]} charted#{item ? ' + procedure planned' : ''}",
+      status: :see_other
+  rescue ActiveRecord::RecordInvalid, ArgumentError => e
+    Rails.logger.warn("[CoursesOfTreatmentController#chart_quick_add] #{e.message}")
+    redirect_back fallback_location: courses_of_treatment_path,
+      alert: "Could not chart tooth: #{e.message}", status: :see_other
   end
 
   private

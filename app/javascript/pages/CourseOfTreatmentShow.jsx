@@ -1,8 +1,9 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link } from '@inertiajs/react'
 import { ArrowLeft, ClipboardPlus, Lock } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import Odontogram from '../components/Odontogram'
+import ToothActionModal from '../components/ToothActionModal'
 import { cn } from '../lib/utils'
 
 const SETTING_LABELS = {
@@ -17,7 +18,12 @@ const ITEM_STATUS_STYLE = {
 }
 const rand = (n) => `R${(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-export default function CourseOfTreatmentShow({ course = {}, items = [], notes = [], chart = {} }) {
+export default function CourseOfTreatmentShow({
+  course = {}, items = [], notes = [], chart = {},
+  procedure_suggestions: procedureSuggestions = {},
+  procedure_codes: procedureCodes = [],
+}) {
+  const [activeTooth, setActiveTooth] = useState(null)
   return (
     <DashboardLayout>
       <Link href="/courses-of-treatment" className="mb-4 inline-flex items-center gap-1 text-sm text-brand-muted hover:text-brand-ink">
@@ -42,9 +48,21 @@ export default function CourseOfTreatmentShow({ course = {}, items = [], notes =
       </div>
 
       <div className="mb-6">
-        <h2 className="mb-2 text-sm font-semibold text-brand-ink">Tooth chart</h2>
-        <Odontogram chart={chart} />
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-brand-ink">Tooth chart</h2>
+          <p className="text-xs text-brand-muted">Click any tooth to chart a finding or plan a procedure</p>
+        </div>
+        <Odontogram chart={chart} onToothClick={setActiveTooth} />
       </div>
+
+      <ToothActionModal
+        open={activeTooth !== null}
+        toothNumber={activeTooth}
+        patientId={course.patient?.id}
+        procedureSuggestions={procedureSuggestions}
+        procedureCodes={procedureCodes}
+        onClose={() => setActiveTooth(null)}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Treatment items */}
