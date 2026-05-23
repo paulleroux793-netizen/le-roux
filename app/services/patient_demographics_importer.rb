@@ -66,19 +66,19 @@ class PatientDemographicsImporter
           end
         end
 
-        # --- Scheme membership (skip PRIVATE) ---
+        # --- Scheme + membership data (skip PRIVATE rows) ---
         scheme_name = row["scheme_name"].to_s.strip
         membership_no = row["membership_number"].to_s.strip
-        if scheme_name.present? && !scheme_name.upcase.start_with?("PRIVATE") && membership_no.present?
-          unless schemes[scheme_name]
-            schemes[scheme_name] = true
-            unless MedicalScheme.exists?(name: scheme_name)
-              r.schemes_created += 1
-              MedicalScheme.create!(name: scheme_name) unless dry_run
-            end
+        dep_code = row["dep_code"].to_s.strip.presence
+        has_scheme = scheme_name.present? && !scheme_name.upcase.start_with?("PRIVATE") && membership_no.present?
+        if has_scheme && !schemes[scheme_name]
+          schemes[scheme_name] = true
+          unless MedicalScheme.exists?(name: scheme_name)
+            r.schemes_created += 1
+            MedicalScheme.create!(name: scheme_name) unless dry_run
           end
-          r.memberships_created += 1 # counted per row that carries a membership
         end
+        r.memberships_created += 1 if has_scheme
 
         # --- Patient identity: match by id_number OR phone; never clobber. ---
         # Identity is the SA ID / passport / DOB-based number (dependant first, else main member).
@@ -89,7 +89,10 @@ class PatientDemographicsImporter
                    (phone.present? && Patient.find_by(phone: phone))
         if existing
           r.patients_matched += 1
-          link_account(existing, acc_code) unless dry_run
+          unless dry_run
+            link_account(existing, acc_code)
+            link_scheme(existing, scheme_name, membership_no, dep_code) if has_scheme
+          end
           next
         end
 
@@ -114,6 +117,7 @@ class PatientDemographicsImporter
           p = Patient.create!(first_name: first.presence || "Unknown", last_name: last.presence || "(imported)",
                               phone: usable_phone, id_number: id_number)
           link_account(p, acc_code)
+          link_scheme(p, scheme_name, membership_no, dep_code) if has_scheme
         end
       end
 
@@ -124,6 +128,18 @@ class PatientDemographicsImporter
   end
 
   private
+
+  # Link a patient to a scheme membership (idempotent). Creates SchemeMembership for the
+  # (scheme, member_number) pair and links the patient via SchemeMembershipPatient.
+  def link_scheme(patient, scheme_name, member_no, dep_code)
+    scheme = MedicalScheme.find_by(name: scheme_name)
+    return unless scheme
+    membership = SchemeMembership.find_or_create_by!(medical_scheme_id: scheme.id, member_number: member_no)
+    SchemeMembershipPatient.find_or_create_by!(scheme_membership_id: membership.id, patient_id: patient.id) do |smp|
+      smp.dependant_code = dep_code
+      smp.role = "dependant"
+    end
+  end
 
   # Link a patient to their billing account (idempotent).
   def link_account(patient, acc_code)

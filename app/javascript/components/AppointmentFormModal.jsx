@@ -21,12 +21,42 @@ import { useLanguage } from '../lib/LanguageContext'
 // Build the schema dynamically so validation messages use the current language.
 // The schema itself is static (field names don't change), but we wrap it
 // in a function so `t()` is called at resolve-time, not import-time.
+// Default appointment duration in minutes, inferred from the reason text.
+// Per the practice config: check-up 45m, whitening 90m, cleaning 30m, etc.
+function defaultDurationFor(reason) {
+  const r = (reason || '').toLowerCase()
+  if (r.includes('whiten')) return 90
+  if (r.includes('check') || r.includes('exam') || r.includes('cosmetic') || r.includes('aligner')) return 45
+  if (r.includes('clean') || r.includes('hygien') || r.includes('polish') || r.includes('scal')) return 30
+  if (r.includes('consult')) return 30
+  if (r.includes('extract')) return 30
+  if (r.includes('filling') || r.includes('restor') || r.includes('crown')) return 45
+  return 30
+}
+
+// Format a Date as the value an HTML datetime-local input expects (local TZ).
+function dtLocal(d) {
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+// Snap a datetime-local string's minutes to the nearest 15-min interval.
+function snapTo15(str) {
+  if (!str) return str
+  const d = new Date(str)
+  const snapped = Math.round(d.getMinutes() / 15) * 15
+  if (snapped === d.getMinutes()) return str
+  d.setMinutes(snapped, 0, 0)
+  return dtLocal(d)
+}
+
 function buildSchema(t) {
   return z
     .object({
       patient_id: z.union([z.string(), z.number()]).refine((v) => !!v, t('validation_patient_required')),
       start_time: z.string().min(1, t('validation_start_required')),
       end_time: z.string().min(1, t('validation_end_required')),
+      duration: z.union([z.string(), z.number()]).optional(),
       reason: z.string().optional(),
       notes: z.string().optional(),
     })
@@ -59,6 +89,8 @@ export default function AppointmentFormModal({
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(buildSchema(t)),
@@ -66,10 +98,39 @@ export default function AppointmentFormModal({
       patient_id: '',
       start_time: '',
       end_time: '',
+      duration: 30,
       reason: '',
       notes: '',
     },
   })
+
+  // ── Smart booking: snap start to 15 min, infer duration from reason, derive end ──
+  const startTime = watch('start_time')
+  const reason    = watch('reason')
+  const duration  = watch('duration')
+
+  // Snap start_time to the nearest 15-minute interval whenever it changes.
+  useEffect(() => {
+    if (!startTime) return
+    const snapped = snapTo15(startTime)
+    if (snapped !== startTime) setValue('start_time', snapped)
+  }, [startTime, setValue])
+
+  // When reason text changes, suggest a duration that matches the practice's
+  // typical slot length (check-up 45, whitening 90, etc.). Doesn't lock — the
+  // user can still pick a different duration from the dropdown.
+  useEffect(() => {
+    if (!reason) return
+    setValue('duration', defaultDurationFor(reason))
+  }, [reason, setValue])
+
+  // Whenever start_time or duration changes, derive end_time = start + duration.
+  useEffect(() => {
+    if (!startTime || !duration) return
+    const d = new Date(startTime)
+    d.setMinutes(d.getMinutes() + Number(duration))
+    setValue('end_time', dtLocal(d))
+  }, [startTime, duration, setValue])
 
   // When the modal opens (or the target appointment changes) hydrate
   // the form with the right defaults. Resetting inside a useEffect
@@ -165,19 +226,36 @@ export default function AppointmentFormModal({
           </Field>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <Field label={t('modal_start_time')} error={errors.start_time?.message}>
+            {/* step=900 = 15-min increments in the native picker; we also snap programmatically */}
             <input
               type="datetime-local"
+              step="900"
               {...register('start_time')}
               className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             />
           </Field>
+          <Field label="Duration">
+            <select
+              {...register('duration')}
+              className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
+            >
+              <option value="15">15 min</option>
+              <option value="30">30 min</option>
+              <option value="45">45 min — check-up / cosmetic</option>
+              <option value="60">60 min</option>
+              <option value="90">90 min — whitening</option>
+              <option value="120">120 min</option>
+            </select>
+          </Field>
           <Field label={t('modal_end_time')} error={errors.end_time?.message}>
             <input
               type="datetime-local"
+              readOnly
               {...register('end_time')}
-              className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
+              className="w-full rounded-2xl border border-brand-border bg-brand-surface/60 px-3 py-2.5 text-sm text-brand-muted focus:outline-none"
+              title="Auto-set from Start + Duration"
             />
           </Field>
         </div>
