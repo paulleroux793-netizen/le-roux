@@ -35,6 +35,7 @@ class InvoicesController < ApplicationController
         lines: invoice.invoice_lines.map { |l|
           {
             code: l.code, description: l.description, tooth_number: l.tooth_number,
+            icd10_code: l.icd10_code,
             quantity: l.quantity, unit_fee: l.unit_fee_cents / 100.0,
             vat_treatment: l.vat_treatment, medical: l.medical, self_portion: l.self_portion,
             line_total: l.line_total

@@ -82,7 +82,10 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
             {(invoice.lines || []).map((l, i) => (
               <tr key={i} className="border-b border-brand-border/50">
                 <td className="py-2 font-mono text-brand-ink">{l.code}</td>
-                <td className="py-2 text-brand-ink">{l.description}{l.vat_treatment === 'standard' ? ' (incl. 15% VAT)' : ''}</td>
+                <td className="py-2 text-brand-ink">
+                  {l.description}{l.vat_treatment === 'standard' ? ' (incl. 15% VAT)' : ''}
+                  {l.icd10_code && <span className="ml-2 text-xs text-brand-muted">ICD-10: {l.icd10_code}</span>}
+                </td>
                 <td className="py-2 text-center text-brand-muted">{l.tooth_number || '—'}</td>
                 <td className="py-2 text-center text-brand-muted">{l.quantity}</td>
                 <td className="py-2 text-right text-brand-muted">{rand(l.medical)}</td>

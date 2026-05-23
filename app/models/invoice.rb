@@ -26,7 +26,8 @@ class Invoice < ApplicationRecord
       invoice.invoice_lines.build(
         procedure_code_id: pc&.id, treatment_item_id: item.id,
         code: pc&.code, description: pc&.description, tooth_number: item.tooth_number,
-        quantity: 1, unit_fee_cents: item.fee_cents.to_i, vat_treatment: item.vat_treatment
+        quantity: 1, unit_fee_cents: item.fee_cents.to_i, vat_treatment: item.vat_treatment,
+        icd10_code: item.icd10_code
       )
     end
     invoice.recalculate

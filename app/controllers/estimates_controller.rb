@@ -39,6 +39,7 @@ class EstimatesController < ApplicationController
   def line_props(l)
     {
       code: l.code, description: l.description, tooth_number: l.tooth_number, quantity: l.quantity,
+      icd10_code: l.icd10_code,
       medical: l.medical, self_portion: l.self_portion, line_total: l.line_total
     }
   end

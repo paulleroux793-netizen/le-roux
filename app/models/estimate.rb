@@ -21,7 +21,7 @@ class Estimate < ApplicationRecord
         procedure_code_id: pc&.id, treatment_item_id: item.id,
         code: pc&.code, description: pc&.description, tooth_number: item.tooth_number,
         quantity: 1, unit_fee_cents: item.fee_cents.to_i, vat_treatment: item.vat_treatment,
-        visit: item.visit
+        visit: item.visit, icd10_code: item.icd10_code
       )
     end
     est.recalculate

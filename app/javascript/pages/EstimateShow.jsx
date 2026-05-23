@@ -82,7 +82,10 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
                 {v.lines.map((l, i) => (
                   <tr key={i} className="border-b border-brand-border/40">
                     <td className="py-1.5 font-mono text-brand-ink">{l.code}</td>
-                    <td className="py-1.5 text-brand-ink">{l.description}</td>
+                    <td className="py-1.5 text-brand-ink">
+                      {l.description}
+                      {l.icd10_code && <span className="ml-2 text-xs text-brand-muted">ICD-10: {l.icd10_code}</span>}
+                    </td>
                     <td className="py-1.5 text-center text-brand-muted">{l.tooth_number || '—'}</td>
                     <td className="py-1.5 text-right text-brand-muted">{rand(l.medical)}</td>
                     <td className="py-1.5 text-right text-brand-muted">{rand(l.self_portion)}</td>
