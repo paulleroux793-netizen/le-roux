@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Link, router } from '@inertiajs/react'
 import { toast } from 'sonner'
-import { ArrowLeft, ClipboardPlus, Lock, Plus, Check, X, RotateCcw, FileText, Receipt } from 'lucide-react'
+import { ArrowLeft, ClipboardPlus, Lock, Plus, Check, X, RotateCcw, FileText, Receipt, Layers } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import Odontogram from '../components/Odontogram'
 import ToothActionModal from '../components/ToothActionModal'
@@ -27,9 +27,22 @@ export default function CourseOfTreatmentShow({
   course = {}, items = [], notes = [], chart = {},
   procedure_suggestions: procedureSuggestions = {},
   procedure_codes: procedureCodes = [],
+  treatment_macros: treatmentMacros = [],
 }) {
   const [activeTooth, setActiveTooth] = useState(null)
   const [addOpen, setAddOpen]         = useState(false)
+  const [macroPickerOpen, setMacroPickerOpen] = useState(false)
+
+  const applyMacro = (macroId) => {
+    router.post(`/courses-of-treatment/${course.id}/apply_macro`,
+      { treatment_macro_id: macroId },
+      {
+        preserveScroll: true,
+        onSuccess: (page) => toast.success(page?.props?.flash?.notice || 'Template applied'),
+        onError:   (errs) => toast.error(Object.values(errs || {})[0] || 'Could not apply'),
+        onFinish:  () => setMacroPickerOpen(false),
+      })
+  }
 
   const completedCount = useMemo(() => items.filter((i) => i.status === 'completed').length, [items])
   const billableTotal  = useMemo(
@@ -95,6 +108,26 @@ export default function CourseOfTreatmentShow({
           className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-dark">
           <Plus size={15} /> Add procedure
         </button>
+        {treatmentMacros.length > 0 && (
+          <div className="relative">
+            <button onClick={() => setMacroPickerOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-surface"
+              title="Apply a visit-type template (e.g. Recall + hygiene, Surgical extraction)">
+              <Layers size={15} /> Apply template
+            </button>
+            {macroPickerOpen && (
+              <div className="absolute z-20 mt-1 max-h-72 w-72 overflow-y-auto rounded-xl border border-brand-border bg-white shadow-lg">
+                {treatmentMacros.map((m) => (
+                  <button key={m.id} onClick={() => applyMacro(m.id)}
+                    className="block w-full border-b border-brand-border/40 px-3 py-2 text-left text-sm last:border-0 hover:bg-brand-surface">
+                    <span className="font-mono font-semibold text-brand-ink">{m.access_code}</span>
+                    <span className="ml-2 text-brand-ink">{m.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <button onClick={generateEstimate} disabled={items.length === 0}
           className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border bg-white px-4 py-2 text-sm font-semibold text-brand-ink hover:bg-brand-surface disabled:opacity-40 disabled:hover:bg-white"
           title="Build a patient quote from every non-voided item">

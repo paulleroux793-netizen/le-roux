@@ -47,7 +47,11 @@ class CoursesOfTreatmentController < ApplicationController
       # `procedure_codes` lets the user override the suggestion inline.
       procedure_suggestions: ChartingService.suggestions_for_props,
       procedure_codes: ProcedureCode.active.order(:code).pluck(:id, :code, :description)
-        .map { |id, code, desc| { id:, code:, description: desc } }
+        .map { |id, code, desc| { id:, code:, description: desc } },
+      # C4 — visit-type templates available to apply with one click
+      treatment_macros: TreatmentMacro.active.order(:access_code)
+        .limit(50).pluck(:id, :access_code, :name)
+        .map { |id, code, name| { id:, access_code: code, name: name } }
     }
   end
 
@@ -111,6 +115,37 @@ class CoursesOfTreatmentController < ApplicationController
     expire_dev_page_cache("courses-of-treatment")
     redirect_back fallback_location: course_of_treatment_path(cot),
       notice: "Added #{pc.code}", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: course_of_treatment_path(params[:id]),
+      alert: e.record.errors.full_messages.to_sentence, status: :see_other
+  end
+
+  # C4 — POST /courses-of-treatment/:id/apply_macro
+  #
+  # Visit-type templates: dentist picks "Recall + Hygiene", "Surgical
+  # extraction", "Crown prep visit 1", etc., and the system creates the
+  # standard set of planned treatment items in one click. Saves clicks
+  # and ensures consistent coding across patients.
+  def apply_macro
+    cot   = CourseOfTreatment.find(params[:id])
+    macro = TreatmentMacro.includes(treatment_macro_items: :procedure_code).find(params[:treatment_macro_id])
+    added = 0
+    ActiveRecord::Base.transaction do
+      macro.treatment_macro_items.each do |mi|
+        pc = mi.procedure_code
+        next unless pc
+        (mi.quantity || 1).times do
+          cot.treatment_items.create!(procedure_code: pc, status: "planned")
+          added += 1
+        end
+      end
+    end
+    AuditService.log(action: "treatment_macro.applied",
+                     summary: "Applied macro #{macro.access_code} (#{macro.name}) to COT ##{cot.id} (#{added} items)",
+                     resource: cot, performed_by: audit_performer, ip_address: request.remote_ip)
+    expire_dev_page_cache("courses-of-treatment")
+    redirect_back fallback_location: course_of_treatment_path(cot),
+      notice: "Added #{added} item#{added == 1 ? '' : 's'} from \"#{macro.name}\"", status: :see_other
   rescue ActiveRecord::RecordInvalid => e
     redirect_back fallback_location: course_of_treatment_path(params[:id]),
       alert: e.record.errors.full_messages.to_sentence, status: :see_other

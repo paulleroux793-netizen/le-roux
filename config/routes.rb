@@ -87,6 +87,8 @@ Rails.application.routes.draw do
       # R1.3 — convert this COT into an Estimate or Invoice
       post :generate_estimate
       post :generate_invoice
+      # C4 — apply a visit-type template (TreatmentMacro) in one click
+      post :apply_macro
     end
   end
 
@@ -97,6 +99,9 @@ Rails.application.routes.draw do
     member do
       # R1.4 — convert estimate to invoice
       post :accept_and_invoice
+      # C1 — drag-drop file attachments on the estimate (X-ray screenshots etc)
+      post :upload_attachment
+      delete "attachments/:attachment_id", to: "estimates#delete_attachment", as: :attachment
     end
   end
 

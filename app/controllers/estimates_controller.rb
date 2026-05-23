@@ -38,6 +38,38 @@ class EstimatesController < ApplicationController
     end
   end
 
+  # C1 — POST /estimates/:id/upload_attachment
+  #
+  # Reception or dentist drag-drops an X-ray screenshot / photo / PDF onto
+  # the EstimateShow page. Stored via ActiveStorage; surfaces inline.
+  def upload_attachment
+    estimate = Estimate.find(params[:id])
+    file = params[:file]
+    if file.blank?
+      return redirect_back fallback_location: estimate_path(estimate),
+        alert: "No file provided", status: :see_other
+    end
+    estimate.attachments.attach(file)
+    AuditService.log(action: "estimate.attachment_added",
+                     summary: "Attached #{file.original_filename} to #{estimate.estimate_number}",
+                     resource: estimate, performed_by: audit_performer, ip_address: request.remote_ip)
+    redirect_back fallback_location: estimate_path(estimate),
+      notice: "Attached #{file.original_filename}", status: :see_other
+  end
+
+  def delete_attachment
+    estimate = Estimate.find(params[:id])
+    blob = estimate.attachments.find_by(id: params[:attachment_id])
+    if blob
+      blob.purge
+      AuditService.log(action: "estimate.attachment_removed",
+                       summary: "Removed attachment from #{estimate.estimate_number}",
+                       resource: estimate, performed_by: audit_performer, ip_address: request.remote_ip)
+    end
+    redirect_back fallback_location: estimate_path(estimate),
+      notice: "Attachment removed", status: :see_other
+  end
+
   # R1.4 — POST /estimates/:id/accept_and_invoice
   #
   # Patient accepts the quote → convert to a real invoice in one click.
@@ -82,7 +114,14 @@ class EstimatesController < ApplicationController
       },
       practice: practice_props,
       patient: { name: patient.full_name, phone: patient.phone,
-                 scheme: membership&.medical_scheme&.name, member_number: membership&.member_number }
+                 scheme: membership&.medical_scheme&.name, member_number: membership&.member_number },
+      attachments: estimate.attachments.map { |a|
+        {
+          id: a.id, filename: a.filename.to_s, content_type: a.content_type,
+          byte_size: a.byte_size,
+          url: Rails.application.routes.url_helpers.rails_blob_path(a, only_path: true)
+        }
+      }
     }
   end
 

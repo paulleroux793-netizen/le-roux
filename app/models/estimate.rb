@@ -7,6 +7,10 @@ class Estimate < ApplicationRecord
   belongs_to :billing_account, optional: true
   belongs_to :course_of_treatment, optional: true
   has_many :estimate_lines, dependent: :destroy
+  # C1 — Drag-drop attachments (X-ray screenshots, intra-oral photos,
+  # clinical reference images that the dentist wants to ship alongside
+  # the quote so the patient understands what they're paying for).
+  has_many_attached :attachments
 
   validates :status, inclusion: { in: STATUSES }
   before_validation :assign_number, on: :create

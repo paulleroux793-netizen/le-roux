@@ -1,17 +1,45 @@
 import React, { useState } from 'react'
 import { Link, router } from '@inertiajs/react'
 import { toast } from 'sonner'
-import { ArrowLeft, Printer, MessageCircle, Info, Download, ThumbsUp } from 'lucide-react'
+import { ArrowLeft, Printer, MessageCircle, Info, Download, ThumbsUp, UploadCloud, Paperclip, X as XIcon } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import BrandLogo from '../components/BrandLogo'
 
 const rand = (n) => `R${(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
-export default function EstimateShow({ estimate = {}, practice = {}, patient = {} }) {
+export default function EstimateShow({ estimate = {}, practice = {}, patient = {}, attachments = [] }) {
   const multiVisit = (estimate.visits || []).length > 1
   const [accepting, setAccepting] = useState(false)
+  const [dragOver, setDragOver]   = useState(false)
   const isAccepted = estimate.status === 'accepted'
+
+  const uploadFile = (file) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    router.post(`/estimates/${estimate.id}/upload_attachment`, fd, {
+      preserveScroll: true,
+      onSuccess: (page) => toast.success(page?.props?.flash?.notice || `Attached ${file.name}`),
+      onError: (errs) => toast.error(Object.values(errs || {})[0] || 'Upload failed'),
+      forceFormData: true,
+    })
+  }
+  const onDrop = (e) => {
+    e.preventDefault(); setDragOver(false)
+    const files = Array.from(e.dataTransfer.files || [])
+    files.forEach(uploadFile)
+  }
+  const onPick = (e) => {
+    Array.from(e.target.files || []).forEach(uploadFile)
+    e.target.value = '' // reset so the same file can be re-picked
+  }
+  const removeAttachment = (id) => {
+    if (!confirm('Remove this attachment?')) return
+    router.delete(`/estimates/${estimate.id}/attachments/${id}`, {
+      preserveScroll: true,
+      onSuccess: () => toast.success('Removed'),
+    })
+  }
 
   const acceptEstimate = () => {
     if (!confirm(`Patient accepts this R${(estimate.total || 0).toLocaleString('en-ZA')} estimate? An invoice will be created and the estimate locked.`)) return
@@ -144,6 +172,45 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
           <p className="mt-3 font-semibold text-brand-ink">ESTIMATE VALID FOR 14 DAYS</p>
           <p className="mt-1">This is an estimate of planned treatment, not a final account. Actual fees may vary depending on what is clinically required on the day. You may submit the final invoice to your medical aid to claim back.</p>
         </div>
+      </div>
+
+      {/* C1 — Drag-drop attachments (screen only, hidden on print) */}
+      <div className="no-print mx-auto mt-4 max-w-3xl">
+        <div
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={onDrop}
+          className={`rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors ${
+            dragOver ? 'border-brand-primary bg-brand-primary/5' : 'border-brand-border bg-white'
+          }`}
+        >
+          <UploadCloud size={22} className="mx-auto mb-1 text-brand-muted" />
+          <p className="text-sm text-brand-ink">
+            Drag X-ray screenshots, intra-oral photos, or reference PDFs here
+          </p>
+          <label className="mt-2 inline-flex cursor-pointer items-center gap-1 text-xs font-semibold text-brand-primary hover:underline">
+            or browse files
+            <input type="file" multiple onChange={onPick} className="hidden" />
+          </label>
+        </div>
+
+        {attachments.length > 0 && (
+          <ul className="mt-3 space-y-1.5">
+            {attachments.map((a) => (
+              <li key={a.id} className="flex items-center justify-between rounded-lg border border-brand-border bg-white px-3 py-2 text-sm">
+                <a href={a.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-brand-ink hover:underline">
+                  <Paperclip size={13} className="text-brand-muted" />
+                  <span>{a.filename}</span>
+                  <span className="text-xs text-brand-muted">· {(a.byte_size / 1024).toFixed(1)} KB</span>
+                </a>
+                <button onClick={() => removeAttachment(a.id)} title="Remove"
+                  className="rounded-md p-1 text-brand-muted hover:bg-brand-surface hover:text-brand-danger">
+                  <XIcon size={13} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </DashboardLayout>
   )
