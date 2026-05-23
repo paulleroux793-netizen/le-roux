@@ -105,7 +105,17 @@ Format: **[status] Topic** — *Decision I made* → **Question for Paul.**
   kids). Implemented; phone made optional; import now does all 2,200 with 0 exceptions.
 - **#16 Name — RESOLVED**: keep **Ivory**.
 - **#17 VAT — RESOLVED**: practice IS VAT-registered, fees are VAT-inclusive. Set vat_registered=true.
-  *(Still need the actual VAT NUMBER string to print on invoices — Paul to-do.)*
+  *(VAT number 4260308871 found in 2023 docs — pending Paul's confirm it's still current.)*
+
+### RESOLVED by Paul (2026-05-23) — UX/workflow decisions
+- **New Patient form — RESOLVED**: ALL in one form (ID, billing account, scheme membership inline).
+- **Schemes field — RESOLVED**: Seeded dropdown of common SA schemes (Discovery, Bonitas, Bestmed,
+  GEMS, Fedhealth, Medihelp, Medshield, Polmed, Bankmed, Profmed + Other).
+- **Odontogram — RESOLVED**: Clickable; condition first → suggested procedure code(s) → confirm.
+- **Active COT — RESOLVED**: Auto-pick patient's open COT (auto-create if none; prompt if multiple).
+- **AI scribe start — RESOLVED**: AUTO when appointment status changes to "In Chair".
+- **WhatsApp document delivery — RESOLVED**: PDF attachment (not link).
+- **Go-live timing — RESOLVED**: HOLD go-live until PDF attachment works end-to-end (~+1 day).
 
 ### New tasks from Paul's 2026-05-22 direction
 22. **[needs-access] SADA / Discovery 2026 rates.** Paul: scrape the latest rates from the SADA website
