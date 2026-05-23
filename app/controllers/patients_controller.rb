@@ -61,11 +61,38 @@ class PatientsController < ApplicationController
       appointments = patient.appointments.order(start_time: :desc).limit(20)
       conversations = patient.conversations.order(updated_at: :desc).limit(10)
 
+      # R2 — quick-action shortcuts: open course of treatment, view
+      # outstanding estimates/invoices. We compute these here so the
+      # PatientShow toolbar can render their counts without re-fetching.
+      open_courses   = CourseOfTreatment.where(patient_id: patient.id)
+                                        .where(status: %w[planned active])
+                                        .order(created_at: :desc).limit(5).to_a
+      open_estimates = Estimate.where(patient_id: patient.id)
+                               .where(status: %w[draft sent])
+                               .order(created_at: :desc).limit(5).to_a
+      open_invoices  = Invoice.where(patient_id: patient.id)
+                              .where(status: %w[open part_paid])
+                              .order(created_at: :desc).limit(5).to_a
+      outstanding_balance_cents = open_invoices.sum { |i| (i.total_cents - i.paid_cents).to_i }
+
       {
         patient: patient_detail_props(patient),
         medical_history: medical_history_props(patient),
         appointments: appointments.map { |a| appointment_props(a) },
-        conversations: conversations.map { |c| conversation_props(c) }
+        conversations: conversations.map { |c| conversation_props(c) },
+        open_courses_of_treatment: open_courses.map { |c|
+          { id: c.id, description: c.description, status: c.status, item_count: c.treatment_items.size }
+        },
+        open_estimates: open_estimates.map { |e|
+          { id: e.id, number: e.estimate_number, total: e.total, valid_until: e.valid_until&.iso8601 }
+        },
+        open_invoices: open_invoices.map { |i|
+          { id: i.id, number: i.invoice_number, total: i.total, balance: i.balance }
+        },
+        outstanding_balance: outstanding_balance_cents / 100.0,
+        next_appointment: patient.appointments.upcoming.first&.then { |a|
+          { id: a.id, start_time: a.start_time.iso8601, reason: a.reason }
+        }
       }
     end
 

@@ -107,6 +107,11 @@ Rails.application.routes.draw do
   get "patients/:patient_id/file", to: "patient_files#show", as: :patient_file
   get "imaging", to: "imaging#index", as: :imaging
   resources :scribe_sessions, only: [ :index, :show ], path: "scribe-sessions"
+
+  # N1 — Admin-only management of recording devices (Surgery 1 / Reception …)
+  namespace :admin do
+    resources :recording_devices, path: "recording-devices"
+  end
   get "recalls", to: "recalls#index", as: :recalls
   get "reporting", to: "reporting#index", as: :reporting
   get   "settings",          to: "settings#index"

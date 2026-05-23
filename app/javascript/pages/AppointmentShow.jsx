@@ -54,6 +54,52 @@ export default function AppointmentShow({ appointment }) {
         </div>
       </div>
 
+      {/* N3 — End-of-appointment AI bullet summary */}
+      {apt.summary && (
+        <div className="mb-5 rounded-xl border border-brand-primary/20 bg-gradient-to-br from-brand-primary/5 to-white p-5">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-brand-ink">Appointment summary</h2>
+              <p className="text-xs text-brand-muted">
+                Auto-generated from the chair-side scribe transcript ·{' '}
+                {new Date(apt.summary.generated_at).toLocaleString('en-ZA')}
+              </p>
+            </div>
+            <span className="inline-flex items-center rounded-full bg-brand-primary/10 px-2 py-0.5 text-[11px] font-semibold text-brand-primary">AI generated</span>
+          </div>
+
+          <div className="space-y-4">
+            {apt.summary.decisions && (
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-muted">Decisions &amp; recommendations</p>
+                <p className="text-sm text-brand-ink whitespace-pre-wrap">{apt.summary.decisions}</p>
+              </div>
+            )}
+
+            {(apt.summary.patient_questions || []).length > 0 && (
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-muted">Patient questions &amp; answers</p>
+                <ul className="space-y-1.5 text-sm">
+                  {apt.summary.patient_questions.map((qa, i) => (
+                    <li key={i} className="rounded-lg bg-white border border-brand-border px-3 py-2">
+                      <p className="font-medium text-brand-ink">Q: {qa.q}</p>
+                      <p className="mt-0.5 text-brand-muted">A: {qa.a}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {apt.summary.estimate_intent && (
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-muted">Estimate intent (planned at chair-side)</p>
+                <p className="text-sm text-brand-ink whitespace-pre-wrap">{apt.summary.estimate_intent}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Cancellation Reason */}
       {apt.cancellation_reason && (
         <div className="bg-red-50 rounded-xl border border-red-100 p-5 mb-5">

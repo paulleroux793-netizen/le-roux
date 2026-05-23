@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { Link, router } from '@inertiajs/react'
-import { Pencil, HeartPulse, Shield, Phone, Trash2 } from 'lucide-react'
+import { Pencil, HeartPulse, Shield, Phone, Trash2, Calendar, ClipboardPlus, FileText, Receipt, Wallet, ArrowRight } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import PatientFormModal from '../components/PatientFormModal'
+import AppointmentFormModal from '../components/AppointmentFormModal'
 
 const STATUS_STYLES = {
   scheduled:   'bg-amber-100 text-amber-800',
@@ -13,8 +14,16 @@ const STATUS_STYLES = {
   rescheduled: 'bg-purple-100 text-purple-800',
 }
 
-export default function PatientShow({ patient, medical_history, appointments, conversations }) {
+export default function PatientShow({
+  patient, medical_history, appointments, conversations,
+  open_courses_of_treatment: openCourses = [],
+  open_estimates: openEstimates = [],
+  open_invoices: openInvoices = [],
+  outstanding_balance: outstandingBalance = 0,
+  next_appointment: nextAppointment = null,
+}) {
   const [editOpen, setEditOpen] = useState(false)
+  const [bookOpen, setBookOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const handleDelete = () => {
@@ -22,6 +31,10 @@ export default function PatientShow({ patient, medical_history, appointments, co
       onSuccess: () => setConfirmDelete(false),
     })
   }
+  // Minimal patients list for the appointment-modal patient picker —
+  // since we open the modal in "existing-patient" mode pre-selected to
+  // THIS patient, we only need to surface this patient as an option.
+  const minimalPatientList = [{ id: patient.id, name: patient.full_name, phone: patient.phone }]
 
   return (
     <DashboardLayout>
@@ -33,25 +46,76 @@ export default function PatientShow({ patient, medical_history, appointments, co
 
       {/* Patient Info Card */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-5">
-        <div className="flex items-start justify-between mb-4">
-          <h1 className="text-xl font-bold text-brand-brown">{patient.full_name}</h1>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-brown hover:bg-brand-cream rounded-lg transition-colors border border-gray-200"
-            >
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <h1 className="text-xl font-bold text-brand-brown">{patient.full_name}</h1>
+            {nextAppointment && (
+              <p className="mt-1 text-xs text-brand-muted">
+                Next: <strong className="text-brand-ink">{new Date(nextAppointment.start_time).toLocaleString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</strong> · {nextAppointment.reason || 'Appointment'}
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setBookOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-brand-primary-dark">
+              <Calendar size={13} /> Book appointment
+            </button>
+            <button type="button" onClick={() => setEditOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-brown hover:bg-brand-cream rounded-lg transition-colors border border-gray-200">
               <Pencil size={13} /> Edit
             </button>
-            <button
-              type="button"
-              onClick={() => setConfirmDelete(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-danger hover:bg-brand-danger/5 rounded-lg transition-colors border border-brand-danger/20"
-            >
+            <button type="button" onClick={() => setConfirmDelete(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-danger hover:bg-brand-danger/5 rounded-lg transition-colors border border-brand-danger/20">
               <Trash2 size={13} /> Delete
             </button>
           </div>
         </div>
+
+        {/* R2 — Quick-action shortcuts. Visible counts so reception sees
+            at a glance what's open without clicking around. */}
+        {(openCourses.length > 0 || openEstimates.length > 0 || openInvoices.length > 0 || outstandingBalance > 0) && (
+          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {openCourses.length > 0 && (
+              <Link href={`/courses-of-treatment/${openCourses[0].id}`}
+                className="group flex items-center justify-between rounded-xl border border-brand-border bg-white px-3 py-2.5 hover:bg-brand-surface">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-blue-700"><ClipboardPlus size={15} /></span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Active treatment</p>
+                    <p className="text-sm font-medium text-brand-ink">{openCourses[0].item_count} item{openCourses[0].item_count === 1 ? '' : 's'} · {openCourses[0].status}</p>
+                  </div>
+                </div>
+                <ArrowRight size={14} className="text-brand-muted group-hover:text-brand-ink" />
+              </Link>
+            )}
+            {openEstimates.length > 0 && (
+              <Link href={`/estimates/${openEstimates[0].id}`}
+                className="group flex items-center justify-between rounded-xl border border-brand-border bg-white px-3 py-2.5 hover:bg-brand-surface">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-700"><FileText size={15} /></span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Open estimate</p>
+                    <p className="text-sm font-medium text-brand-ink">{openEstimates[0].number} · R{openEstimates[0].total.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </div>
+                <ArrowRight size={14} className="text-brand-muted group-hover:text-brand-ink" />
+              </Link>
+            )}
+            {openInvoices.length > 0 && (
+              <Link href={`/invoices/${openInvoices[0].id}`}
+                className="group flex items-center justify-between rounded-xl border border-brand-border bg-white px-3 py-2.5 hover:bg-brand-surface">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Wallet size={15} /></span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Outstanding</p>
+                    <p className="text-sm font-medium text-brand-danger">R{outstandingBalance.toLocaleString('en-ZA', { minimumFractionDigits: 2 })} on {openInvoices.length} invoice{openInvoices.length === 1 ? '' : 's'}</p>
+                  </div>
+                </div>
+                <ArrowRight size={14} className="text-brand-muted group-hover:text-brand-ink" />
+              </Link>
+            )}
+          </div>
+        )}
 
         {/* Delete confirmation inline banner */}
         {confirmDelete && (
@@ -185,6 +249,12 @@ export default function PatientShow({ patient, medical_history, appointments, co
         medicalHistory={medical_history}
         bloodTypes={medical_history?.blood_types}
         onClose={() => setEditOpen(false)}
+      />
+      <AppointmentFormModal
+        mode="create"
+        open={bookOpen}
+        onClose={() => setBookOpen(false)}
+        patients={minimalPatientList}
       />
     </DashboardLayout>
   )

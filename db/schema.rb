@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000013) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_23_000014) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -46,11 +46,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000013) do
     t.string "reason"
     t.datetime "start_time", null: false
     t.integer "status", default: 0, null: false
+    t.text "summary_decisions_text"
+    t.text "summary_estimate_intent_text"
+    t.datetime "summary_generated_at"
+    t.jsonb "summary_patient_questions", default: [], null: false
+    t.bigint "summary_scribe_session_id"
     t.datetime "updated_at", null: false
     t.index ["google_event_id"], name: "index_appointments_on_google_event_id", unique: true
     t.index ["patient_id"], name: "index_appointments_on_patient_id"
     t.index ["start_time"], name: "index_appointments_on_start_time"
     t.index ["status"], name: "index_appointments_on_status"
+    t.index ["summary_generated_at"], name: "index_appointments_on_summary_generated_at"
+    t.index ["summary_scribe_session_id"], name: "index_appointments_on_summary_scribe_session_id"
     t.exclusion_constraint "tsrange(start_time, end_time) WITH &&", where: "status <> 3", using: :gist, name: "no_overlapping_active_appointments"
   end
 
@@ -581,6 +588,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000013) do
     t.index ["status"], name: "index_recalls_on_status"
   end
 
+  create_table "recording_devices", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.boolean "enabled", default: true, null: false
+    t.datetime "last_seen_at"
+    t.string "location", null: false
+    t.string "name", null: false
+    t.text "notes"
+    t.datetime "updated_at", null: false
+    t.index ["location"], name: "index_recording_devices_on_location"
+    t.index ["name"], name: "index_recording_devices_on_name", unique: true
+  end
+
   create_table "scheme_membership_patients", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "dependant_code"
@@ -616,12 +635,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000013) do
     t.bigint "estimate_id"
     t.text "notes"
     t.bigint "patient_id", null: false
+    t.bigint "recording_device_id"
     t.datetime "started_at"
     t.string "status", default: "recording", null: false
     t.text "transcript"
     t.datetime "updated_at", null: false
     t.index ["appointment_id"], name: "index_scribe_sessions_on_appointment_id"
     t.index ["patient_id"], name: "index_scribe_sessions_on_patient_id"
+    t.index ["recording_device_id"], name: "index_scribe_sessions_on_recording_device_id"
     t.index ["status"], name: "index_scribe_sessions_on_status"
   end
 
@@ -844,6 +865,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000013) do
   add_foreign_key "account_patients", "billing_accounts"
   add_foreign_key "account_patients", "patients"
   add_foreign_key "appointments", "patients"
+  add_foreign_key "appointments", "scribe_sessions", column: "summary_scribe_session_id"
   add_foreign_key "billing_accounts", "patients", column: "head_patient_id"
   add_foreign_key "call_logs", "patients"
   add_foreign_key "cancellation_reasons", "appointments"
@@ -890,6 +912,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000013) do
   add_foreign_key "scribe_sessions", "courses_of_treatment", column: "course_of_treatment_id", on_delete: :nullify
   add_foreign_key "scribe_sessions", "estimates", on_delete: :nullify
   add_foreign_key "scribe_sessions", "patients"
+  add_foreign_key "scribe_sessions", "recording_devices"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

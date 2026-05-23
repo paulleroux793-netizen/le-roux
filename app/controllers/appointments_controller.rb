@@ -401,11 +401,16 @@ class AppointmentsController < ApplicationController
     # must never block the front-desk status change.
     scribe_started = maybe_start_scribe(appointment) if new_status == "in_consultation"
 
+    # N3 — Generate the end-of-appointment bullet summary when reception
+    # marks the visit completed. Best-effort: a summary failure must
+    # never block the journey button.
+    summary_generated = maybe_summarise(appointment) if new_status == "completed"
+
     AuditService.log(
       action: "appointment.status_changed",
       summary: "Marked #{appointment.patient.full_name}'s appointment as #{new_status.humanize} (#{appointment.start_time.strftime('%-d %b at %H:%M')})",
       resource: appointment,
-      details: { status: new_status, scribe_started: !!scribe_started }.compact,
+      details: { status: new_status, scribe_started: !!scribe_started, summary_generated: !!summary_generated }.compact,
       performed_by: audit_performer,
       ip_address: request.remote_ip
     )
@@ -499,7 +504,14 @@ class AppointmentsController < ApplicationController
       },
       confirmation_logs: appointment.confirmation_logs.order(created_at: :desc).map { |cl|
         { method: cl.method, outcome: cl.outcome, attempts: cl.attempts, flagged: cl.flagged, created_at: cl.created_at.iso8601 }
-      }
+      },
+      # N3 — end-of-appointment bullet summary surfaced for AppointmentShow.
+      summary: appointment.summary_generated_at ? {
+        decisions:         appointment.summary_decisions_text,
+        patient_questions: appointment.summary_patient_questions,
+        estimate_intent:   appointment.summary_estimate_intent_text,
+        generated_at:      appointment.summary_generated_at.iso8601
+      } : nil
     )
   end
 
@@ -513,6 +525,17 @@ class AppointmentsController < ApplicationController
     ScribeSession.start_for(appointment)
   rescue StandardError => e
     Rails.logger.warn("[AppointmentsController#set_status] scribe auto-start failed: #{e.message}")
+    nil
+  end
+
+  # N3 — Generate the end-of-appointment bullet summary. Skipped if
+  # there's no transcript yet (e.g. clinician completed manually without
+  # any scribe input), or if a summary already exists for this appointment.
+  def maybe_summarise(appointment)
+    return nil if appointment.summary_generated_at.present?
+    AppointmentSummaryService.summarise!(appointment)
+  rescue StandardError => e
+    Rails.logger.warn("[AppointmentsController#set_status] summary failed: #{e.message}")
     nil
   end
 

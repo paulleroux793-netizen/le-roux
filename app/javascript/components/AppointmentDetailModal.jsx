@@ -1,6 +1,7 @@
 import React from 'react'
 import { router } from '@inertiajs/react'
-import { Phone, Mail, Calendar, Edit3, X as XIcon, FileText, UserPlus, UserCheck, Cake, Globe } from 'lucide-react'
+import { Phone, Mail, Calendar, Edit3, X as XIcon, FileText, UserPlus, UserCheck, Cake, Globe, User, ClipboardPlus, Mic } from 'lucide-react'
+import { Link } from '@inertiajs/react'
 import { toast } from 'sonner'
 import Modal from './Modal'
 
@@ -24,11 +25,13 @@ const STATUS_CHIP = {
 
 // The front-desk journey, in order. Each button sets the status via
 // /appointments/:id/set_status and tints the calendar event.
+// "Start consultation" triggers ScribeSession.start_for under the hood
+// (P9.4) — the receptionist doesn't need to know that.
 const JOURNEY = [
-  { key: 'confirmed',       label: 'Confirm',         active: 'bg-emerald-500' },
-  { key: 'arrived',         label: 'Arrived',         active: 'bg-yellow-400 text-yellow-900' },
-  { key: 'in_consultation', label: 'In Consultation', active: 'bg-blue-400' },
-  { key: 'completed',       label: 'Completed',       active: 'bg-blue-700' },
+  { key: 'confirmed',       label: 'Confirm',            active: 'bg-emerald-500' },
+  { key: 'arrived',         label: 'Arrived',            active: 'bg-yellow-400 text-yellow-900' },
+  { key: 'in_consultation', label: 'Start consultation', active: 'bg-blue-400', icon: Mic, hint: 'Scribe auto-starts' },
+  { key: 'completed',       label: 'Completed',          active: 'bg-blue-700' },
 ]
 
 const STATUS_LABEL = {
@@ -124,16 +127,19 @@ export default function AppointmentDetailModal({ appointment, open, onClose, onE
         <div className="grid grid-cols-4 gap-2">
           {JOURNEY.map((step) => {
             const isCurrent = appointment.status === step.key
+            const StepIcon = step.icon
             return (
               <button
                 key={step.key}
                 onClick={() => setStatus(step.key)}
-                className={`rounded-xl px-2 py-2.5 text-xs font-semibold transition-colors ${
+                title={step.hint || undefined}
+                className={`flex items-center justify-center gap-1 rounded-xl px-2 py-2.5 text-xs font-semibold transition-colors ${
                   isCurrent
                     ? `${step.active} ${step.key === 'arrived' ? '' : 'text-white'} shadow-sm`
                     : 'border border-brand-border bg-white text-brand-ink hover:bg-brand-surface/50'
                 }`}
               >
+                {StepIcon && <StepIcon size={12} />}
                 {step.label}
               </button>
             )
@@ -161,6 +167,28 @@ export default function AppointmentDetailModal({ appointment, open, onClose, onE
             <Row icon={FileText} label="Notes"><span className="whitespace-pre-wrap">{appointment.notes}</span></Row>
           )}
         </div>
+      </div>
+
+      {/* R3 — quick links so reception/dentist can jump from a calendar
+          pop-over to the patient's profile or active treatment plan
+          without backtracking through the patients list. */}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Link
+          href={`/patients/${appointment.patient_id}`}
+          onClick={onClose}
+          className="group flex items-center justify-between rounded-xl border border-brand-border bg-white px-3 py-2.5 text-sm font-medium text-brand-ink hover:bg-brand-surface"
+        >
+          <span className="flex items-center gap-2"><User size={14} /> Open patient profile</span>
+          <span className="text-brand-muted group-hover:text-brand-ink">→</span>
+        </Link>
+        <Link
+          href={`/courses-of-treatment?patient_id=${appointment.patient_id}`}
+          onClick={onClose}
+          className="group flex items-center justify-between rounded-xl border border-brand-border bg-white px-3 py-2.5 text-sm font-medium text-brand-ink hover:bg-brand-surface"
+        >
+          <span className="flex items-center gap-2"><ClipboardPlus size={14} /> View treatment plans</span>
+          <span className="text-brand-muted group-hover:text-brand-ink">→</span>
+        </Link>
       </div>
     </Modal>
   )
