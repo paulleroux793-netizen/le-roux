@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
+import { UserPlus, Users } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -50,10 +51,13 @@ function snapTo15(str) {
   return dtLocal(d)
 }
 
-function buildSchema(t) {
+function buildSchema(t, getNewPatientMode) {
   return z
     .object({
-      patient_id: z.union([z.string(), z.number()]).refine((v) => !!v, t('validation_patient_required')),
+      // patient_id is only required when NOT in new-patient mode. When
+      // the user toggles "New patient" the inline fields take over and
+      // patient_id can be blank.
+      patient_id: z.union([z.string(), z.number()]).optional(),
       start_time: z.string().min(1, t('validation_start_required')),
       end_time: z.string().min(1, t('validation_end_required')),
       duration: z.union([z.string(), z.number()]).optional(),
@@ -63,6 +67,10 @@ function buildSchema(t) {
     .refine((v) => new Date(v.end_time) > new Date(v.start_time), {
       path: ['end_time'],
       message: t('validation_end_after_start'),
+    })
+    .refine((v) => (typeof getNewPatientMode === 'function' && getNewPatientMode()) || !!v.patient_id, {
+      path: ['patient_id'],
+      message: t('validation_patient_required'),
     })
 }
 
@@ -81,9 +89,23 @@ export default function AppointmentFormModal({
   mode = 'create',       // 'create' | 'edit'
   appointment,           // required for mode=edit
   patients = [],         // required for mode=create
+  prefillStart = null,   // Date | null — opened from a calendar empty-slot click
 }) {
   const { t } = useLanguage()
   const isEdit = mode === 'edit'
+
+  // ── New-Patient inline path ───────────────────────────────────────
+  // When reception clicks an empty calendar slot, the most common case
+  // is "Mrs Smith just called — book her in for tomorrow 10am". We
+  // don't want them to bounce to /patients first. The toggle below
+  // lets them capture the patient inline:
+  //   - Existing patient: pick from dropdown (the original flow)
+  //   - New patient:      type first name + last name + phone here
+  // Server-side AppointmentsController#create accepts both shapes.
+  const [newPatientMode, setNewPatientMode] = useState(false)
+  const [newFirstName,   setNewFirstName]   = useState('')
+  const [newLastName,    setNewLastName]    = useState('')
+  const [newPhone,       setNewPhone]       = useState('')
 
   const {
     register,
@@ -93,7 +115,7 @@ export default function AppointmentFormModal({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(buildSchema(t)),
+    resolver: zodResolver(buildSchema(t, () => newPatientMode)),
     defaultValues: {
       patient_id: '',
       start_time: '',
@@ -146,19 +168,41 @@ export default function AppointmentFormModal({
         notes: appointment.notes || '',
       })
     } else {
-      reset({ patient_id: '', start_time: '', end_time: '', reason: '', notes: '' })
+      const start = prefillStart ? dtLocal(prefillStart) : ''
+      reset({ patient_id: '', start_time: start, end_time: '', duration: 30, reason: '', notes: '' })
     }
-  }, [open, isEdit, appointment, reset])
+    setNewPatientMode(false)
+    setNewFirstName(''); setNewLastName(''); setNewPhone('')
+  }, [open, isEdit, appointment, prefillStart, reset])
 
   const onSubmit = (data) => {
+    // New-patient inline path: pre-flight check on required fields
+    // (the zod schema lets these through because they live OUTSIDE
+    // the form — they're plain useState — to keep the schema simple).
+    if (!isEdit && newPatientMode) {
+      if (!newFirstName.trim() || !newLastName.trim() || !newPhone.trim()) {
+        toast.error('New patient: first name, last name, and phone are required')
+        return
+      }
+    }
+
     const payload = {
       appointment: {
-        ...(isEdit ? {} : { patient_id: data.patient_id }),
+        ...(isEdit ? {} : { patient_id: newPatientMode ? null : data.patient_id }),
         start_time: new Date(data.start_time).toISOString(),
         end_time: new Date(data.end_time).toISOString(),
         reason: data.reason || null,
         notes: data.notes || null,
       },
+      // Server creates the patient first, then the appointment. Both
+      // succeed or both roll back.
+      ...(!isEdit && newPatientMode && {
+        new_patient: {
+          first_name: newFirstName.trim(),
+          last_name:  newLastName.trim(),
+          phone:      newPhone.trim(),
+        },
+      }),
     }
 
     const opts = {
@@ -209,21 +253,60 @@ export default function AppointmentFormModal({
       }
     >
       <form id="appointment-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Patient — only shown in create mode */}
+        {/* Patient — toggle between Existing (picker) and New (inline capture) */}
         {!isEdit && (
-          <Field label={t('modal_patient_label')} error={errors.patient_id?.message}>
-            <select
-              {...register('patient_id')}
-              className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
-            >
-              <option value="">{t('modal_select_patient')}</option>
-              {patients.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} — {p.phone}
-                </option>
-              ))}
-            </select>
-          </Field>
+          <div className="space-y-2">
+            <div className="inline-flex rounded-2xl border border-brand-border bg-brand-surface p-1">
+              <button type="button" onClick={() => setNewPatientMode(false)}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  !newPatientMode ? 'bg-white text-brand-ink shadow-sm' : 'text-brand-muted hover:text-brand-ink'
+                }`}>
+                <Users size={13} /> Existing patient
+              </button>
+              <button type="button" onClick={() => setNewPatientMode(true)}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  newPatientMode ? 'bg-white text-brand-primary shadow-sm' : 'text-brand-muted hover:text-brand-ink'
+                }`}>
+                <UserPlus size={13} /> New patient
+              </button>
+            </div>
+
+            {!newPatientMode ? (
+              <Field label={t('modal_patient_label')} error={errors.patient_id?.message}>
+                <select
+                  {...register('patient_id')}
+                  className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
+                >
+                  <option value="">{t('modal_select_patient')}</option>
+                  {patients.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — {p.phone}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            ) : (
+              <div className="grid grid-cols-3 gap-3 rounded-2xl border border-brand-accent/80 bg-brand-surface/40 p-3">
+                <Field label="First name">
+                  <input value={newFirstName} onChange={(e) => setNewFirstName(e.target.value)}
+                    autoFocus
+                    className="w-full rounded-xl border border-brand-accent/80 bg-white px-2.5 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45" />
+                </Field>
+                <Field label="Last name">
+                  <input value={newLastName} onChange={(e) => setNewLastName(e.target.value)}
+                    className="w-full rounded-xl border border-brand-accent/80 bg-white px-2.5 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45" />
+                </Field>
+                <Field label="Phone">
+                  <input type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)}
+                    placeholder="+27 82 123 4567"
+                    className="w-full rounded-xl border border-brand-accent/80 bg-white px-2.5 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45" />
+                </Field>
+                <p className="col-span-3 text-xs text-brand-muted">
+                  This will create a new patient record and book the appointment in one step. You can fill in ID number, medical aid, and medical history later from the patient profile.
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         <div className="grid grid-cols-3 gap-4">

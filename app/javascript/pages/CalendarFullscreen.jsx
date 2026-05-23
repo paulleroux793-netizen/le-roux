@@ -26,12 +26,14 @@ export default function CalendarFullscreen({
 }) {
   const [modalMode, setModalMode] = useState(null)
   const [selected, setSelected] = useState(null)
+  const [prefillStart, setPrefillStart] = useState(null)
 
   const openDetail = (apt) => { setSelected(apt); setModalMode('detail') }
-  const openCreate = () => { setSelected(null); setModalMode('create') }
+  const openCreate = () => { setSelected(null); setPrefillStart(null); setModalMode('create') }
+  const openCreateAt = (date) => { setSelected(null); setPrefillStart(date); setModalMode('create') }
   const openEdit   = (apt) => { if (apt) setSelected(apt); setModalMode('edit') }
   const openCancel = (apt) => { if (apt) setSelected(apt); setModalMode('cancel') }
-  const closeModal = () => { setModalMode(null); setSelected(null) }
+  const closeModal = () => { setModalMode(null); setSelected(null); setPrefillStart(null) }
 
   // Live refresh every 15s — keeps the grid current as the AI books and
   // reception walks patients through the day on another machine.
@@ -91,6 +93,7 @@ export default function CalendarFullscreen({
           notes={calendar_notes}
           calendarMeta={calendar_meta}
           onEventClick={handleEventClick}
+          onEmptySlotClick={openCreateAt}
           fillHeight
         />
       </main>
@@ -108,6 +111,7 @@ export default function CalendarFullscreen({
         open={modalMode === 'create'}
         onClose={closeModal}
         patients={patients}
+        prefillStart={prefillStart}
       />
       <AppointmentFormModal
         mode="edit"

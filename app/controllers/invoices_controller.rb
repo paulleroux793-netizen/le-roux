@@ -14,7 +14,7 @@ class InvoicesController < ApplicationController
   end
 
   def show
-    invoice = Invoice.includes(:patient, :billing_account, invoice_lines: :procedure_code).find(params[:id])
+    invoice = Invoice.includes(:patient, :billing_account, :payments, invoice_lines: :procedure_code).find(params[:id])
     patient = invoice.patient
     membership = patient.scheme_memberships.first
 
@@ -62,6 +62,15 @@ class InvoicesController < ApplicationController
             quantity: l.quantity, unit_fee: l.unit_fee_cents / 100.0,
             vat_treatment: l.vat_treatment, medical: l.medical, self_portion: l.self_portion,
             line_total: l.line_total
+          }
+        },
+        # R1.5 — payment timeline so the receptionist sees what's been
+        # banked without leaving the page.
+        payments: invoice.payments.order(received_at: :desc).map { |p|
+          {
+            id: p.id, method: p.method, amount: p.amount,
+            reference: p.reference, notes: p.notes,
+            received_at: p.received_at&.iso8601
           }
         }
       },

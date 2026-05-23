@@ -38,6 +38,35 @@ class EstimatesController < ApplicationController
     end
   end
 
+  # R1.4 — POST /estimates/:id/accept_and_invoice
+  #
+  # Patient accepts the quote → convert to a real invoice in one click.
+  # Model owns the transaction; we add audit + redirect.
+  def accept_and_invoice
+    estimate = Estimate.find(params[:id])
+    if estimate.status == "accepted"
+      return redirect_to estimate_path(estimate),
+        alert: "Already accepted — find the invoice in /invoices", status: :see_other
+    end
+
+    invoice = estimate.accept_and_invoice!
+    AuditService.log(
+      action: "estimate.accepted",
+      summary: "Patient accepted estimate #{estimate.estimate_number} → invoice #{invoice.invoice_number} (R#{format('%.2f', invoice.total)})",
+      resource: invoice,
+      details: { estimate_id: estimate.id, invoice_id: invoice.id },
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    expire_dev_page_cache("estimates")
+    expire_dev_page_cache("invoices")
+    redirect_to invoice_path(invoice),
+      notice: "Estimate accepted — invoice #{invoice.invoice_number} created", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: estimate_path(params[:id]),
+      alert: e.record.errors.full_messages.to_sentence, status: :see_other
+  end
+
   private
 
   # Inertia render — extracted so the .html branch above stays a one-liner.

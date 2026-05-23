@@ -1,6 +1,7 @@
-import React from 'react'
-import { Link } from '@inertiajs/react'
-import { ArrowLeft, Printer, MessageCircle, Info, Download } from 'lucide-react'
+import React, { useState } from 'react'
+import { Link, router } from '@inertiajs/react'
+import { toast } from 'sonner'
+import { ArrowLeft, Printer, MessageCircle, Info, Download, ThumbsUp } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import BrandLogo from '../components/BrandLogo'
 
@@ -9,13 +10,26 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-ZA', { day: 
 
 export default function EstimateShow({ estimate = {}, practice = {}, patient = {} }) {
   const multiVisit = (estimate.visits || []).length > 1
+  const [accepting, setAccepting] = useState(false)
+  const isAccepted = estimate.status === 'accepted'
+
+  const acceptEstimate = () => {
+    if (!confirm(`Patient accepts this R${(estimate.total || 0).toLocaleString('en-ZA')} estimate? An invoice will be created and the estimate locked.`)) return
+    setAccepting(true)
+    router.post(`/estimates/${estimate.id}/accept_and_invoice`, {}, {
+      onSuccess: (page) => toast.success(page?.props?.flash?.notice || 'Accepted'),
+      onError:   (errs) => toast.error(Object.values(errs || {})[0] || 'Could not accept'),
+      onFinish:  () => setAccepting(false),
+    })
+  }
+
   return (
     <DashboardLayout>
       <div className="mb-4 flex items-center justify-between no-print">
         <Link href="/estimates" className="inline-flex items-center gap-1 text-sm text-brand-muted hover:text-brand-ink">
           <ArrowLeft size={14} /> All estimates
         </Link>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-ink hover:bg-brand-surface">
             <Printer size={14} /> Print
           </button>
@@ -28,11 +42,19 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
             <Download size={14} /> Download PDF
           </a>
           <button
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm text-white opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border bg-white px-3 py-1.5 text-sm text-brand-muted opacity-60"
             disabled
             title="WhatsApp send activates after the Twilio media-URL config is verified — for now use Print or Download PDF"
           >
             <MessageCircle size={14} /> Send on WhatsApp
+          </button>
+          <button
+            onClick={acceptEstimate}
+            disabled={isAccepted || accepting}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+            title={isAccepted ? 'Already accepted' : 'Patient accepts the quote — convert to invoice'}
+          >
+            <ThumbsUp size={14} /> {isAccepted ? 'Accepted' : 'Accept estimate'}
           </button>
         </div>
       </div>

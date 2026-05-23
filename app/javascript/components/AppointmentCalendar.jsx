@@ -47,6 +47,11 @@ export default function AppointmentCalendar({
   appointments = [],
   notes = [],
   onEventClick,
+  // R1.calendar — parent passes a callback so clicking an empty slot
+  // opens the booking modal instead of the diary-note modal. When null,
+  // we fall back to the legacy reminder behaviour for any callers we
+  // haven't migrated yet.
+  onEmptySlotClick = null,
   calendarMeta = {},
   // Height of the scrollable calendar body for the inline dashboard view,
   // which leaves room for the page header + stat cards (~210px).
@@ -216,14 +221,21 @@ export default function AppointmentCalendar({
     setClipboard(null)
   }
 
-  // Clicking an empty slot: if something is "cut", drop it here; otherwise
-  // open the diary-reminder creator pre-filled with that time. (Remember
-  // the slot too, so Ctrl+V has a paste target.)
+  // Clicking an empty slot: if something is "cut", drop it here;
+  // otherwise open a NEW BOOKING pre-filled with that time. The
+  // diary-reminder modal is no longer the default — reception almost
+  // always wants to book a patient when they click a slot, not jot a
+  // note. Notes still accessible via the dedicated "+ Diary note"
+  // button. (Remember the slot too, so Ctrl+V has a paste target.)
   const handleDateClick = (info) => {
     lastSlotRef.current = info.date
     if (clipboard) {
       placeClipboardAt(info.date)
+    } else if (onEmptySlotClick) {
+      onEmptySlotClick(info.date)
     } else {
+      // Backward-compat: if the parent doesn't supply onEmptySlotClick
+      // (legacy embed), fall through to the diary reminder.
       setReminderModal({ mode: 'create', prefillStart: info.date })
     }
   }

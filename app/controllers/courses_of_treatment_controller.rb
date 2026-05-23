@@ -87,6 +87,87 @@ class CoursesOfTreatmentController < ApplicationController
       alert: "Could not chart tooth: #{e.message}", status: :see_other
   end
 
+  # R1.2 — POST /courses-of-treatment/:id/add_item
+  #
+  # Add a procedure to the COT that isn't tied to a specific tooth
+  # (oral exam 8101, prophylaxis 8159, x-ray 8107, etc.) — chart_quick_add
+  # was tooth-first only and didn't cover these whole-mouth procedures.
+  def add_item
+    cot = CourseOfTreatment.find(params[:id])
+    pc  = ProcedureCode.find(params[:procedure_code_id])
+
+    item = cot.treatment_items.create!(
+      procedure_code: pc,
+      tooth_number: params[:tooth_number].presence,
+      status: "planned"
+    )
+    AuditService.log(
+      action: "treatment_item.added",
+      summary: "Added #{pc.code} #{pc.description.to_s.truncate(40)} to COT ##{cot.id}",
+      resource: item,
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    expire_dev_page_cache("courses-of-treatment")
+    redirect_back fallback_location: course_of_treatment_path(cot),
+      notice: "Added #{pc.code}", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: course_of_treatment_path(params[:id]),
+      alert: e.record.errors.full_messages.to_sentence, status: :see_other
+  end
+
+  # R1.3a — POST /courses-of-treatment/:id/generate_estimate
+  #
+  # Build an Estimate from the COT's non-voided items (planned + completed)
+  # and redirect to /estimates/:id. Idempotent at the user level — there's
+  # no uniqueness constraint, so accidental double-clicks would create two;
+  # in practice estimates are infrequent and the latest wins.
+  def generate_estimate
+    cot = CourseOfTreatment.find(params[:id])
+    est = Estimate.from_course(cot)
+    est.save!
+    AuditService.log(
+      action: "estimate.generated",
+      summary: "Generated estimate #{est.estimate_number} from COT ##{cot.id} (#{est.estimate_lines.size} lines, R#{format('%.2f', est.total)})",
+      resource: est,
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    expire_dev_page_cache("estimates")
+    redirect_to estimate_path(est), notice: "Estimate #{est.estimate_number} ready", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: course_of_treatment_path(params[:id]),
+      alert: e.record.errors.full_messages.to_sentence, status: :see_other
+  end
+
+  # R1.3b — POST /courses-of-treatment/:id/generate_invoice
+  #
+  # Build an Invoice from the COT's COMPLETED items only. If nothing is
+  # marked complete yet we friendly-fail rather than creating an empty
+  # invoice with sequence-number burnt.
+  def generate_invoice
+    cot = CourseOfTreatment.find(params[:id])
+    if cot.treatment_items.where(status: "completed").none?
+      return redirect_back fallback_location: course_of_treatment_path(cot),
+        alert: "Mark at least one treatment item Done before invoicing", status: :see_other
+    end
+
+    inv = Invoice.from_course(cot)
+    inv.save!
+    AuditService.log(
+      action: "invoice.generated",
+      summary: "Generated invoice #{inv.invoice_number} from COT ##{cot.id} (#{inv.invoice_lines.size} lines, R#{format('%.2f', inv.total)})",
+      resource: inv,
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    expire_dev_page_cache("invoices")
+    redirect_to invoice_path(inv), notice: "Invoice #{inv.invoice_number} ready", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: course_of_treatment_path(params[:id]),
+      alert: e.record.errors.full_messages.to_sentence, status: :see_other
+  end
+
   private
 
   def list_props(c)

@@ -1,21 +1,26 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link } from '@inertiajs/react'
-import { ArrowLeft, Printer, MessageCircle, Download } from 'lucide-react'
+import { ArrowLeft, Printer, MessageCircle, Download, Wallet } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import BrandLogo from '../components/BrandLogo'
+import PaymentModal from '../components/PaymentModal'
 import { cn } from '../lib/utils'
 
 const rand = (n) => `R${(n || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-ZA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
 export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} }) {
+  const [payOpen, setPayOpen] = useState(false)
+  const balance = Number(invoice.balance || 0)
+  const isPaid  = balance <= 0 && !invoice.void
+
   return (
     <DashboardLayout>
       <div className="mb-4 flex items-center justify-between no-print">
         <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-brand-muted hover:text-brand-ink">
           <ArrowLeft size={14} /> All invoices
         </Link>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-ink hover:bg-brand-surface">
             <Printer size={14} /> Print
           </button>
@@ -28,14 +33,29 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
             <Download size={14} /> Download PDF
           </a>
           <button
-            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm text-white opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border bg-white px-3 py-1.5 text-sm text-brand-muted opacity-60"
             title="WhatsApp send activates after the Twilio media-URL config is verified — for now use Print or Download PDF"
             disabled
           >
             <MessageCircle size={14} /> Send on WhatsApp
           </button>
+          <button
+            onClick={() => setPayOpen(true)}
+            disabled={invoice.void}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm',
+              isPaid
+                ? 'border border-brand-border bg-white text-brand-ink hover:bg-brand-surface'
+                : 'bg-emerald-600 text-white hover:bg-emerald-700',
+            )}
+            title={invoice.void ? 'Void invoice — cannot record payment' : isPaid ? 'Add another payment or record a refund' : 'Record a card/cash/EFT payment'}
+          >
+            <Wallet size={14} /> {isPaid ? 'Add payment' : `Record payment · R${balance.toFixed(2)}`}
+          </button>
         </div>
       </div>
+
+      <PaymentModal open={payOpen} onClose={() => setPayOpen(false)} invoice={invoice} />
 
       {/* The compliant invoice document */}
       <div className="print-document mx-auto max-w-3xl rounded-xl border border-brand-border bg-white p-8 shadow-sm">
@@ -123,6 +143,25 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
           <p>{practice.bank}</p>
           <p className="mt-2">This statement may be submitted to your medical aid for reimbursement. The practice does not claim on your behalf.</p>
         </div>
+
+        {/* R1.5 — payments timeline (visible on-screen + in print) */}
+        {(invoice.payments || []).length > 0 && (
+          <div className="mt-6 border-t border-brand-border pt-4">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-muted">Payments received</p>
+            <table className="w-full text-sm">
+              <tbody>
+                {invoice.payments.map((p) => (
+                  <tr key={p.id} className="border-b border-brand-border/40 last:border-0">
+                    <td className="py-1.5 text-brand-muted">{fmtDate(p.received_at)}</td>
+                    <td className="py-1.5 capitalize text-brand-ink">{p.method}</td>
+                    <td className="py-1.5 text-xs text-brand-muted">{p.reference || p.notes || ''}</td>
+                    <td className="py-1.5 text-right font-medium text-emerald-700">{rand(p.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )

@@ -43,12 +43,16 @@ export default function Appointments({
   const [view, setView] = useState('schedule')
   const [modalMode, setModalMode] = useState(null)
   const [selected, setSelected] = useState(null)
+  // Slot pre-fill for the booking modal when reception clicks an empty
+  // calendar slot. Stored as a Date.
+  const [prefillStart, setPrefillStart] = useState(null)
 
   const openDetail = (apt) => { setSelected(apt); setModalMode('detail') }
-  const openCreate = () => { setSelected(null); setModalMode('create') }
+  const openCreate = () => { setSelected(null); setPrefillStart(null); setModalMode('create') }
+  const openCreateAt = (date) => { setSelected(null); setPrefillStart(date); setModalMode('create') }
   const openEdit   = (apt) => { if (apt) setSelected(apt); setModalMode('edit') }
   const openCancel = (apt) => { if (apt) setSelected(apt); setModalMode('cancel') }
-  const closeModal = () => { setModalMode(null); setSelected(null) }
+  const closeModal = () => { setModalMode(null); setSelected(null); setPrefillStart(null) }
 
   const STATUS_OPTIONS = [
     { value: 'scheduled',   label: t('status_scheduled') },
@@ -231,6 +235,7 @@ export default function Appointments({
           notes={calendar_notes}
           calendarMeta={calendar_meta}
           onEventClick={handleEventClick}
+          onEmptySlotClick={openCreateAt}
         />
       ) : (
         <DataTable
@@ -289,6 +294,7 @@ export default function Appointments({
         open={modalMode === 'create'}
         onClose={closeModal}
         patients={patients}
+        prefillStart={prefillStart}
       />
       <AppointmentFormModal
         mode="edit"

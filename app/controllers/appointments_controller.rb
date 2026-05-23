@@ -142,7 +142,27 @@ class AppointmentsController < ApplicationController
         status: :see_other
     end
 
-    patient = Patient.find(create_params[:patient_id])
+    # Calendar-fix path: reception clicked an empty slot, ticked
+    # "New patient", typed first/last/phone — we create the Patient
+    # first, in the same DB transaction as the appointment. Both
+    # succeed or neither — no orphan patients on slot-overlap rejects.
+    patient =
+      if params[:new_patient].present? && create_params[:patient_id].blank?
+        np = params.require(:new_patient).permit(:first_name, :last_name, :phone)
+        if np[:first_name].blank? || np[:last_name].blank? || np[:phone].blank?
+          return redirect_back fallback_location: appointments_location,
+            alert: "New patient: first name, last name, and phone are required",
+            inertia: { errors: { patient_id: "New patient details are required" } },
+            status: :see_other
+        end
+        Patient.create!(
+          first_name: np[:first_name],
+          last_name:  np[:last_name],
+          phone:      np[:phone]
+        )
+      else
+        Patient.find(create_params[:patient_id])
+      end
 
     appointment =
       if ENV["GOOGLE_CALENDAR_ID"].present?

@@ -81,9 +81,29 @@ Rails.application.routes.draw do
       # P9.3 — clickable odontogram → chart entry + planned procedure
       post :chart_quick_add
     end
+    member do
+      # R1.2 — add a procedure to this COT (no tooth required)
+      post :add_item
+      # R1.3 — convert this COT into an Estimate or Invoice
+      post :generate_estimate
+      post :generate_invoice
+    end
   end
-  resources :estimates, only: [ :index, :show ]
-  resources :invoices, only: [ :index, :show ]
+
+  # R1.1 — let staff mark individual treatment items done / failed / voided
+  resources :treatment_items, only: [ :update ]
+
+  resources :estimates, only: [ :index, :show ] do
+    member do
+      # R1.4 — convert estimate to invoice
+      post :accept_and_invoice
+    end
+  end
+
+  resources :invoices, only: [ :index, :show ] do
+    # R1.5 — record a payment (card / cash / EFT) against an invoice
+    resources :payments, only: [ :create ]
+  end
   get "patients/:patient_id/file", to: "patient_files#show", as: :patient_file
   get "imaging", to: "imaging#index", as: :imaging
   resources :scribe_sessions, only: [ :index, :show ], path: "scribe-sessions"
