@@ -1,152 +1,152 @@
 code,description,category,vat_treatment,tooth_specific,default_fee_cents,medical_fee_cents
 0000,Adjustment / no-charge line,other,zero_rated,N,8560,
 8099,Dental laboratory service,other,zero_rated,N,358423,
-8101,Oral examination – general dental practitioner.,diagnostic,zero_rated,N,69930,
-8102,Tariff 8102,diagnostic,zero_rated,N,60644,
-8104,Extensive oral examination – condition focused c,diagnostic,zero_rated,N,40128,
-8107,Intraoral radiograph/image– periapical,diagnostic,zero_rated,N,18170,
-8109,Infection control/barrier techniques,diagnostic,zero_rated,N,13679,
-8110,Sterilized instrumentation,diagnostic,zero_rated,N,14973,
-8112,Intraoral radiograph/image – bitewing,diagnostic,zero_rated,N,36340,
-8115,Panoramic radiograph,diagnostic,zero_rated,N,63170,
-8117,Diagnostic models,diagnostic,zero_rated,N,16980,
-8119,Tariff 8119,diagnostic,zero_rated,N,41055,
-8121,Diagnostic photograph/image,diagnostic,zero_rated,N,16980,
-8124,Tariff 8124,diagnostic,zero_rated,N,4650,
-8131,Tariff 8131,diagnostic,zero_rated,N,100000,
-8132,Pulp removal (pulpectomy),diagnostic,zero_rated,N,45100,
-8133,Recement inlay/onlay/crown,diagnostic,zero_rated,N,83763,
-8135,Tariff 8135,diagnostic,zero_rated,N,72296,
-8136,Tariff 8136,diagnostic,zero_rated,N,21310,
-8139,Tariff 8139,diagnostic,zero_rated,N,95000,
-8140,Tariff 8140,diagnostic,zero_rated,N,87512,
-8144,Tariff 8144,diagnostic,zero_rated,N,10490,
-8145,Local anaesthesia- report per quadrant,diagnostic,zero_rated,N,24802,
+8101,Oral examination,diagnostic,zero_rated,N,69930,32290
+8102,Comprehensive oral examination,diagnostic,zero_rated,N,60644,48440
+8104,Limited oral examination,diagnostic,zero_rated,N,40128,15650
+8107,Intraoral radiograph - periapical,diagnostic,zero_rated,N,18170,13980
+8109,Infection control/barrier techniques,diagnostic,zero_rated,N,13679,3100
+8110,Sterilized instrumentation,diagnostic,zero_rated,N,14973,6960
+8112,Intraoral radiograph - bitewing,diagnostic,zero_rated,N,36340,13980
+8115,Extraoral radiograph - panoramic,diagnostic,zero_rated,N,63170,48580
+8117,Diagnostic models,diagnostic,zero_rated,N,16980,13040
+8119,Diagnostic models mounted,diagnostic,zero_rated,N,41055,32800
+8121,Oral and/or facial image (digital/conventional),diagnostic,zero_rated,N,16980,13040
+8124,Pulp tests,diagnostic,zero_rated,N,4650,3580
+8131,Emergency dental treatment,diagnostic,zero_rated,N,100000,18420
+8132,Pulp removal (pulpectomy),diagnostic,zero_rated,N,45100,34700
+8133,"Recement inlay, onlay, crown or veneer",diagnostic,zero_rated,N,83763,18420
+8135,"Remove inlay, onlay or crown",diagnostic,zero_rated,N,72296,36680
+8136,Access through a prosthetic crown or inlay to facilitate root canal treatment,diagnostic,zero_rated,N,21310,16430
+8139,Appointment not kept /30min,diagnostic,zero_rated,N,95000,
+8140,House/extended care facility/hospital call,diagnostic,zero_rated,N,87512,29920
+8144,Intravenous sedation,diagnostic,zero_rated,N,10490,8090
+8145,Local anaesthetic - per visit,diagnostic,zero_rated,N,24802,11890
 8146,Resin bonding for restorations,diagnostic,zero_rated,N,80000,
-8151,Tariff 8151,diagnostic,zero_rated,N,23900,
-8155,Polishing,diagnostic,zero_rated,N,38776,
-8157,Tariff 8157,diagnostic,zero_rated,N,23900,
-8158,Tariff 8158,diagnostic,zero_rated,N,76820,
-8159,Prophylaxis (scaling and polishing) – complete d,diagnostic,zero_rated,N,66498,
-8160,Tariff 8160,diagnostic,zero_rated,N,43860,
-8161,Topical fluoride - child,diagnostic,zero_rated,N,23900,
-8162,Topical application of fluoride – adult,diagnostic,zero_rated,N,32073,
-8163,Fissure sealant - per tooth,diagnostic,zero_rated,N,28790,
-8165,Sedative filling,diagnostic,zero_rated,N,23900,
-8166,Tariff 8166,diagnostic,zero_rated,N,15213,
-8169,Occlusal guard,diagnostic,zero_rated,N,147040,
-8175,Tariff 8175,diagnostic,zero_rated,N,55226,
-8195,Tariff 8195,diagnostic,zero_rated,N,168700,
-8197,CBCT capture and interpretation with limited fie,diagnostic,zero_rated,N,183550,
-8201,Extraction of tooth (simple),surgical,zero_rated,Y,90625,
-8213,Tariff 8213,surgical,zero_rated,Y,148510,
-8220,Cost of Suture Material,surgical,zero_rated,Y,36000,
-8231,Complete dentures – maxillary and mandibular,surgical,zero_rated,Y,745845,
-8232,Tariff 8232,surgical,zero_rated,Y,490540,
-8233,Tariff 8233,surgical,zero_rated,Y,260782,
-8234,Tariff 8234,surgical,zero_rated,Y,260782,
-8235,Tariff 8235,surgical,zero_rated,Y,309761,
-8236,Tariff 8236,surgical,zero_rated,Y,349739,
-8237,Tariff 8237,surgical,zero_rated,Y,349739,
-8238,Tariff 8238,surgical,zero_rated,Y,409780,
-8239,Tariff 8239,surgical,zero_rated,Y,401734,
-8240,Tariff 8240,surgical,zero_rated,Y,450710,
-8241,Tariff 8241,surgical,zero_rated,Y,450710,
-8244,Tariff 8244,surgical,zero_rated,Y,381813,
-8255,Apicectomy,surgical,zero_rated,Y,49027,
-8259,Tariff 8259,surgical,zero_rated,Y,87111,
-8267,Tariff 8267,surgical,zero_rated,Y,216090,
-8269,Tariff 8269,surgical,zero_rated,Y,69418,
-8270,Tariff 8270,surgical,zero_rated,Y,21153,
-8271,Tariff 8271,surgical,zero_rated,Y,21960,
-8273,"Impression to repair or modify a denture, or oth",surgical,zero_rated,Y,46174,
-8275,Tariff 8275,surgical,zero_rated,Y,35040,
-8281,Tariff 8281,surgical,zero_rated,Y,498076,
-8303,"Resin restoration - one surface, anterior",restorative,zero_rated,Y,31800,
-8304,Isolation of tooth/teeth – per arch,restorative,zero_rated,Y,33397,
+8151,Oral hygiene instruction,diagnostic,zero_rated,N,23900,18420
+8155,Polishing - complete dentition,diagnostic,zero_rated,N,38776,18420
+8157,Re-burnishing and polishing of restorations - complete dentition,diagnostic,zero_rated,N,23900,18420
+8158,Enamel microabrasion,diagnostic,zero_rated,N,76820,16860
+8159,Prophylaxis - complete dentition,diagnostic,zero_rated,N,66498,36210
+8160,Removal of gross calculus,diagnostic,zero_rated,N,43860,
+8161,Topical application of fluoride - child,diagnostic,zero_rated,N,23900,18420
+8162,Topical application of fluoride - adult,diagnostic,zero_rated,N,32073,18420
+8163,Dental sealant,diagnostic,zero_rated,N,28790,12180
+8165,Sedative filling,diagnostic,zero_rated,N,23900,18420
+8166,"Application of desensitising resin, per tooth",diagnostic,zero_rated,N,15213,12180
+8169,Occlusal guard,diagnostic,zero_rated,N,147040,70780
+8175,Space maintainer  - removable,diagnostic,zero_rated,N,55226,44090
+8195,CBCT capture and interpretation with limited field of  view  of one full dental arch -mandible,diagnostic,zero_rated,N,168700,130990
+8197,CBCT capture and interpretation with limited field of  view  of both dental arches without orbits and/or cranium,diagnostic,zero_rated,N,183550,137240
+8201,Extraction - tooth or exposed tooth roots (first per quadrant),surgical,zero_rated,Y,90625,21190
+8213,"Surgical removal of residual roots, first tooth - per tooth",surgical,zero_rated,Y,148510,79660
+8220,Cost of suture material,surgical,zero_rated,Y,36000,
+8231,Complete dentures - maxillary and mandibular,surgical,zero_rated,Y,745845,297260
+8232,Complete denture - maxillary or mandibular,surgical,zero_rated,Y,490540,183300
+8233,Partial denture - resin base - one tooth,surgical,zero_rated,Y,260782,85210
+8234,Partial denture - resin base - two teeth,surgical,zero_rated,Y,260782,85210
+8235,Partial denture - resin base - three teeth,surgical,zero_rated,Y,309761,127510
+8236,Partial denture - resin base - four teeth,surgical,zero_rated,Y,349739,127510
+8237,Partial denture - resin base - five teeth,surgical,zero_rated,Y,349739,127510
+8238,Partial denture - resin base - six teeth,surgical,zero_rated,Y,409780,169100
+8239,Partial denture - resin base - seven teeth,surgical,zero_rated,Y,401734,169100
+8240,Partial denture - resin base - eight teeth,surgical,zero_rated,Y,450710,169100
+8241,Partial denture - resin base - nine or more teeth,surgical,zero_rated,Y,450710,169100
+8244,Immediate denture - maxillary,surgical,zero_rated,Y,381813,183300
+8255,Clasp or rest - stainless steel,surgical,zero_rated,Y,49027,17740
+8259,Rebase complete or partial denture (laboratory),surgical,zero_rated,Y,87111,69510
+8267,Reline complete or partial denture (laboratory),surgical,zero_rated,Y,216090,101410
+8269,Repair denture or other intra-oral appliance,surgical,zero_rated,Y,69418,26940
+8270,Add clasp to existing partial denture,surgical,zero_rated,Y,21153,16860
+8271,Add tooth to existing partial denture,surgical,zero_rated,Y,21960,16860
+8273,Impression to repair or modify a denture or other intra-oral appliance,surgical,zero_rated,Y,46174,13480
+8275,Adjust complete or partial denture,surgical,zero_rated,Y,35040,13480
+8281,Partial denture - cast metal framework only,surgical,zero_rated,Y,498076,198820
+8303,Pulp cap - indirect,restorative,zero_rated,Y,31800,24500
+8304,Rubber dam per arch,restorative,zero_rated,Y,33397,14420
 8306,Cost of MTA,restorative,zero_rated,Y,135000,
-8307,"Resin restoration - four surfaces, anterior",restorative,zero_rated,Y,30114,
-8308,External tooth whitening procedures – per arch,restorative,zero_rated,Y,611324,
-8323,"Resin restoration - one surface, posterior",restorative,zero_rated,Y,73800,
-8324,"Resin restoration - two surfaces, posterior",restorative,zero_rated,Y,43451,
-8325,"Resin restoration - three surfaces, posterior",restorative,zero_rated,Y,83362,
-8327,Tariff 8327,restorative,zero_rated,Y,33362,
-8329,"Root canal therapy, anteriors and premo- lars -",restorative,zero_rated,Y,55490,
-8332,Tariff 8332,restorative,zero_rated,Y,23028,
-8333,Tariff 8333,restorative,zero_rated,Y,100920,
-8334,Tariff 8334,restorative,zero_rated,Y,35370,
-8335,Tariff 8335,restorative,zero_rated,Y,104721,
-8336,Tariff 8336,restorative,zero_rated,Y,149690,
-8337,Tariff 8337,restorative,zero_rated,Y,88900,
-8338,"Root canal therapy, interiors and premo- lars -",restorative,zero_rated,Y,166350,
-8339,"Root canal therapy, molars - first canal.",restorative,zero_rated,Y,228650,
-8340,"Root canal therapy, molars - each additiona",restorative,zero_rated,Y,221960,
-8351,Tariff 8351,restorative,zero_rated,Y,76807,
-8352,Tariff 8352,restorative,zero_rated,Y,95477,
-8353,Tariff 8353,restorative,zero_rated,Y,118136,
-8354,Tariff 8354,restorative,zero_rated,Y,131340,
-8355,Tariff 8355,restorative,zero_rated,Y,148070,
-8367,Tariff 8367,restorative,zero_rated,Y,81887,
-8368,"Resin restoration - posterior, two surfaces",restorative,zero_rated,Y,100387,
-8369,Tariff 8369,restorative,zero_rated,Y,125166,
-8370,Tariff 8370,restorative,zero_rated,Y,135240,
-8374,Tariff 8374,restorative,zero_rated,Y,591000,
-8376,Tariff 8376,restorative,zero_rated,Y,205616,
-8379,Tariff 8379,restorative,zero_rated,Y,74973,
-8398,Core build-up with pins,restorative,zero_rated,Y,158694,
-8400,Tariff 8400,restorative,zero_rated,Y,62975,
-8405,Tariff 8405,restorative,zero_rated,Y,303118,
-8409,Crown – ceramic,restorative,zero_rated,Y,552522,
-8410,Tariff 8410,restorative,zero_rated,Y,49100,
-8415,Pontic – ceramic,restorative,zero_rated,Y,534934,
-8419,Provisional pontic,restorative,zero_rated,Y,99941,
-8420,Tariff 8420,restorative,zero_rated,Y,247371,
-8443,Crown retainer – ceramic,restorative,zero_rated,Y,541000,
-8447,Provisional crown retainer,restorative,zero_rated,Y,99785,
-8448,Tariff 8448,restorative,zero_rated,Y,303118,
-8514,Tariff 8514,other,zero_rated,N,85000,
-8516,Tariff 8516,other,zero_rated,N,70852,
-8523,Tariff 8523,other,zero_rated,N,47200,
-8525,Fabrication of computer generated ceramic implan,other,zero_rated,N,364043,
-8536,Implant/abutment supported crownporcelain/ ceram,other,zero_rated,N,692575,
-8546,Implant/abutment supported-porcelain/ ceramic cr,other,zero_rated,N,548459,
-8552,Veneer ceramic – indirect,other,zero_rated,N,541000,
-8553,Tariff 8553,other,zero_rated,N,50954,
+8307,Pulp amputation (pulpotomy),restorative,zero_rated,Y,30114,24060
+8308,External bleaching - per arch,restorative,zero_rated,Y,611324,
+8323,"Retreatment of previously completed root canal therapy, each additional canal – anterior or premolar",restorative,zero_rated,Y,73800,
+8324,"Retreatment of previously completed root canal therapy, each additional canal – molar",restorative,zero_rated,Y,43451,
+8325,Internal bleaching - per tooth,restorative,zero_rated,Y,83362,
+8327,Internal bleaching - each additional visit,restorative,zero_rated,Y,33362,
+8329,Root canal therapy - anteriors and premolars - each additional canal,restorative,zero_rated,Y,55490,42680
+8332,Root canal preparatory visit - single canal tooth,restorative,zero_rated,Y,23028,18420
+8333,Root canal preparatory visit - multi canal tooth,restorative,zero_rated,Y,100920,25910
+8334,Re-preparation of previously obturated root canal,restorative,zero_rated,Y,35370,27230
+8335,Root canal obturation - anteriors and premolars - first canal,restorative,zero_rated,Y,104721,83640
+8336,Root canal obturation - posteriors - first canal,restorative,zero_rated,Y,149690,115150
+8337,Root canal obturation - posteriors - each additional canal,restorative,zero_rated,Y,88900,34210
+8338,Root canal therapy - anteriors and premolars - first canal,restorative,zero_rated,Y,166350,127940
+8339,Root canal therapy - posteriors - first canal,restorative,zero_rated,Y,228650,175870
+8340,Root canal therapy - posteriors - each additional canal,restorative,zero_rated,Y,221960,42680
+8351,"Resin - one surface, anterior",restorative,zero_rated,Y,76807,46270
+8352,"Resin - two surfaces, anterior",restorative,zero_rated,Y,95477,58230
+8353,"Resin - three surfaces, anterior",restorative,zero_rated,Y,118136,69550
+8354,"Resin - four or more surfaces, anterior",restorative,zero_rated,Y,131340,77600
+8355,Veneer - resin (chair-side),restorative,zero_rated,Y,148070,63910
+8367,"Resin - one surface, posterior",restorative,zero_rated,Y,81887,50180
+8368,"Resin - two surfaces, posterior",restorative,zero_rated,Y,100387,62050
+8369,"Resin - three surfaces, posterior",restorative,zero_rated,Y,125166,74970
+8370,"Resin - four or more surfaces, posterior",restorative,zero_rated,Y,135240,80650
+8374,Inlay/onlay - porcelain - four or more surfaces,restorative,zero_rated,Y,591000,198820
+8376,Core build-up with prefabricated posts,restorative,zero_rated,Y,205616,100290
+8379,Cost of prefabricated posts,restorative,zero_rated,Y,74973,
+8398,Core build-up with or without pins,restorative,zero_rated,Y,158694,81850
+8400,Temporary crown,restorative,zero_rated,Y,62975,
+8405,Crown - resin laboratory,restorative,zero_rated,Y,303118,198760
+8409,Crown - porcelain/ceramic,restorative,zero_rated,Y,552522,242000
+8410,Provisional crown,restorative,zero_rated,Y,49100,40860
+8415,Pontic - porcelain/ceramic,restorative,zero_rated,Y,534934,197540
+8419,Provisional pontic,restorative,zero_rated,Y,99941,40860
+8420,Pontic – resin based composite (indirect),restorative,zero_rated,Y,247371,197540
+8443,Crown retainer - porcelain/ceramic,restorative,zero_rated,Y,541000,242000
+8447,Provisional crown retainer,restorative,zero_rated,Y,99785,40860
+8448,Crown retainer – resin based composite (indirect),restorative,zero_rated,Y,303118,242000
+8514,Recement bridge,other,zero_rated,N,85000,23430
+8516,Remove bridge,other,zero_rated,N,70852,36680
+8523,"Fabrication of computer generated  resin or ceramic pontic, per unit as part of bridge framework",other,zero_rated,N,47200,
+8525,"Fabrication of computer generated ceramic implant supported restoration, per unit",other,zero_rated,N,364043,
+8536,Crown - implant/abutment supported - porcelain/ceramic,other,zero_rated,N,692575,314190
+8546,Crown retainer - implant/abutment supported - porcelain/ceramic,other,zero_rated,N,548459,314190
+8552,Veneer - porcelain (laboratory),other,zero_rated,N,541000,141380
+8553,Occlusal adjustment - minor,other,zero_rated,N,50954,55810
 8560,Cost of ceramic block,other,zero_rated,N,90000,
-8570,Fabrication of computer generated ceramic restor,other,zero_rated,N,274080,
-8590,Tariff 8590,other,zero_rated,N,41850,
-8591,Tariff 8591,other,zero_rated,N,45952,
-8598,Tariff 8598,other,zero_rated,N,21740,
-8599,Tariff 8599,other,zero_rated,N,51162,
+8570,Fabrication of computer generated ceramic restoration,other,zero_rated,N,274080,210860
+8590,Implant maintenance procedures - per implant,other,zero_rated,N,41850,15150
+8591,Removal of implant supported prosthesis,other,zero_rated,N,45952,36680
+8598,Repair of implant supported Provisional Prosthesis,other,zero_rated,N,21740,25160
+8599,Precision attachment (removable denture),other,zero_rated,N,51162,40860
 8600,Cost of implant components,other,zero_rated,N,468333,
-8601,Tariff 8601,other,zero_rated,N,350000,
-8602,Computer Generated Surgical Guide,other,zero_rated,N,400000,
-8637,Tariff 8637,other,zero_rated,N,225000,
-8639,Endodontic instruments per patient per completed,other,zero_rated,N,24980,
-8654,Tariff 8654,other,zero_rated,N,763327,
-8660,Tariff 8660,other,zero_rated,N,337540,
-8667,Tariff 8667,other,zero_rated,N,124727,
-8670,Implant screw access closure,other,zero_rated,N,75812,
-8713,Tariff 8713,other,zero_rated,N,350000,
-8727,Tariff 8727,other,zero_rated,N,30000,
-8731,Tariff 8731,other,zero_rated,N,36783,
-8743,Tariff 8743,other,zero_rated,N,145181,
-8767,Bone regeneration/repair procedure - at a single,other,zero_rated,N,254326,
+8601,Computerised implant planning,other,zero_rated,N,350000,
+8602,Computer Generated Surgical Guide A computer generated surgical guide for implant positioning after computerised planning code 8601. See Rule 002 Code 8483 followed by 8092,other,zero_rated,N,400000,
+8637,"Apicectomy/ periradicular surgery, first root – premolar",other,zero_rated,N,225000,
+8639,Endodontic instruments per patient per completed treatment.,other,zero_rated,N,24980,
+8654,Implant supported fixed-detachable complete overdenture,other,zero_rated,N,763327,371640
+8660,Additional fee to implant supported fixed-detachable denture - per implant,other,zero_rated,N,337540,51270
+8667,Soft base to denture (heat cured),other,zero_rated,N,124727,99580
+8670,Implant screw access closure,other,zero_rated,N,75812,46270
+8713,Blood and Blood Products for Regeneration,other,zero_rated,N,350000,
+8727,Provisional splinting - intracoronal - per tooth,other,zero_rated,N,30000,15590
+8731,Incision & drainage of abscess - intra-oral,other,zero_rated,N,36783,29390
+8743,Gingivectomy or gingivoplasty - one to three teeth per quadrant,other,zero_rated,N,145181,90880
+8767,Bone regeneration/repair procedure - at a single site,other,zero_rated,N,254326,155000
 8770,Cost of bone regenerative/repair material,other,zero_rated,N,379334,
-8804,Tariff 8804,other,zero_rated,N,147040,
-8805,Tariff 8805,other,zero_rated,N,98026,
-8848,Tariff 8848,other,zero_rated,N,38953,
-8849,Tariff 8849,other,zero_rated,N,124808,
-8935,Tariff 8935,other,zero_rated,N,17520,
-8937,Tariff 8937,other,zero_rated,N,172610,
-8985,Tariff 8985,other,zero_rated,N,193810,
-9079,Tariff 9079,other,zero_rated,N,332500,
-9163,Tariff 9163,other,zero_rated,N,110900,
-9183,Surgical placement of endosseus implant – first,other,zero_rated,N,551753,
+8804,Placement of Fixed orthodontic retainer,other,zero_rated,N,147040,
+8805,Repair or Replacement of fixed orthodontic Retainer,other,zero_rated,N,98026,
+8848,Repair orthodontic appliance - fixed,other,zero_rated,N,38953,25060
+8849,Retainer (orthodontic),other,zero_rated,N,124808,58500
+8935,Treatment of septic socket,other,zero_rated,N,17520,17300
+8937,Surgical removal of tooth,other,zero_rated,N,172610,79660
+8985,Frenulectomy/frenulotomy,other,zero_rated,N,193810,122185
+9079,Trigger point injection,other,zero_rated,N,332500,20810
+9163,Surgical template - simple,other,zero_rated,N,110900,40860
+9183,Surgical placement of endosteal implant - first per jaw,other,zero_rated,N,551753,201610
 9187,Cost of endosteal implant body,other,zero_rated,N,572647,
-9189,Cost of other implant components.,other,zero_rated,N,180000,
-9190,Surgical exposure of endosseus implant – first p,other,zero_rated,N,79400,
-9271,Tariff 9271,other,zero_rated,N,2200,
+9189,Cost of other implant compnts,other,zero_rated,N,180000,
+9190,Surgical placement of abutment - first per jaw,other,zero_rated,N,79400,85930
+9271,Cost of impression material (only to be used with code 8215,other,zero_rated,N,2200,
 9301,Casting and trimming of model in plaster (yellow,other,zero_rated,N,5240,
 9303,Tariff 9303,other,zero_rated,N,7200,
 9313,Tariff 9313,other,zero_rated,N,14400,
