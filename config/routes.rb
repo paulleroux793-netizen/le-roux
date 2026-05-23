@@ -71,7 +71,9 @@ Rails.application.routes.draw do
   get "audit-log/export", to: "audit_logs#export", as: :audit_log_export
 
   # ── Practice-management system (Phase 1+) — ADDITIVE, read-first ──
-  get "procedure-codes", to: "procedure_codes#index", as: :procedure_codes
+  get   "procedure-codes",     to: "procedure_codes#index", as: :procedure_codes
+  # P9.6 — let staff fix bad descriptions inline. Only :description is editable.
+  patch "procedure-codes/:id", to: "procedure_codes#update", as: :procedure_code
   get "treatment-macros", to: "treatment_macros#index", as: :treatment_macros
   resources :billing_accounts, only: [ :index, :show ], path: "accounts"
   resources :courses_of_treatment, only: [ :index, :show ], path: "courses-of-treatment" do
