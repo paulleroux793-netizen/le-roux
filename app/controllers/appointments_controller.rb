@@ -374,17 +374,26 @@ class AppointmentsController < ApplicationController
     end
 
     appointment.update!(status: new_status)
+
+    # P9.4 — Auto-start an AI scribe session when the patient sits in the
+    # chair. Idempotent: if a session is already recording for this
+    # appointment we don't spawn a second. Best-effort — a scribe failure
+    # must never block the front-desk status change.
+    scribe_started = maybe_start_scribe(appointment) if new_status == "in_consultation"
+
     AuditService.log(
       action: "appointment.status_changed",
       summary: "Marked #{appointment.patient.full_name}'s appointment as #{new_status.humanize} (#{appointment.start_time.strftime('%-d %b at %H:%M')})",
       resource: appointment,
-      details: { status: new_status },
+      details: { status: new_status, scribe_started: !!scribe_started }.compact,
       performed_by: audit_performer,
       ip_address: request.remote_ip
     )
     expire_appointment_caches!
+    notice = "Marked as #{new_status.humanize}"
+    notice += " · Scribe recording started" if scribe_started
     redirect_back fallback_location: appointments_path,
-      notice: "Marked as #{new_status.humanize}", status: :see_other
+      notice: notice, status: :see_other
   rescue ActiveRecord::RecordInvalid => e
     redirect_back fallback_location: appointments_path,
       alert: e.record.errors.full_messages.to_sentence, status: :see_other
@@ -472,6 +481,19 @@ class AppointmentsController < ApplicationController
         { method: cl.method, outcome: cl.outcome, attempts: cl.attempts, flagged: cl.flagged, created_at: cl.created_at.iso8601 }
       }
     )
+  end
+
+  # P9.4 — start a scribe session for this appointment only if one isn't
+  # already recording. Returns the session (truthy) on success, nil if
+  # idempotent skip or rescued. Never raises.
+  def maybe_start_scribe(appointment)
+    if ScribeSession.where(appointment_id: appointment.id, status: "recording").exists?
+      return nil
+    end
+    ScribeSession.start_for(appointment)
+  rescue StandardError => e
+    Rails.logger.warn("[AppointmentsController#set_status] scribe auto-start failed: #{e.message}")
+    nil
   end
 
   def expire_appointment_caches!
