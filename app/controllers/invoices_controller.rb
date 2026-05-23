@@ -18,6 +18,29 @@ class InvoicesController < ApplicationController
     patient = invoice.patient
     membership = patient.scheme_memberships.first
 
+    # P9.5 — server-rendered PDF for download / WhatsApp send. Pure Ruby (Prawn).
+    respond_to do |format|
+      format.html { render_inertia(invoice, patient, membership) }
+      format.pdf do
+        AuditService.log(
+          action: "invoice.pdf_downloaded",
+          summary: "Downloaded invoice #{invoice.invoice_number}",
+          resource: invoice,
+          performed_by: audit_performer,
+          ip_address: request.remote_ip
+        )
+        send_data DocumentPdf.invoice(invoice),
+          filename: "#{invoice.invoice_number}.pdf",
+          type: "application/pdf",
+          disposition: "inline"
+      end
+    end
+  end
+
+  private
+
+  # Inertia render — extracted so the .html branch above stays a one-liner.
+  def render_inertia(invoice, patient, membership)
     render inertia: "InvoiceShow", props: {
       invoice: {
         id: invoice.id,
@@ -51,8 +74,6 @@ class InvoicesController < ApplicationController
       }
     }
   end
-
-  private
 
   def practice_props
     p = PracticeBillingProfile.current

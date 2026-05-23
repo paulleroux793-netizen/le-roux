@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from '@inertiajs/react'
-import { ArrowLeft, Printer, MessageCircle, Info } from 'lucide-react'
+import { ArrowLeft, Printer, MessageCircle, Info, Download } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import BrandLogo from '../components/BrandLogo'
 
@@ -17,9 +17,21 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
         </Link>
         <div className="flex gap-2">
           <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-ink hover:bg-brand-surface">
-            <Printer size={14} /> Print / PDF
+            <Printer size={14} /> Print
           </button>
-          <button className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm text-white opacity-60" disabled title="Send to patient over WhatsApp (wired with the messaging integration)">
+          <a
+            href={`/estimates/${estimate.id}.pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-ink hover:bg-brand-surface"
+          >
+            <Download size={14} /> Download PDF
+          </a>
+          <button
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm text-white opacity-60"
+            disabled
+            title="WhatsApp send activates after the Twilio media-URL config is verified — for now use Print or Download PDF"
+          >
             <MessageCircle size={14} /> Send on WhatsApp
           </button>
         </div>

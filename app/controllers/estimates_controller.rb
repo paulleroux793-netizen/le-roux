@@ -19,6 +19,29 @@ class EstimatesController < ApplicationController
     patient = estimate.patient
     membership = patient.scheme_memberships.first
 
+    # P9.5 — server-rendered PDF for download / WhatsApp send. Pure Ruby (Prawn).
+    respond_to do |format|
+      format.html { render_inertia(estimate, patient, membership) }
+      format.pdf do
+        AuditService.log(
+          action: "estimate.pdf_downloaded",
+          summary: "Downloaded estimate #{estimate.estimate_number}",
+          resource: estimate,
+          performed_by: audit_performer,
+          ip_address: request.remote_ip
+        )
+        send_data DocumentPdf.estimate(estimate),
+          filename: "#{estimate.estimate_number}.pdf",
+          type: "application/pdf",
+          disposition: "inline"
+      end
+    end
+  end
+
+  private
+
+  # Inertia render — extracted so the .html branch above stays a one-liner.
+  def render_inertia(estimate, patient, membership)
     render inertia: "EstimateShow", props: {
       estimate: {
         id: estimate.id, number: estimate.estimate_number, status: estimate.status,
@@ -33,8 +56,6 @@ class EstimatesController < ApplicationController
                  scheme: membership&.medical_scheme&.name, member_number: membership&.member_number }
     }
   end
-
-  private
 
   def line_props(l)
     {

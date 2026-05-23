@@ -46,6 +46,13 @@ gem "ruby-anthropic", "~> 0.4", require: "anthropic"
 # === Zip file processing (WhatsApp bulk import) ===
 gem "rubyzip", "~> 2.3", require: "zip"
 
+# === PDF generation (P9.5 — server-rendered invoices + estimates) ===
+# Pure Ruby, no native binary. The on-screen "Print / PDF" button still
+# uses the browser for pixel-perfect WYSIWYG; Prawn powers the
+# programmatic path (server-rendered downloads + future WhatsApp send).
+gem "prawn", "~> 2.5"
+gem "prawn-table", "~> 0.2"
+
 # === Frontend - Inertia.js + React dashboard ===
 gem "inertia_rails"
 gem "vite_rails"

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Link } from '@inertiajs/react'
-import { ArrowLeft, Printer, MessageCircle } from 'lucide-react'
+import { ArrowLeft, Printer, MessageCircle, Download } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import BrandLogo from '../components/BrandLogo'
 import { cn } from '../lib/utils'
@@ -17,9 +17,21 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
         </Link>
         <div className="flex gap-2">
           <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-ink hover:bg-brand-surface">
-            <Printer size={14} /> Print / PDF
+            <Printer size={14} /> Print
           </button>
-          <button className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm text-white opacity-60" title="Phase 3.3 stub — wired to WhatsApp later" disabled>
+          <a
+            href={`/invoices/${invoice.id}.pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-ink hover:bg-brand-surface"
+          >
+            <Download size={14} /> Download PDF
+          </a>
+          <button
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm text-white opacity-60"
+            title="WhatsApp send activates after the Twilio media-URL config is verified — for now use Print or Download PDF"
+            disabled
+          >
             <MessageCircle size={14} /> Send on WhatsApp
           </button>
         </div>
