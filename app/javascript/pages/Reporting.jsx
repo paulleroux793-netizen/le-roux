@@ -24,13 +24,33 @@ export default function Reporting({ kpis = {}, production_by_setting = {}, invoi
         </div>
       </div>
 
+      {/* Financial KPIs */}
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">Money</p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Production (month)" value={rand(kpis.production_month)} />
         <Kpi label="Collections (month)" value={rand(kpis.collections_month)} accent="text-emerald-600" />
         <Kpi label="Outstanding" value={rand(kpis.outstanding)} accent="text-brand-danger" />
+        <Kpi label="Invoices" value={kpis.invoices_total ?? 0} />
+      </div>
+
+      {/* C3 — Clinical-context KPIs the competitors don't surface as cleanly */}
+      <p className="mt-6 mb-2 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">Clinical performance</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Kpi label="Case acceptance"
+             value={kpis.case_acceptance_rate == null ? '—' : `${kpis.case_acceptance_rate}%`}
+             accent={kpis.case_acceptance_rate != null && kpis.case_acceptance_rate >= 70 ? 'text-emerald-600' : 'text-amber-600'} />
+        <Kpi label="Estimates issued (month)" value={kpis.estimates_this_month ?? 0} />
+        <Kpi label="Treatment completion (Q)"
+             value={kpis.treatment_completion_rate == null ? '—' : `${kpis.treatment_completion_rate}%`}
+             accent="text-brand-primary" />
+        <Kpi label="Chair hours today" value={`${kpis.chair_hours_today ?? 0} h`} />
+      </div>
+
+      {/* Operational backlog */}
+      <p className="mt-6 mb-2 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">Backlog</p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi label="Open courses" value={kpis.courses_open ?? 0} />
         <Kpi label="Open estimates" value={kpis.estimates_open ?? 0} />
-        <Kpi label="Invoices" value={kpis.invoices_total ?? 0} />
         <Kpi label="Imaging to match" value={kpis.imaging_needs_match ?? 0} accent="text-amber-600" />
         <Kpi label="Recalls due" value={kpis.recalls_due ?? 0} />
       </div>
