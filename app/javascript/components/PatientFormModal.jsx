@@ -29,10 +29,35 @@ const phoneRegex = /^\+?\d{10,15}$/
 const schema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name:  z.string().min(1, 'Last name is required'),
-  phone:      z.string().regex(phoneRegex, 'Must be a valid phone number'),
+  // Phone is now optional — family/shared phones are common in SA, and ID
+  // number is sufficient identity. Validate only when supplied.
+  phone:      z.string()
+    .refine((v) => !v || phoneRegex.test(v), 'Must be a valid phone number')
+    .optional(),
   email:      z.string().email('Invalid email').or(z.literal('')).optional(),
   date_of_birth: z.string().optional(),
+  // SA ID number (13 digits) OR passport. Free-text; validation is loose
+  // so receptionist can type-as-they-hear; uniqueness lives on the model.
+  id_number:  z.string().optional(),
   notes:      z.string().optional(),
+
+  // ── Billing account (optional) ──
+  // If billing_name is supplied we attach a BillingAccount. Otherwise we
+  // skip account creation entirely (most "self-pay walk-ins" don't need one).
+  account_code:         z.string().optional(),
+  account_billing_name: z.string().optional(),
+  account_email:        z.string().email('Invalid email').or(z.literal('')).optional(),
+  account_phone:        z.string()
+    .refine((v) => !v || phoneRegex.test(v), 'Must be a valid phone number')
+    .optional(),
+
+  // ── Medical aid (optional) ──
+  // scheme_id picks from the seeded dropdown; scheme_name_other lets the
+  // receptionist type any scheme name not yet in the catalogue.
+  scheme_id:          z.string().optional(),
+  scheme_name_other:  z.string().optional(),
+  membership_number:  z.string().optional(),
+  dependant_code:     z.string().optional(),
 
   // Medical history — all optional.
   mh_allergies:              z.string().optional(),
@@ -57,7 +82,9 @@ const DEFAULT_BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 
 const EMPTY_DEFAULTS = {
   first_name: '', last_name: '', phone: '', email: '',
-  date_of_birth: '', notes: '',
+  date_of_birth: '', id_number: '', notes: '',
+  account_code: '', account_billing_name: '', account_email: '', account_phone: '',
+  scheme_id: '', scheme_name_other: '', membership_number: '', dependant_code: '',
   mh_allergies: '', mh_chronic_conditions: '', mh_current_medications: '',
   mh_blood_type: '', mh_emergency_contact_name: '', mh_emergency_contact_phone: '',
   mh_insurance_provider: '', mh_insurance_policy_number: '',
@@ -71,6 +98,7 @@ export default function PatientFormModal({
   patient,                 // required for mode=edit
   medicalHistory,          // optional existing medical history hash
   bloodTypes = DEFAULT_BLOOD_TYPES,
+  schemes = [],            // [{id, name}, ...] seeded SA medical schemes
 }) {
   const isEdit = mode === 'edit'
 
@@ -78,11 +106,17 @@ export default function PatientFormModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues: EMPTY_DEFAULTS,
   })
+
+  // Watch scheme_id so we can reveal the "Other" free-text field when the
+  // receptionist picks the sentinel "other" option.
+  const watchedSchemeId = watch('scheme_id')
+  const isOtherScheme = watchedSchemeId === 'other'
 
   // Hydrate form when opening or switching target patient.
   useEffect(() => {
@@ -94,7 +128,13 @@ export default function PatientFormModal({
         phone:      patient.phone      || '',
         email:      patient.email      || '',
         date_of_birth: patient.date_of_birth || '',
+        id_number:  patient.id_number  || '',
         notes:      patient.notes      || '',
+        // Account/scheme aren't editable from this modal in edit mode —
+        // they live on their own dedicated screens. Keep blank so the
+        // hidden inputs don't overwrite anything on submit.
+        account_code: '', account_billing_name: '', account_email: '', account_phone: '',
+        scheme_id: '', scheme_name_other: '', membership_number: '', dependant_code: '',
         mh_allergies:              medicalHistory?.allergies || '',
         mh_chronic_conditions:     medicalHistory?.chronic_conditions || '',
         mh_current_medications:    medicalHistory?.current_medications || '',
@@ -121,9 +161,10 @@ export default function PatientFormModal({
       patient: {
         first_name: data.first_name,
         last_name:  data.last_name,
-        phone:      data.phone,
+        phone:      nullify(data.phone),
         email:      nullify(data.email),
         date_of_birth: nullify(data.date_of_birth),
+        id_number:  nullify(data.id_number),
         notes:      nullify(data.notes),
         medical_history_attributes: {
           ...(medicalHistory?.id ? { id: medicalHistory.id } : {}),
@@ -139,6 +180,27 @@ export default function PatientFormModal({
           last_dental_visit:      nullify(data.mh_last_dental_visit),
         },
       },
+    }
+
+    // Account & scheme are sent as separate top-level keys (not nested
+    // under patient) so PatientsController#create can route them to the
+    // attach_account! / attach_scheme! helpers — best-effort, never blocks
+    // the patient create.
+    if (!isEdit && data.account_billing_name) {
+      payload.account = {
+        account_code:  nullify(data.account_code),
+        billing_name:  data.account_billing_name,
+        email:         nullify(data.account_email),
+        phone:         nullify(data.account_phone),
+      }
+    }
+    if (!isEdit && data.membership_number) {
+      payload.scheme = {
+        scheme_id:         data.scheme_id === 'other' ? null : nullify(data.scheme_id),
+        scheme_name:       data.scheme_id === 'other' ? nullify(data.scheme_name_other) : null,
+        membership_number: data.membership_number,
+        dependant_code:    nullify(data.dependant_code),
+      }
     }
 
     const opts = {
@@ -198,7 +260,7 @@ export default function PatientFormModal({
             <Field label="Last name" error={errors.last_name?.message}>
               <Input {...register('last_name')} />
             </Field>
-            <Field label="Phone" error={errors.phone?.message}>
+            <Field label="Phone (optional)" error={errors.phone?.message}>
               <Input type="tel" placeholder="+27 82 123 4567" {...register('phone')} />
             </Field>
             <Field label="Email" error={errors.email?.message}>
@@ -206,6 +268,9 @@ export default function PatientFormModal({
             </Field>
             <Field label="Date of birth">
               <Input type="date" {...register('date_of_birth')} />
+            </Field>
+            <Field label="ID / passport number">
+              <Input placeholder="13-digit SA ID or passport" {...register('id_number')} />
             </Field>
           </div>
           <Field label="Notes">
@@ -217,6 +282,57 @@ export default function PatientFormModal({
             />
           </Field>
         </Section>
+
+        {/* ── Billing account (create only — edit happens on the Account screen) ── */}
+        {!isEdit && (
+          <Section title="Billing account" subtitle="Optional — leave blank for a self-pay walk-in. Only fill this if a family member or insurer pays.">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Account holder / billing name">
+                <Input placeholder="e.g. John Smith (father)" {...register('account_billing_name')} />
+              </Field>
+              <Field label="Existing account code">
+                <Input placeholder="e.g. ACC-0042 (leave blank to auto-generate)" {...register('account_code')} />
+              </Field>
+              <Field label="Billing email" error={errors.account_email?.message}>
+                <Input type="email" {...register('account_email')} />
+              </Field>
+              <Field label="Billing phone" error={errors.account_phone?.message}>
+                <Input type="tel" placeholder="+27 82 123 4567" {...register('account_phone')} />
+              </Field>
+            </div>
+          </Section>
+        )}
+
+        {/* ── Medical aid (create only) ──────────────────────────── */}
+        {!isEdit && (
+          <Section title="Medical aid" subtitle="Optional — patient claims back themselves. We don't submit claims.">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Scheme">
+                <select
+                  {...register('scheme_id')}
+                  className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
+                >
+                  <option value="">— None / Private —</option>
+                  {schemes.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                  <option value="other">Other (type below)…</option>
+                </select>
+              </Field>
+              {isOtherScheme && (
+                <Field label="Other scheme name">
+                  <Input placeholder="e.g. Sizwe Hosmed" {...register('scheme_name_other')} />
+                </Field>
+              )}
+              <Field label="Membership number">
+                <Input {...register('membership_number')} />
+              </Field>
+              <Field label="Dependant code">
+                <Input placeholder="e.g. 01" {...register('dependant_code')} />
+              </Field>
+            </div>
+          </Section>
+        )}
 
         {/* ── Medical history ──────────────────────────────────── */}
         <Section title="Medical History" subtitle="Optional — fill in what you have">

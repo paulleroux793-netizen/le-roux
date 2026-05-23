@@ -8,6 +8,16 @@ class PatientsController < ApplicationController
   # 6 months OR have an upcoming one. Otherwise "Inactive".
   ACTIVE_WINDOW_MONTHS = 6
 
+  # Curated "base name" dropdown for the New Patient form. Matches the
+  # 10 names seeded by db/seeds/medical_schemes.rb. We deliberately do
+  # NOT surface the ~168 plan-specific imported records here — the
+  # receptionist picks a base scheme, types the membership number,
+  # and falls back to "Other" for anything not in the list.
+  PICKER_SCHEMES = %w[
+    Discovery Bonitas Bestmed GEMS Fedhealth
+    Medihelp Medshield Polmed Bankmed Profmed
+  ].freeze
+
   def index
     page_data = dev_page_cache("patients", "index") do
       patients = Patient
@@ -33,7 +43,12 @@ class PatientsController < ApplicationController
 
       {
         patients: patients.map { |p| patient_list_props(p) },
-        stats: stats
+        stats: stats,
+        # Common SA schemes for the New Patient form dropdown. Cheap query, no need to cache.
+        # Restricted to the curated PICKER_SCHEMES list — the ~168 imported plan-specific
+        # records stay in the DB for legacy linkage but never appear in the picker.
+        schemes: MedicalScheme.active.where(name: PICKER_SCHEMES).order(:name)
+          .pluck(:id, :name).map { |id, name| { id:, name: } }
       }
     end
 
@@ -68,6 +83,15 @@ class PatientsController < ApplicationController
     patient = result.patient
 
     if result.success?
+      # Additive: link a billing account + scheme membership if the form supplied them.
+      # Best-effort — never blocks the patient create; errors are logged + flashed.
+      begin
+        attach_account!(patient, params[:account]) if params[:account].present?
+        attach_scheme!(patient,  params[:scheme])  if params[:scheme].present?
+      rescue StandardError => e
+        Rails.logger.warn("[PatientsController#create] account/scheme link failed: #{e.message}")
+      end
+
       expire_patient_caches!
       NotificationService.patient_created(patient) if result.created?
       AuditService.log(
@@ -151,9 +175,52 @@ class PatientsController < ApplicationController
 
   private
 
+  # Idempotently link the patient to a BillingAccount based on form params.
+  # Creates account on the fly if billing_name supplied; never duplicates.
+  def attach_account!(patient, account_params)
+    p = account_params.permit(:account_code, :billing_name, :email, :phone).to_h
+    return if p["billing_name"].blank?
+
+    account = nil
+    if p["account_code"].present?
+      account = BillingAccount.find_or_initialize_by(account_code: p["account_code"])
+    else
+      account = BillingAccount.new(account_code: BillingAccount.next_account_code)
+    end
+    account.billing_name = p["billing_name"]
+    account.email = p["email"].presence if account.respond_to?(:email=)
+    account.phone = p["phone"].presence if account.respond_to?(:phone=)
+    account.head_patient_id ||= patient.id
+    account.save!
+    AccountPatient.find_or_create_by!(billing_account: account, patient: patient) { |ap| ap.relationship = "self" }
+  end
+
+  # Idempotently link the patient to a scheme membership. Accepts scheme_id (existing
+  # MedicalScheme) OR scheme_name (free text, find_or_create_by — the "Other" path).
+  def attach_scheme!(patient, scheme_params)
+    p = scheme_params.permit(:scheme_id, :scheme_name, :membership_number, :dependant_code).to_h
+    return if p["membership_number"].blank?
+
+    scheme =
+      if p["scheme_id"].present?
+        MedicalScheme.find_by(id: p["scheme_id"])
+      elsif p["scheme_name"].present?
+        MedicalScheme.find_or_create_by!(name: p["scheme_name"]) { |s| s.active = true }
+      end
+    return unless scheme
+
+    membership = SchemeMembership.find_or_create_by!(
+      medical_scheme_id: scheme.id, member_number: p["membership_number"]
+    )
+    SchemeMembershipPatient.find_or_create_by!(scheme_membership: membership, patient: patient) do |smp|
+      smp.dependant_code = p["dependant_code"].presence
+      smp.role = "dependant"
+    end
+  end
+
   def patient_params
     permitted = params.require(:patient).permit(
-      :first_name, :last_name, :phone, :email, :date_of_birth, :notes,
+      :first_name, :last_name, :phone, :email, :date_of_birth, :notes, :id_number,
       medical_history_attributes: [
         :id, :allergies, :chronic_conditions, :current_medications,
         :blood_type, :emergency_contact_name, :emergency_contact_phone,

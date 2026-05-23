@@ -8,7 +8,7 @@ import { useLanguage } from '../lib/LanguageContext'
 
 // Phase 9.6 sub-area #3 — Patients list rebuilt on the shared DataTable.
 
-export default function Patients({ patients = [], stats }) {
+export default function Patients({ patients = [], stats, schemes = [] }) {
   const { t, language } = useLanguage()
   const dateFmt = language === 'af' ? 'af-ZA' : 'en-ZA'
 
@@ -223,6 +223,7 @@ export default function Patients({ patients = [], stats }) {
       <PatientFormModal
         open={modalMode === 'create'}
         mode="create"
+        schemes={schemes}
         onClose={closeModal}
       />
       <PatientFormModal
@@ -231,6 +232,7 @@ export default function Patients({ patients = [], stats }) {
         patient={selected}
         medicalHistory={selected?.medical_history}
         bloodTypes={selected?.medical_history?.blood_types}
+        schemes={schemes}
         onClose={closeModal}
       />
     </DashboardLayout>
