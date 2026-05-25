@@ -54,6 +54,14 @@ class AppointmentSummaryService
     transcript = primary_transcript
     return nil if transcript.blank?
 
+    # POPIA — never call the LLM if the patient hasn't signed consent.
+    # Receptionist ticks the checkbox in the patient profile after
+    # filing the paper form (Paul's 2026-05-24 decision).
+    unless @appointment.patient&.ai_consent?
+      Rails.logger.info("[AppointmentSummaryService] skipping — patient #{@appointment.patient_id} has no AI consent on file")
+      return nil
+    end
+
     response = anthropic_complete(transcript)
     parsed   = JSON.parse(response)
 

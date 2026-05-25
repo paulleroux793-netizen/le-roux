@@ -72,6 +72,16 @@ class Patient < ApplicationRecord
     medical_history || build_medical_history
   end
 
+  # POPIA — Patient has signed the paper consent form to allow the
+  # practice's AI features (chair-side scribe summary, mailbox booking
+  # drafts, email triage) to process their data. The signed form lives
+  # in the physical file; this flag is the digital reflection of that.
+  # Default false → AI features SKIP this patient until reception ticks
+  # the checkbox on the patient profile.
+  def ai_consent?
+    consent_to_ai_processing_at.present?
+  end
+
   def auto_created_placeholder_profile?
     AUTO_CREATED_PLACEHOLDER_NAMES.include?([ first_name, last_name ]) &&
       email.blank? &&

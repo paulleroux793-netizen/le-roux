@@ -56,7 +56,12 @@ step(results, "1. Empty-slot click → new patient (Smith, Jane) + appointment b
   # Pick a clearly-free slot 2 weeks out
   slot = (Date.current + 2.weeks).in_time_zone("Africa/Johannesburg").change(hour: 10)
   walkin = Patient.create!(first_name: "Jane", last_name: "Smith-Mega",
-                            phone: "+27855#{Time.current.to_i.to_s[-7..]}")
+                            phone: "+27855#{Time.current.to_i.to_s[-7..]}",
+                            # POPIA — Paul's 2026-05-24 decision: AI features
+                            # check this flag. Mega test patient simulates
+                            # reception having ticked the paper-consent box.
+                            consent_to_ai_processing_at: Time.current,
+                            consent_to_ai_processing_by: "Mega Stress Test")
   appt = walkin.appointments.create!(
     start_time: slot, end_time: slot + 45.minutes,
     reason: "Sudden tooth pain — wants check-up", status: :scheduled

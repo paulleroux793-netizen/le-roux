@@ -121,6 +121,16 @@ Rails.application.routes.draw do
   # N2 — Unified inbox (Outlook-style). Provider OAuth flows land later.
   get  "mail",                to: "mail#index", as: :mail
   patch "mail/threads/:id/mark_read", to: "mail#mark_read", as: :mail_thread_mark_read
+
+  # 2026-05-24 — Always-on scribe daemon (Phase 1 = practice-PC).
+  # The Python daemon at tools/scribe-daemon/ POSTs transcript chunks
+  # here authenticated by X-Scribe-Token (env SCRIBE_API_TOKEN).
+  namespace :api do
+    namespace :v1 do
+      post "scribe/transcript", to: "scribe#transcript"
+      get  "scribe/heartbeat",  to: "scribe#heartbeat"
+    end
+  end
   get "recalls", to: "recalls#index", as: :recalls
   get "reporting", to: "reporting#index", as: :reporting
   get   "settings",          to: "settings#index"

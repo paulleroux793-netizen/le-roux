@@ -59,6 +59,12 @@ const schema = z.object({
   membership_number:  z.string().optional(),
   dependant_code:     z.string().optional(),
 
+  // POPIA — Patient has signed the paper AI-processing consent form.
+  // The receptionist ticks this AFTER filing the signed form physically.
+  // When false: AI summaries, mailbox drafts, scribe outputs all SKIP
+  // this patient. Default false.
+  ai_consent: z.boolean().optional(),
+
   // Medical history — all optional.
   mh_allergies:              z.string().optional(),
   mh_chronic_conditions:     z.string().optional(),
@@ -83,6 +89,7 @@ const DEFAULT_BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']
 const EMPTY_DEFAULTS = {
   first_name: '', last_name: '', phone: '', email: '',
   date_of_birth: '', id_number: '', notes: '',
+  ai_consent: false,
   account_code: '', account_billing_name: '', account_email: '', account_phone: '',
   scheme_id: '', scheme_name_other: '', membership_number: '', dependant_code: '',
   mh_allergies: '', mh_chronic_conditions: '', mh_current_medications: '',
@@ -130,6 +137,7 @@ export default function PatientFormModal({
         date_of_birth: patient.date_of_birth || '',
         id_number:  patient.id_number  || '',
         notes:      patient.notes      || '',
+        ai_consent: !!patient.ai_consent,
         // Account/scheme aren't editable from this modal in edit mode —
         // they live on their own dedicated screens. Keep blank so the
         // hidden inputs don't overwrite anything on submit.
@@ -166,6 +174,7 @@ export default function PatientFormModal({
         date_of_birth: nullify(data.date_of_birth),
         id_number:  nullify(data.id_number),
         notes:      nullify(data.notes),
+        ai_consent: !!data.ai_consent,
         medical_history_attributes: {
           ...(medicalHistory?.id ? { id: medicalHistory.id } : {}),
           allergies:              nullify(data.mh_allergies),
@@ -281,6 +290,23 @@ export default function PatientFormModal({
               className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             />
           </Field>
+        </Section>
+
+        {/* ── POPIA consent (Paul's 2026-05-24 decision: paper form + this checkbox) ── */}
+        <Section title="AI processing consent (POPIA)" subtitle="Tick only after the patient has signed the paper consent form and it's filed.">
+          <label className="flex items-start gap-3 rounded-2xl border border-brand-accent/80 bg-brand-surface/30 px-4 py-3">
+            <input
+              type="checkbox"
+              {...register('ai_consent')}
+              className="mt-0.5 h-5 w-5 rounded border-brand-accent text-brand-primary focus:ring-brand-primary"
+            />
+            <span className="text-sm text-brand-ink">
+              <strong>Consent to AI processing — paper form on file.</strong>
+              <span className="mt-0.5 block text-xs text-brand-muted">
+                When ticked, the chair-side scribe summary, mailbox booking drafts, and any future AI features will process this patient's data. When unticked, all AI features SKIP this patient.
+              </span>
+            </span>
+          </label>
         </Section>
 
         {/* ── Billing account (create only — edit happens on the Account screen) ── */}

@@ -248,6 +248,7 @@ class PatientsController < ApplicationController
   def patient_params
     permitted = params.require(:patient).permit(
       :first_name, :last_name, :phone, :email, :date_of_birth, :notes, :id_number,
+      :ai_consent, # boolean form field → mapped to consent_to_ai_processing_at below
       medical_history_attributes: [
         :id, :allergies, :chronic_conditions, :current_medications,
         :blood_type, :emergency_contact_name, :emergency_contact_phone,
@@ -257,6 +258,20 @@ class PatientsController < ApplicationController
     )
 
     normalized = permitted.to_h
+
+    # POPIA — translate the form's boolean checkbox into the
+    # consent_to_ai_processing_at timestamp (and the recorder's name).
+    # Ticked → stamp NOW + audit_performer; unticked → clear.
+    if normalized.key?("ai_consent")
+      flag = ActiveRecord::Type::Boolean.new.cast(normalized.delete("ai_consent"))
+      if flag
+        normalized["consent_to_ai_processing_at"] ||= Time.current
+        normalized["consent_to_ai_processing_by"] ||= audit_performer
+      else
+        normalized["consent_to_ai_processing_at"] = nil
+        normalized["consent_to_ai_processing_by"] = nil
+      end
+    end
     medical_history = normalized["medical_history_attributes"]
     return normalized unless medical_history.is_a?(Hash)
 
@@ -338,9 +353,14 @@ class PatientsController < ApplicationController
       phone: patient.phone,
       email: patient.email,
       date_of_birth: patient.date_of_birth&.iso8601,
+      id_number: patient.id_number,
       notes: patient.notes,
       preferred_language: patient.preferred_language,
-      created_at: patient.created_at.iso8601
+      created_at: patient.created_at.iso8601,
+      # POPIA — AI-processing consent (paper form ticked → flag set)
+      ai_consent: patient.ai_consent?,
+      ai_consent_at: patient.consent_to_ai_processing_at&.iso8601,
+      ai_consent_by: patient.consent_to_ai_processing_by
     }
   end
 

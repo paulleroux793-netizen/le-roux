@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_23_000016) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_24_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -592,6 +592,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000016) do
   end
 
   create_table "patients", force: :cascade do |t|
+    t.datetime "consent_to_ai_processing_at"
+    t.string "consent_to_ai_processing_by"
     t.datetime "created_at", null: false
     t.date "date_of_birth"
     t.string "email"
@@ -602,6 +604,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_23_000016) do
     t.string "phone"
     t.string "preferred_language", limit: 5
     t.datetime "updated_at", null: false
+    t.index ["consent_to_ai_processing_at"], name: "index_patients_on_consent_to_ai_processing_at"
     t.index ["id_number"], name: "index_patients_on_id_number", where: "(id_number IS NOT NULL)"
     t.index ["last_name", "first_name"], name: "index_patients_on_last_name_and_first_name"
     t.index ["phone"], name: "index_patients_on_phone", unique: true
