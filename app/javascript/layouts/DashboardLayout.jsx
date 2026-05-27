@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { key: 'nav_conversations', href: '/conversations', icon: MessageSquare },
   { key: 'nav_analytics',     href: '/analytics',     icon: BarChart2 },
   { key: 'nav_audit_log',    href: '/audit-log',     icon: ClipboardList },
+  { key: 'nav_reconciliation', href: '/reconciliation', icon: BarChart3, label: 'Reconciliation' },
 ]
 
 // Practice-management system (Phase 1+). Literal labels for now — localisation parked.

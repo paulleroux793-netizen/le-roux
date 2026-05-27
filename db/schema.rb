@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_24_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -277,6 +277,95 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_24_000001) do
     t.index ["course_of_treatment_id"], name: "index_documents_on_course_of_treatment_id"
     t.index ["patient_id", "folder"], name: "index_documents_on_patient_id_and_folder"
     t.index ["source"], name: "index_documents_on_source"
+  end
+
+  create_table "elixir_diary_snapshots", force: :cascade do |t|
+    t.string "account_code"
+    t.datetime "appointment_end_at", null: false
+    t.datetime "appointment_start_at", null: false
+    t.string "cellular"
+    t.datetime "created_at", null: false
+    t.string "dentist"
+    t.date "diary_date", null: false
+    t.decimal "due_amount", precision: 10, scale: 2
+    t.datetime "imported_at", null: false
+    t.boolean "is_new_patient", default: false, null: false
+    t.string "patient_name"
+    t.jsonb "raw_payload", default: {}, null: false
+    t.string "reason"
+    t.string "source_file", null: false
+    t.datetime "updated_at", null: false
+    t.index ["account_code"], name: "index_elixir_diary_snapshots_on_account_code"
+    t.index ["diary_date", "dentist"], name: "index_elixir_diary_snapshots_on_diary_date_and_dentist"
+    t.index ["imported_at"], name: "index_elixir_diary_snapshots_on_imported_at"
+    t.index ["patient_name"], name: "index_elixir_diary_snapshots_on_patient_name"
+    t.index ["source_file", "appointment_start_at"], name: "idx_diary_snap_unique_per_slot", unique: true
+  end
+
+  create_table "elixir_estimate_snapshots", force: :cascade do |t|
+    t.string "account_code"
+    t.datetime "created_at", null: false
+    t.date "date_sent"
+    t.string "dentist"
+    t.text "details"
+    t.datetime "imported_at", null: false
+    t.date "last_followup_at"
+    t.string "legend"
+    t.string "patient_aware"
+    t.string "patient_name", null: false
+    t.jsonb "raw_payload", default: {}, null: false
+    t.integer "row_index", null: false
+    t.string "source_file", null: false
+    t.text "update_note"
+    t.datetime "updated_at", null: false
+    t.decimal "value", precision: 10, scale: 2
+    t.index ["account_code"], name: "index_elixir_estimate_snapshots_on_account_code"
+    t.index ["imported_at"], name: "index_elixir_estimate_snapshots_on_imported_at"
+    t.index ["patient_name"], name: "index_elixir_estimate_snapshots_on_patient_name"
+    t.index ["source_file", "row_index"], name: "idx_estimate_snap_unique_per_row", unique: true
+  end
+
+  create_table "elixir_mirror_imports", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.jsonb "details", default: {}
+    t.text "error_message"
+    t.string "file_kind", null: false
+    t.string "file_name", null: false
+    t.string "file_path", null: false
+    t.string "file_sha256"
+    t.datetime "finished_at"
+    t.integer "rows_inserted", default: 0, null: false
+    t.integer "rows_parsed", default: 0, null: false
+    t.integer "rows_skipped", default: 0, null: false
+    t.datetime "started_at", null: false
+    t.string "status", null: false
+    t.datetime "updated_at", null: false
+    t.index ["file_kind", "started_at"], name: "index_elixir_mirror_imports_on_file_kind_and_started_at"
+    t.index ["file_sha256"], name: "index_elixir_mirror_imports_on_file_sha256", where: "(file_sha256 IS NOT NULL)"
+  end
+
+  create_table "elixir_transaction_snapshots", force: :cascade do |t|
+    t.string "account_code", null: false
+    t.datetime "created_at", null: false
+    t.decimal "credit", precision: 10, scale: 2, default: "0.0"
+    t.decimal "debit", precision: 10, scale: 2, default: "0.0"
+    t.string "dentist"
+    t.string "dependant_name"
+    t.datetime "imported_at", null: false
+    t.decimal "pat_due", precision: 10, scale: 2, default: "0.0"
+    t.string "patient_surname"
+    t.string "procedure_code", null: false
+    t.jsonb "raw_payload", default: {}, null: false
+    t.decimal "sch_due", precision: 10, scale: 2, default: "0.0"
+    t.string "source_file", null: false
+    t.string "tooth"
+    t.date "transaction_date", null: false
+    t.integer "units", default: 1, null: false
+    t.datetime "updated_at", null: false
+    t.index ["imported_at"], name: "index_elixir_transaction_snapshots_on_imported_at"
+    t.index ["procedure_code"], name: "index_elixir_transaction_snapshots_on_procedure_code"
+    t.index ["source_file", "transaction_date", "account_code", "procedure_code", "tooth", "debit"], name: "idx_txn_snap_unique", unique: true
+    t.index ["transaction_date", "account_code"], name: "idx_on_transaction_date_account_code_668cbdbaba"
   end
 
   create_table "estimate_lines", force: :cascade do |t|

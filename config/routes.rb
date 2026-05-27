@@ -70,6 +70,12 @@ Rails.application.routes.draw do
   get "audit-log", to: "audit_logs#index", as: :audit_log
   get "audit-log/export", to: "audit_logs#export", as: :audit_log_export
 
+  # Daily Reconciliation — the Elixir-vs-Ivory learning-loop dashboard.
+  # Compares what Elixir actually delivered today against what Ivory
+  # predicted, and suggests specific improvements (2026-05-27 directive).
+  get  "reconciliation",      to: "reconciliation#index", as: :reconciliation
+  post "reconciliation/scan", to: "reconciliation#scan",  as: :reconciliation_scan
+
   # ── Practice-management system (Phase 1+) — ADDITIVE, read-first ──
   get   "procedure-codes",     to: "procedure_codes#index", as: :procedure_codes
   # P9.6 — let staff fix bad descriptions inline. Only :description is editable.

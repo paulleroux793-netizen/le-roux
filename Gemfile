@@ -53,6 +53,14 @@ gem "rubyzip", "~> 2.3", require: "zip"
 gem "prawn", "~> 2.5"
 gem "prawn-table", "~> 0.2"
 
+# === Elixir mirror (read-only ingest of Elixir/Med-e-Mass daily exports) ===
+# pdf-reader: pure Ruby PDF text extraction (handles the predictable Elixir layout).
+# roo: read .xlsx files (Estimates listing.xlsx, NEW PATIENT BOOKING.xlsx).
+# Both are mature, no native dependencies.
+gem "pdf-reader", "~> 2.14"
+gem "roo", "~> 2.10"
+gem "csv"  # roo 2.10 depends on this implicitly; Ruby 3.4 makes csv a non-default gem
+
 # === Frontend - Inertia.js + React dashboard ===
 gem "inertia_rails"
 gem "vite_rails"
