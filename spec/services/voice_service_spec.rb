@@ -68,6 +68,15 @@ RSpec.describe VoiceService do
 
       expect(twiml).to include("Dr Chalita le Roux")
     end
+
+    it "tunes the speech Gather for SA-English callers (en-GB + conversational model + hints)" do
+      twiml = service.handle_incoming(call_sid: "CA_001", caller: "+27821111116")
+
+      expect(twiml).to include('language="en-GB"')
+      expect(twiml).to include('speechModel="experimental_conversations"')
+      expect(twiml).to include("hints=")
+      expect(twiml).to include("whitening") # a representative practice-vocab hint
+    end
   end
 
   # ── handle_gather ─────────────────────────────────────────────────────
@@ -129,14 +138,18 @@ RSpec.describe VoiceService do
       expect(twiml).to include("didn't catch that")
     end
 
-    it "prompts again when confidence is below threshold" do
+    it "still processes low-confidence (but non-blank) speech, letting the AI clarify" do
       twiml = service.handle_gather(
         call_sid:      "CA_002",
-        speech_result: "mumble",
+        speech_result: "I think I want a cleaning",
         confidence:    0.1
       )
 
-      expect(ai_service).not_to have_received(:process_message)
+      # Post-STT-upgrade we trust the recognizer and no longer silently drop
+      # borderline speech — a re-prompt loop is worse UX than letting the AI
+      # ask the caller to repeat themselves if it's genuinely unclear.
+      expect(ai_service).to have_received(:process_message)
+      expect(twiml).to include("<Gather")
     end
 
     it "returns farewell TwiML when goodbye is detected" do

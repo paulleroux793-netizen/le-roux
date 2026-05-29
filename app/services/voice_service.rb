@@ -5,7 +5,29 @@ class VoiceService
   # `play_or_say` and ElevenLabsService.
   VOICE            = "Polly.Joanna"
   GATHER_TIMEOUT   = "3"    # seconds of silence before giving up — was 5, shortened to reduce dead air
-  CONFIDENCE_FLOOR = 0.3    # ignore speech below this Twilio confidence score
+
+  # Speech-recognition tuning. Callers are South African, but Twilio's STT
+  # has no en-ZA model (only af-ZA / zu-ZA) — en-GB is the closest accent
+  # match it supports and transcribes SA English far better than the
+  # default en-US. "experimental_conversations" (now GA) is tuned for
+  # spontaneous spoken dialogue, unlike the weak default recognizer.
+  SPEECH_LANGUAGE = "en-GB".freeze
+  SPEECH_MODEL    = "experimental_conversations".freeze
+
+  # Bias recognition toward practice-specific vocabulary that the generic
+  # model otherwise mangles (proper nouns, dental terms, suburb names).
+  SPEECH_HINTS = [
+    "Dr Chalita le Roux", "appointment", "booking", "consultation",
+    "teeth whitening", "whitening", "cleaning", "filling", "extraction",
+    "checkup", "emergency", "toothache", "Roodepoort", "Amorosa",
+    "medical aid", "deposit", "quote"
+  ].join(", ").freeze
+
+  # Lowered from 0.3: the upgraded model returns more reliable transcripts,
+  # so we no longer silently drop borderline speech. If confidence is low we
+  # still pass it to the AI, which can ask the caller to clarify — far better
+  # UX than a repeated "sorry, I didn't catch that" loop.
+  CONFIDENCE_FLOOR = 0.0    # only blank speech re-prompts; trust the AI to clarify the rest
 
   GREETING = "Hi, you've reached Dr Chalita le Roux's practice. I'm the AI assistant — how can I help you today?".freeze
 
@@ -142,7 +164,15 @@ class VoiceService
   # If no speech is detected within GATHER_TIMEOUT, hangs up with a polite farewell.
   def gather_twiml(message, action)
     Twilio::TwiML::VoiceResponse.new do |r|
-      r.gather(input: "speech", action: action, timeout: GATHER_TIMEOUT, speech_timeout: "auto") do |g|
+      r.gather(
+        input:         "speech",
+        action:        action,
+        timeout:       GATHER_TIMEOUT,
+        speech_timeout: "auto",
+        language:      SPEECH_LANGUAGE,
+        speech_model:  SPEECH_MODEL,
+        hints:         SPEECH_HINTS
+      ) do |g|
         play_or_say(g, message)
       end
       play_or_say(r, "I didn't hear anything. Please call us back or send a WhatsApp message. Goodbye.")
