@@ -10,6 +10,13 @@ class ApplicationController < ActionController::Base
   # class) so Twilio inbounds bypass the basic-auth check and continue to
   # be authenticated by X-Twilio-Signature only.
   #
+  # The /voice/audio/* endpoint, however, IS an ApplicationController (it
+  # renders cached blobs, not API). Twilio fetches those URLs anonymously
+  # via TwiML <Play>, so it must stay public too — otherwise Twilio gets a
+  # 401 on the audio fetch and the caller hears "an application error has
+  # occurred". It exposes no PII (only μ-law TTS bytes keyed by an
+  # unguessable SHA256 hash), so excluding it from the gate is safe.
+  #
   # Configure via Railway env:
   #   DASHBOARD_USERNAME (e.g. "reception")
   #   DASHBOARD_PASSWORD (a strong shared password)
@@ -18,7 +25,7 @@ class ApplicationController < ActionController::Base
   http_basic_authenticate_with(
     name:     ENV["DASHBOARD_USERNAME"].to_s,
     password: ENV["DASHBOARD_PASSWORD"].to_s,
-    if:       -> { ENV["DASHBOARD_USERNAME"].present? && ENV["DASHBOARD_PASSWORD"].present? }
+    if:       -> { dashboard_basic_auth_required? }
   )
 
   # Phase 9.6 sub-area #6 — shared Inertia props.
@@ -34,6 +41,16 @@ class ApplicationController < ActionController::Base
   end
 
   private
+
+  # Whether the dashboard basic-auth gate applies to this request.
+  # Returns false for the public /voice/audio/* endpoint (fetched
+  # anonymously by Twilio's TwiML <Play>) so those audio blobs stay
+  # reachable even when DASHBOARD_USERNAME/PASSWORD are configured.
+  def dashboard_basic_auth_required?
+    return false if request.path.start_with?("/voice/audio")
+
+    ENV["DASHBOARD_USERNAME"].present? && ENV["DASHBOARD_PASSWORD"].present?
+  end
 
   def dev_page_cache(*parts, expires_in: 10.seconds)
     return yield unless Rails.env.development?

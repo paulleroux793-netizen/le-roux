@@ -53,5 +53,25 @@ RSpec.describe "Voice audio endpoint", type: :request do
         expect(response).to have_http_status(:not_found)
       end
     end
+
+    # Regression: the dashboard basic-auth gate (ApplicationController) must
+    # NOT apply here. Twilio fetches this URL anonymously via TwiML <Play>;
+    # a 401 makes the call fail with "an application error has occurred".
+    context "when the dashboard basic-auth gate is configured" do
+      before do
+        stub_const("ENV", ENV.to_h.merge(
+          "DASHBOARD_USERNAME" => "reception",
+          "DASHBOARD_PASSWORD" => "s3cret"
+        ))
+        Rails.cache.write("voice_audio:#{valid_hash}", fake_mp3, expires_in: 30.days)
+      end
+
+      it "still serves audio without credentials (endpoint stays public for Twilio)" do
+        get "/voice/audio/#{valid_hash}.mp3"
+
+        expect(response).to have_http_status(:ok)
+        expect(response.body.b).to eq(fake_mp3)
+      end
+    end
   end
 end
