@@ -1,7 +1,8 @@
 # Estimates — read-first list (patient quotes built from a course of treatment). Additive route.
 class EstimatesController < ApplicationController
   def index
-    estimates = Estimate.includes(:patient).order(created_at: :desc).limit(300).to_a
+    # eager-load estimate_lines — list_props reads e.estimate_lines.size (else N+1).
+    estimates = Estimate.includes(:patient, :estimate_lines).order(created_at: :desc).limit(300).to_a
     render inertia: "Estimates", props: {
       estimates: estimates.map { |e|
         {
@@ -15,7 +16,8 @@ class EstimatesController < ApplicationController
   end
 
   def show
-    estimate = Estimate.includes(:patient, estimate_lines: :procedure_code).find(params[:id])
+    estimate = Estimate.includes(estimate_lines: :procedure_code,
+                                  patient: { scheme_memberships: :medical_scheme }).find(params[:id])
     patient = estimate.patient
     membership = patient.scheme_memberships.first
 

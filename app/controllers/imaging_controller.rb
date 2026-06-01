@@ -18,4 +18,15 @@ class ImagingController < ApplicationController
       }
     }
   end
+
+  # POST /imaging/scan — kick off a SIDEXIS folder scan in the BACKGROUND.
+  # Enqueues PracticeDataSyncJob (async); newly-matched studies appear on the
+  # next load. Same job the hourly recurring schedule runs.
+  def scan
+    PracticeDataSyncJob.perform_later(sources: ["sidexis"])
+    redirect_to imaging_path,
+                notice: "SIDEXIS sync started in the background — studies will appear shortly."
+  rescue StandardError => e
+    redirect_to imaging_path, alert: "Could not start sync: #{e.class}: #{e.message}"
+  end
 end

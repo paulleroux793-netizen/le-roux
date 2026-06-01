@@ -3,3 +3,8 @@ patients.csv
 
 # Sidexis manifest contains real patient names (PII) — never commit.
 sidexis_manifest.csv
+
+# Raw GoodX export (real PII) + the one-off conversion scripts that read it.
+goodx_raw.csv
+convert_goodx.py
+transform_goodx.py

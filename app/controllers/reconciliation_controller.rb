@@ -36,16 +36,17 @@ class ReconciliationController < ApplicationController
     }
   end
 
-  # POST /reconciliation/scan — kick off an Elixir mirror scan in-process.
-  # In production this becomes a background job; for now a synchronous
-  # button so Paul can refresh on demand from the dashboard.
+  # POST /reconciliation/scan — kick off an Elixir mirror scan in the BACKGROUND.
+  # Enqueues PracticeDataSyncJob (async) so the request returns immediately; the
+  # parsed rows appear on the next dashboard load. Same job the hourly recurring
+  # schedule runs (config/recurring.yml).
   def scan
-    results = ElixirMirror::Importer.scan_default_locations
+    PracticeDataSyncJob.perform_later(sources: ["elixir"])
     redirect_to reconciliation_path(date: params[:date]),
-                notice: "Scanned #{results.size} files."
+                notice: "Elixir sync started in the background — new data will appear shortly."
   rescue StandardError => e
     redirect_to reconciliation_path(date: params[:date]),
-                alert: "Scan error: #{e.class}: #{e.message}"
+                alert: "Could not start sync: #{e.class}: #{e.message}"
   end
 
   private

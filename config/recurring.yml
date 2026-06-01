@@ -33,3 +33,11 @@ production:
     class: AppointmentNoConfirmationJob
     queue: default
     schedule: every day at 7:30am
+
+  # Pull new Elixir exports + SIDEXIS scans into Ivory's read-only mirror tables
+  # so the reconciliation dashboard and patient Imaging tab stay current without
+  # anyone clicking "Scan". Idempotent — already-seen files are skipped.
+  practice_data_sync:
+    class: PracticeDataSyncJob
+    queue: default
+    schedule: every hour at minute 20

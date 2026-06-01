@@ -32,6 +32,10 @@ services:
     init: true   # reap zombie esbuild/vite child procs over a long dev session
     command: bash -lc "bundle exec rails db:prepare && bundle exec rails server -b 0.0.0.0 -p 3000"
     env_file: .env.dev
+    environment:
+      # Where the Elixir-mirror importer reads the live system's daily exports.
+      # Mounted READ-ONLY below — Ivory can never write back to Dr Chalita's folder.
+      ELIXIR_DATA_ROOT: "/elixir_data"
     ports:
       - "3000:3000"
     volumes:
@@ -39,6 +43,10 @@ services:
       - node_modules:/rails/node_modules   # keep Linux-native node_modules
       - rails_tmp:/rails/tmp               # Bootsnap cache/pids/sockets on fast storage, NOT the slow OneDrive mount
       - rails_log:/rails/log
+      # READ-ONLY mount of the live Elixir export folder. The :ro flag is enforced
+      # by the Docker kernel layer — the hard constraint (never touch Elixir data)
+      # cannot be violated even by a bug in the importer.
+      - "D:/Paul le Roux/OneDrive/1. Dr Chalita le Roux:/elixir_data:ro"
     depends_on:
       db:
         condition: service_healthy

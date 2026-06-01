@@ -81,7 +81,17 @@ module ElixirMirror
       date = Date.strptime(date_match[:date], "%d/%m/%Y") rescue nil
       return nil unless date
 
-      rest = date_match[:rest]
+      rest = date_match[:rest].rstrip
+
+      # In this report layout UNITS is the LAST column (after CREDITS), so peel
+      # it off the tail FIRST. Otherwise the trailing units integer blocks the
+      # end-anchored money-cell strip below, which cascades into the code/account
+      # extraction failing and every line getting skipped (the 0-rows bug).
+      units = 1
+      if (m = rest.match(/\s+(\d+)\s*\z/))
+        units = m[1].to_i
+        rest  = rest.sub(/\s+\d+\s*\z/, "").rstrip
+      end
 
       # Pull the four trailing money cells (PAT.DUE, SCH.DUE, DEBIT, CREDIT)
       monies = rest.scan(MONEY_RE)
@@ -89,14 +99,7 @@ module ElixirMirror
 
       pat_due, sch_due, debit, credit = monies.last(4).map { |m| money_to_decimal(m) }
       # Strip trailing monies + any final whitespace
-      head = rest.sub(/(?:#{MONEY_RE}\s*){4}\z/, "").rstrip
-
-      # Pull units (the integer immediately before the four money cells)
-      units = 1
-      if (m = head.match(/\s+(\d+)\s*\z/))
-        units = m[1].to_i
-        head  = head.sub(/\s+\d+\s*\z/, "").rstrip
-      end
+      head = rest.sub(/(?:#{MONEY_RE}\s*){4}\s*\z/, "").rstrip
 
       # Pull procedure code (the trailing token: 8369 / P-CARD / B01 / C26 etc.)
       code = nil

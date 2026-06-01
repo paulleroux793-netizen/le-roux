@@ -116,7 +116,8 @@ Rails.application.routes.draw do
     resources :payments, only: [ :create ]
   end
   get "patients/:patient_id/file", to: "patient_files#show", as: :patient_file
-  get "imaging", to: "imaging#index", as: :imaging
+  get  "imaging",      to: "imaging#index", as: :imaging
+  post "imaging/scan", to: "imaging#scan",  as: :imaging_scan
   resources :scribe_sessions, only: [ :index, :show ], path: "scribe-sessions"
 
   # N1 — Admin-only management of recording devices (Surgery 1 / Reception …)

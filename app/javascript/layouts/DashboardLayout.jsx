@@ -25,12 +25,14 @@ const NAV_ITEMS = [
 ]
 
 // Practice-management system (Phase 1+). Literal labels for now — localisation parked.
+//
+// Patient-as-spine: Accounts, Courses of Treatment, Estimates and Invoices are
+// NOT top-level headings — they are per-patient records and live as tabs inside
+// each patient (PatientShow). You reach a treatment plan / estimate / invoice by
+// opening the patient, never by browsing a separate document-type list. What
+// remains here are genuine practice-WIDE tools, not per-patient record types.
 const PMS_NAV_ITEMS = [
   { label: 'Mailbox',              href: '/mail',                 icon: Inbox },
-  { label: 'Accounts',             href: '/accounts',             icon: Wallet },
-  { label: 'Courses of Treatment', href: '/courses-of-treatment', icon: ClipboardPlus },
-  { label: 'Estimates',            href: '/estimates',            icon: FileText },
-  { label: 'Invoices',             href: '/invoices',             icon: Receipt },
   { label: 'Imaging (SIDEXIS)',    href: '/imaging',              icon: Scan },
   { label: 'Chair-side Scribe',    href: '/scribe-sessions',      icon: Mic },
   { label: 'Recalls',              href: '/recalls',              icon: BellRing },

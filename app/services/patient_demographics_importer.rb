@@ -111,6 +111,14 @@ class PatientDemographicsImporter
         end
         r.rows_blank_phone += 1 if phone.blank?
 
+        # A new patient must satisfy the model's identity rule (phone OR id_number).
+        # If a shared phone got deduped to nil and there's no id_number, we can't
+        # create a valid record — log it as an exception instead of crashing.
+        if usable_phone.blank? && id_number.blank?
+          r.exceptions << { row: i + 2, reason: "no usable phone and no identity", account: acc_code }
+          next
+        end
+
         r.patients_created += 1
         seen_phones[usable_phone] = :pending if usable_phone
         unless dry_run

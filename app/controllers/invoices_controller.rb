@@ -14,7 +14,8 @@ class InvoicesController < ApplicationController
   end
 
   def show
-    invoice = Invoice.includes(:patient, :billing_account, :payments, invoice_lines: :procedure_code).find(params[:id])
+    invoice = Invoice.includes(:billing_account, :payments, invoice_lines: :procedure_code,
+                               patient: { scheme_memberships: :medical_scheme }).find(params[:id])
     patient = invoice.patient
     membership = patient.scheme_memberships.first
 

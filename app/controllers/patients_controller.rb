@@ -66,6 +66,7 @@ class PatientsController < ApplicationController
       # PatientShow toolbar can render their counts without re-fetching.
       open_courses   = CourseOfTreatment.where(patient_id: patient.id)
                                         .where(status: %w[planned active])
+                                        .includes(:treatment_items) # item_count below → avoid N+1
                                         .order(created_at: :desc).limit(5).to_a
       open_estimates = Estimate.where(patient_id: patient.id)
                                .where(status: %w[draft sent])
@@ -75,11 +76,31 @@ class PatientsController < ApplicationController
                               .order(created_at: :desc).limit(5).to_a
       outstanding_balance_cents = open_invoices.sum { |i| (i.total_cents - i.paid_cents).to_i }
 
+      # Patient-as-spine: the patient page is the single hub for EVERYTHING
+      # about this person — treatment plans, estimates, invoices, account.
+      # We ship the FULL lists (not just the open ones) so the patient view
+      # never has to hand off to a separate top-level Estimates/Invoices/COT
+      # screen. Capped for safety; a single patient never has thousands.
+      all_courses   = patient.courses_of_treatment.includes(:treatment_items)
+                             .order(created_at: :desc).limit(50).to_a
+      all_estimates = patient.estimates.order(created_at: :desc).limit(50).to_a
+      all_invoices  = patient.invoices.order(created_at: :desc).limit(50).to_a
+      all_imaging   = patient.imaging_studies.order(Arel.sql("captured_at DESC NULLS LAST")).limit(50).to_a
+      account       = patient.primary_billing_account
+
       {
         patient: patient_detail_props(patient),
         medical_history: medical_history_props(patient),
         appointments: appointments.map { |a| appointment_props(a) },
         conversations: conversations.map { |c| conversation_props(c) },
+        # Full per-patient record sets — the tabs on PatientShow render these inline.
+        courses_of_treatment: all_courses.map { |c| course_props(c) },
+        estimates: all_estimates.map { |e| estimate_props(e) },
+        invoices: all_invoices.map { |i| invoice_props(i) },
+        imaging_studies: all_imaging.map { |s| imaging_props(s) },
+        billing_account: account && billing_account_props(account),
+        account_summary: account_summary(all_invoices),
+        # Kept for the at-a-glance shortcut cards on the Overview tab.
         open_courses_of_treatment: open_courses.map { |c|
           { id: c.id, description: c.description, status: c.status, item_count: c.treatment_items.size }
         },
@@ -384,6 +405,82 @@ class PatientsController < ApplicationController
       last_dental_visit: mh&.last_dental_visit&.iso8601,
       any_data: mh ? mh.any_data? : false,
       blood_types: PatientMedicalHistory::BLOOD_TYPES
+    }
+  end
+
+  # ── Per-patient hub prop builders ───────────────────────────────────────
+  # These feed the tabs on PatientShow so a patient's treatment plans,
+  # estimates, invoices and billing account all live under the one record.
+  def course_props(c)
+    {
+      id: c.id,
+      description: c.description,
+      status: c.status,
+      item_count: c.treatment_items.size,
+      estimated_total: c.estimated_total,
+      completed_total: c.completed_total,
+      created_at: c.created_at.iso8601
+    }
+  end
+
+  def estimate_props(e)
+    {
+      id: e.id,
+      number: e.estimate_number,
+      total: e.total,
+      status: e.status,
+      valid_until: e.valid_until&.iso8601,
+      created_at: e.created_at.iso8601
+    }
+  end
+
+  def invoice_props(i)
+    {
+      id: i.id,
+      number: i.invoice_number,
+      total: i.total,
+      balance: i.balance,
+      status: i.status,
+      invoice_date: i.invoice_date&.iso8601,
+      created_at: i.created_at.iso8601
+    }
+  end
+
+  def billing_account_props(account)
+    {
+      id: account.id,
+      account_code: account.account_code,
+      billing_name: account.billing_name,
+      head_patient_id: account.head_patient_id,
+      members: account.patients.map { |p|
+        { id: p.id, name: p.full_name, is_head: p.id == account.head_patient_id }
+      }
+    }
+  end
+
+  def imaging_props(s)
+    {
+      id: s.id,
+      modality: s.modality,
+      modality_label: s.modality_label,
+      captured_at: s.captured_at&.iso8601,
+      status: s.status,
+      notes: s.notes,
+      sidexis_patient_name: s.sidexis_patient_name,
+      source_folder: s.source_folder,
+      storage_key: s.storage_key
+    }
+  end
+
+  # Roll-up across all of the patient's invoices for the Account tab.
+  def account_summary(invoices)
+    billed_cents = invoices.sum { |i| i.total_cents.to_i }
+    paid_cents   = invoices.sum { |i| i.paid_cents.to_i }
+    {
+      total_billed:  billed_cents / 100.0,
+      total_paid:    paid_cents / 100.0,
+      outstanding:   (billed_cents - paid_cents) / 100.0,
+      invoice_count: invoices.size
     }
   end
 

@@ -50,6 +50,7 @@ class DailyReconciliationService
 
   # ── Aggregate totals ────────────────────────────────────────────────────
   def elixir_totals
+    @elixir_totals ||= begin
     txns_for_day = ElixirTransactionSnapshot.for_date(@date)
     billed_total = txns_for_day.procedures_only.sum(:debit)
     received     = txns_for_day.payments_only.sum(:credit)
@@ -63,9 +64,11 @@ class DailyReconciliationService
       unique_patients:  txns_for_day.procedures_only.distinct.count(:account_code),
       providers:        txns_for_day.procedures_only.distinct.pluck(:dentist).compact
     }
+    end
   end
 
   def ivory_totals
+    @ivory_totals ||= begin
     appts = Appointment.where(start_time: @date.beginning_of_day..@date.end_of_day)
     completed = appts.where(status: %i[completed in_consultation])
     invoices_today = Invoice.where(invoice_date: @date)
@@ -82,6 +85,7 @@ class DailyReconciliationService
                                   .where.not(consent_to_ai_processing_at: nil)
                                   .distinct.count
     }
+    end
   end
 
   def deltas
@@ -100,16 +104,32 @@ class DailyReconciliationService
   # the matching Ivory appointment + scribe summary + invoice if we can
   # join them (by name OR by billing_account.account_code).
   def patient_rows
+    @patient_rows ||= build_patient_rows
+  end
+
+  def build_patient_rows
     by_account = ElixirTransactionSnapshot.for_date(@date).procedures_only
                   .order(:transaction_date, :account_code)
                   .group_by(&:account_code)
 
+    # Batch-load everything the per-account loop needs ONCE, so the loop costs a
+    # constant number of queries instead of O(accounts) (was: payment lines +
+    # appointment match + scribe session, each queried per account row).
+    payments_by_account = ElixirTransactionSnapshot.for_date(@date).payments_only.group_by(&:account_code)
+    appts_for_date = Appointment.where(start_time: @date.beginning_of_day..@date.end_of_day)
+                                .order(:start_time).includes(:patient).to_a
+    accounts_by_code = BillingAccount.where(account_code: by_account.keys)
+                                     .includes(:patients)
+                                     .index_by(&:account_code)
+    scribe_by_appt = ScribeSession.where(appointment_id: appts_for_date.map(&:id))
+                                  .order(:created_at).group_by(&:appointment_id)
+
     by_account.map do |account_code, lines|
-      payment_lines = ElixirTransactionSnapshot.for_date(@date).payments_only.where(account_code: account_code)
+      payment_lines = payments_by_account[account_code] || []
 
       patient_name = lines.first.patient_surname
-      ivory_appt   = match_ivory_appointment(name: patient_name, account_code: account_code, on_date: @date)
-      scribe       = ivory_appt && ScribeSession.where(appointment_id: ivory_appt.id).order(:created_at).last
+      ivory_appt   = match_ivory_appointment(name: patient_name, account: accounts_by_code[account_code], appts: appts_for_date)
+      scribe       = ivory_appt && scribe_by_appt[ivory_appt.id]&.last
 
       {
         account_code:     account_code,
@@ -131,30 +151,27 @@ class DailyReconciliationService
     end
   end
 
-  # Loose join: try account_code first, then patient surname-LIKE.
-  def match_ivory_appointment(name:, account_code:, on_date:)
-    return nil if on_date.nil?
-    by_account = nil
-    if account_code.present?
-      ba = BillingAccount.find_by(account_code: account_code)
-      if ba && ba.respond_to?(:patients)
-        patient_ids = ba.patients.pluck(:id)
-        by_account = Appointment.where(patient_id: patient_ids,
-                                       start_time: on_date.beginning_of_day..on_date.end_of_day).first
-        return by_account if by_account
-      end
+  # Loose join against the date's PRELOADED appointments (no per-account queries):
+  # try the billing account's patients first, then patient surname-LIKE.
+  def match_ivory_appointment(name:, account:, appts:)
+    return nil if appts.empty?
+
+    if account
+      patient_ids = account.patients.map(&:id)
+      hit = appts.find { |a| patient_ids.include?(a.patient_id) }
+      return hit if hit
     end
     return nil if name.blank?
 
     # Elixir uses "SURNAME,I MR/MRS" → use just the surname token
-    surname = name.split(",").first.to_s.strip
+    surname = name.split(",").first.to_s.strip.downcase
     return nil if surname.empty?
 
-    Appointment.joins(:patient)
-               .where("LOWER(patients.last_name) = LOWER(?) OR LOWER(patients.first_name) LIKE LOWER(?)",
-                      surname, "%#{surname}%")
-               .where(start_time: on_date.beginning_of_day..on_date.end_of_day)
-               .first
+    appts.find do |a|
+      p = a.patient
+      next false unless p
+      p.last_name.to_s.downcase == surname || p.first_name.to_s.downcase.include?(surname)
+    end
   end
 
   # Stub for now — relies on ScribeDraftService later. Empty string means
@@ -192,15 +209,18 @@ class DailyReconciliationService
     codes_today = ElixirTransactionSnapshot.for_date(@date).procedures_only.pluck(:procedure_code).uniq
     in_catalogue = ProcedureCode.where(code: codes_today).pluck(:code)
     missing = codes_today - in_catalogue
+    # one sample row per missing code, batched in a single query (was find_by per code).
+    samples = ElixirTransactionSnapshot.for_date(@date).procedures_only
+                                       .where(procedure_code: missing).group_by(&:procedure_code)
     missing.map do |code|
-      sample = ElixirTransactionSnapshot.for_date(@date).find_by(procedure_code: code)
+      sample = samples[code]&.first
       {
         kind: "missing_procedure_code",
         severity: "high",
         title: "Add procedure code #{code} to Ivory's catalogue",
-        detail: "Elixir billed code #{code} today (R#{money(sample.debit)}) for account #{sample.account_code}. " \
+        detail: "Elixir billed code #{code} today (R#{money(sample&.debit)}) for account #{sample&.account_code}. " \
                 "Ivory doesn't know about it — every future scribe draft that should suggest #{code} will silently skip it.",
-        action: { type: "create_procedure_code", code: code, suggested_fee: money(sample.debit) }
+        action: { type: "create_procedure_code", code: code, suggested_fee: money(sample&.debit) }
       }
     end
   end
@@ -208,8 +228,9 @@ class DailyReconciliationService
   def stale_procedure_prices
     codes_today = ElixirTransactionSnapshot.for_date(@date).procedures_only
     grouped = codes_today.group(:procedure_code).pluck(:procedure_code, "AVG(debit)::numeric")
+    cats = ProcedureCode.where(code: grouped.map(&:first)).index_by(&:code) # batch (was find_by per code)
     grouped.flat_map do |code, avg_debit|
-      cat = ProcedureCode.find_by(code: code)
+      cat = cats[code]
       next [] unless cat
       next [] if cat.default_fee_cents.nil? || cat.default_fee_cents.to_i == 0
       cat_fee = BigDecimal(cat.default_fee_cents.to_s) / 100
@@ -289,9 +310,10 @@ class DailyReconciliationService
     return [] unless defined?(ScribeDraftService)
     keyword_codes = ScribeDraftService.const_get(:KEYWORD_CODES).values.uniq
     billed_today = ElixirTransactionSnapshot.for_date(@date).procedures_only.pluck(:procedure_code).uniq
-    misses = billed_today - keyword_codes - ScribeDraftService.const_get(:KEYWORD_CODES).values
-    misses.uniq.take(10).map do |code|
-      cat = ProcedureCode.find_by(code: code)
+    misses = (billed_today - keyword_codes - ScribeDraftService.const_get(:KEYWORD_CODES).values).uniq.take(10)
+    cats = ProcedureCode.where(code: misses).index_by(&:code) # batch (was find_by per code)
+    misses.map do |code|
+      cat = cats[code]
       {
         kind: "code_keyword_miss",
         severity: "low",
