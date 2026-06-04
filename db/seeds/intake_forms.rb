@@ -58,7 +58,9 @@ upsert_template!(
           # which is designed to hold "SA ID / passport / DOB+zeros for kids".
           { key: "id_number", label: "ID or passport number", type: "text", required: true,
             help: "Your South African ID number — or your passport number if you are not a South African citizen." },
-          { key: "contact_number", label: "Contact number", type: "tel", required: false }
+          { key: "contact_number", label: "Contact number", type: "tel", required: false },
+          { key: "email", label: "Email address", type: "email", required: false,
+            help: "We email your settled account here so you can claim back from your medical aid." }
         ]
       },
       {

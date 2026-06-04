@@ -13,8 +13,7 @@ class IntakesController < PublicController
     patient = patient_from_token
     return render_invalid unless patient
 
-    submissions = IntakeProcessor.pending_or_recent(patient)
-    submissions.each { |s| s.update!(status: "opened", opened_at: Time.current) if s.status == "sent" }
+    submissions = ensure_submissions(patient)
 
     render inertia: "PublicIntake", props: {
       token: params[:token],
@@ -41,6 +40,23 @@ class IntakesController < PublicController
   end
 
   private
+
+  # Ensure the patient has a submission for each active intake template, CREATING any
+  # that are missing — so a valid link ALWAYS renders the full form, even if it wasn't
+  # pre-created by IntakeDispatch (e.g. a re-issued or manually-minted link). Freshly
+  # shown "sent" forms are flipped to "opened".
+  def ensure_submissions(patient)
+    KEYS.filter_map do |key|
+      template = FormTemplate.latest(key)
+      next unless template
+
+      sub = patient.form_submissions.joins(:form_template)
+                   .where(form_templates: { key: key }).order(:created_at).last
+      sub ||= patient.form_submissions.create!(form_template: template).tap(&:mark_sent!)
+      sub.update!(status: "opened", opened_at: Time.current) if sub.status == "sent"
+      sub
+    end
+  end
 
   # Returns the Patient for a valid, unexpired token, or nil.
   def patient_from_token

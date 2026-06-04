@@ -83,6 +83,9 @@ class IntakeProcessor
     }.compact_blank
     # Only set phone if the patient doesn't already have one (live WhatsApp flows own it).
     attrs[:phone] = d["contact_number"] if patient.phone.blank? && d["contact_number"].present?
+    # Capture the patient's email — but only if it's a valid address, so a typo can't
+    # fail the whole submission (the raw answer is preserved in the form data regardless).
+    attrs[:email] = d["email"] if d["email"].to_s.match?(URI::MailTo::EMAIL_REGEXP)
     patient.update!(attrs) if attrs.any?
   end
 
