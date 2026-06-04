@@ -1,0 +1,17 @@
+<p>Hi team,</p>
+
+<p><strong><%= @patient.full_name %></strong> has completed their online patient forms.</p>
+
+<p>
+  The completed pack is attached as a PDF — personal &amp; account details, medical history,
+  treatment consent, and the payment &amp; cancellation policy page. Please print it and add
+  it to the patient's file. They will sign and initial it on arrival.
+</p>
+
+<ul>
+  <li><strong>Patient:</strong> <%= @patient.full_name %></li>
+  <li><strong>Phone:</strong> <%= @patient.phone.presence || "—" %></li>
+  <% if @patient.email.present? %><li><strong>Email:</strong> <%= @patient.email %></li><% end %>
+</ul>
+
+<p style="color:#707070;font-size:13px;">— Dr Chalita le Roux AI Receptionist</p>

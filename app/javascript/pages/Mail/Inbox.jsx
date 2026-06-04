@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, router } from '@inertiajs/react'
-import { Inbox as InboxIcon, Star, Search, Mail, Calendar, AlertCircle, PlusCircle, Paperclip, ChevronRight } from 'lucide-react'
+import { Inbox as InboxIcon, Star, Search, Mail, Calendar, AlertCircle, PlusCircle, Paperclip, ChevronRight, Folder } from 'lucide-react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { cn } from '../../lib/utils'
 
@@ -92,6 +92,33 @@ export default function MailInbox({
                 {a.unread_count > 0 && <span className="text-[10px] font-semibold">{a.unread_count}</span>}
               </button>
             ))}
+
+            {/* Folders (Outlook-style tree) for the selected account */}
+            {(() => {
+              const acct = accounts.find((a) => String(a.id) === String(filters.account_id))
+              const folders = acct?.folders || []
+              if (!acct || folders.length === 0) return null
+              return (
+                <>
+                  <p className="mb-1 mt-4 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">Folders</p>
+                  {folders.map((f) => {
+                    const active = filters.folder === f
+                    const depth = (f.match(/[./]/g) || []).length
+                    const label = f.split(/[./]/).filter(Boolean).pop() || f
+                    return (
+                      <button key={f} title={f}
+                        onClick={() => goto({ account_id: acct.id, folder: active ? null : f })}
+                        className={cn('mb-0.5 flex w-full items-center gap-1.5 rounded-lg py-1 pr-2 text-xs',
+                          active ? 'bg-brand-primary text-white' : 'text-brand-ink hover:bg-brand-surface')}
+                        style={{ paddingLeft: 8 + depth * 12 }}>
+                        <Folder size={11} className="flex-shrink-0 opacity-70" />
+                        <span className="truncate">{label}</span>
+                      </button>
+                    )
+                  })}
+                </>
+              )
+            })()}
 
             <p className="mb-2 mt-4 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">Filters</p>
             {[

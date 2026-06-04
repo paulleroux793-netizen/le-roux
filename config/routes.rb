@@ -35,10 +35,15 @@ Rails.application.routes.draw do
       patch :set_status
     end
   end
+  # Elixir-style two-column day diary (one column per dentist).
+  get "diary", to: "appointments#diary", as: :diary
+
   # Diary reminders / notes (non-appointment calendar items)
   resources :calendar_notes, only: [ :create, :update, :destroy ]
 
-  resources :patients, only: [ :index, :show, :create, :update, :destroy ]
+  resources :patients, only: [ :index, :show, :create, :update, :destroy ] do
+    collection { get :lookup } # type-ahead search (JSON) for the booking modal
+  end
   resources :conversations, only: [ :index, :show ] do
     collection do
       post :import
@@ -116,6 +121,14 @@ Rails.application.routes.draw do
     resources :payments, only: [ :create ]
   end
   get "patients/:patient_id/file", to: "patient_files#show", as: :patient_file
+  # Staff: send the WhatsApp intake link, and print the completed pack on arrival.
+  post "patients/:patient_id/send-intake", to: "patient_files#send_intake", as: :send_patient_intake
+  get  "patients/:patient_id/intake.pdf", to: "patient_files#intake_pdf",  as: :patient_intake_pdf, format: false
+
+  # ── Public, tokenised patient intake wizard (UNAUTHENTICATED — see PublicController) ──
+  # The signed_id link is sent over WhatsApp; no PII in the URL, 14-day expiry.
+  get   "intake/:token", to: "intakes#show",   as: :intake
+  match "intake/:token", to: "intakes#update", via: %i[patch put]
   get  "imaging",      to: "imaging#index", as: :imaging
   post "imaging/scan", to: "imaging#scan",  as: :imaging_scan
   resources :scribe_sessions, only: [ :index, :show ], path: "scribe-sessions"

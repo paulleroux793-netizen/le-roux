@@ -7,10 +7,23 @@ class FormSubmission < ApplicationRecord
   belongs_to :patient
   belongs_to :document, optional: true
 
+  # POPIA s19 — the submitted answers are the patient's full PHI; encrypt at rest.
+  # `data` moved from jsonb to text (EncryptPhiColumns) so it can hold ciphertext;
+  # serialize keeps the public interface a Hash. Existing rows are re-encrypted by
+  # `bin/rails phi:encrypt`.
+  serialize :data, coder: JSON
+  encrypts :data
+  encrypts :signature_data
+
   validates :token, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }
 
   before_validation :ensure_token, on: :create
+  # `data` is NOT NULL but, since EncryptPhiColumns dropped the old jsonb `{}`
+  # default (an encrypted text column can't carry a plaintext DB default), a
+  # freshly-sent submission with no answers yet would violate the constraint.
+  # Default it to an empty hash in the model so the model owns the empty state.
+  before_validation :ensure_data
 
   scope :pending, -> { where(status: %w[sent opened]) }
 
@@ -42,5 +55,9 @@ class FormSubmission < ApplicationRecord
 
   def ensure_token
     self.token ||= SecureRandom.urlsafe_base64(24)
+  end
+
+  def ensure_data
+    self.data ||= {}
   end
 end

@@ -1,9 +1,12 @@
 class DoctorSchedule < ApplicationRecord
   DAY_NAMES = %w[sunday monday tuesday wednesday thursday friday saturday].freeze
 
+  # optional during transition; each dentist has their own weekly schedule.
+  belongs_to :provider, optional: true
+
   validates :day_of_week, presence: true,
             inclusion: { in: 0..6 },
-            uniqueness: true
+            uniqueness: { scope: :provider_id }
   validates :start_time, presence: true, if: :active?
   validates :end_time, presence: true, if: :active?
   validate :end_time_after_start_time

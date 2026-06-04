@@ -8,7 +8,9 @@ class CalendarNotesController < ApplicationController
     starts_at = parse_time(note_params[:starts_at])
     ends_at   = parse_time(note_params[:ends_at]) || (starts_at && starts_at + 30.minutes)
 
-    note = CalendarNote.new(starts_at: starts_at, ends_at: ends_at, note: note_params[:note])
+    note = CalendarNote.new(starts_at: starts_at, ends_at: ends_at,
+                            note: note_params[:note].presence || "Closed",
+                            provider_id: note_params[:provider_id].presence)
     if note.save
       expire_calendar_caches!
       AuditService.log(
@@ -54,7 +56,7 @@ class CalendarNotesController < ApplicationController
   private
 
   def note_params
-    params.require(:calendar_note).permit(:note, :starts_at, :ends_at, :done)
+    params.require(:calendar_note).permit(:note, :starts_at, :ends_at, :done, :provider_id)
   end
 
   def parse_time(value)

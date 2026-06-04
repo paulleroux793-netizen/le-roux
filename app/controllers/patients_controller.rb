@@ -18,10 +18,39 @@ class PatientsController < ApplicationController
     Medihelp Medshield Polmed Bankmed Profmed
   ].freeze
 
+  # Type-ahead patient lookup for the booking modal. Searches name, surname,
+  # phone, and the Elixir ACCOUNT CODE across all patients. Returns JSON.
+  def lookup
+    q = params[:q].to_s.strip
+    return render json: { results: [] } if q.length < 2
+
+    pattern = "%#{q.gsub(/[\\%_]/) { |c| "\\#{c}" }}%"
+    account_patient_ids = BillingAccount
+      .where("account_code ILIKE ?", pattern)
+      .joins(:account_patients)
+      .pluck("account_patients.patient_id")
+
+    patients = Patient
+      .where(
+        "first_name ILIKE :p OR last_name ILIKE :p OR " \
+        "(first_name || ' ' || last_name) ILIKE :p OR phone ILIKE :p OR id IN (:ids)",
+        p: pattern, ids: account_patient_ids.presence || [ 0 ]
+      )
+      .includes(:billing_accounts)
+      .order(:last_name, :first_name)
+      .limit(15)
+
+    render json: {
+      results: patients.map { |pt|
+        { id: pt.id, name: pt.full_name, account_code: pt.account_code, phone: pt.phone }
+      }
+    }
+  end
+
   def index
     page_data = dev_page_cache("patients", "index") do
       patients = Patient
-        .includes(:appointments, :medical_history)
+        .includes(:appointments, :medical_history, :billing_accounts)
         .order(:last_name, :first_name)
         .limit(LIST_ROW_LIMIT)
         .to_a

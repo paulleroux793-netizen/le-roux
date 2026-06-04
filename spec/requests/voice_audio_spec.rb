@@ -4,7 +4,11 @@ RSpec.describe "Voice audio endpoint", type: :request do
   let(:valid_hash) { "a" * 64 } # 64 hex chars
   let(:fake_mp3)   { "FAKE_MP3_BYTES".b }
 
-  before { Rails.cache.clear }
+  # The test env uses :null_store (config/environments/test.rb), which silently
+  # drops writes — so give these cache-backed examples a real store. The endpoint
+  # reads through Rails.cache (via ElevenLabsService#cached_audio).
+  let(:memory_cache) { ActiveSupport::Cache::MemoryStore.new }
+  before { allow(Rails).to receive(:cache).and_return(memory_cache) }
 
   describe "GET /voice/audio/:hash.mp3" do
     context "when audio is cached" do

@@ -163,8 +163,11 @@ RSpec.describe 'Appointments', type: :request do
     end
 
     it 'parses browser UTC ISO timestamps back into the clinic timezone' do
-      start_payload = '2026-05-14T07:00:00.000Z'
-      end_payload = '2026-05-14T07:30:00.000Z'
+      # Date-relative so the test never rots: the create guard rejects past times.
+      # 07:00Z must round-trip to 09:00 in Africa/Johannesburg (UTC+2).
+      day = 4.weeks.from_now.to_date
+      start_payload = "#{day.iso8601}T07:00:00.000Z"
+      end_payload = "#{day.iso8601}T07:30:00.000Z"
 
       post appointments_path, params: {
         appointment: {
@@ -176,8 +179,8 @@ RSpec.describe 'Appointments', type: :request do
       }
 
       appointment = Appointment.last
-      expect(appointment.start_time.in_time_zone.strftime('%Y-%m-%d %H:%M')).to eq('2026-05-14 09:00')
-      expect(appointment.end_time.in_time_zone.strftime('%Y-%m-%d %H:%M')).to eq('2026-05-14 09:30')
+      expect(appointment.start_time.in_time_zone.strftime('%Y-%m-%d %H:%M')).to eq("#{day.iso8601} 09:00")
+      expect(appointment.end_time.in_time_zone.strftime('%Y-%m-%d %H:%M')).to eq("#{day.iso8601} 09:30")
     end
 
     it 'rejects invalid times without creating anything' do
@@ -195,20 +198,19 @@ RSpec.describe 'Appointments', type: :request do
       expect(session[:inertia_errors]).to include(start_time: 'Invalid start or end time')
     end
 
-    it 'rejects bookings with a start_time in the past' do
+    it 'allows bookings in the past (reception back-enters walk-ins / notes)' do
       expect {
         post appointments_path, params: {
           appointment: {
             patient_id: patient.id,
             start_time: 2.hours.ago.iso8601,
             end_time: 1.hour.ago.iso8601,
-            reason: 'Cleaning'
+            reason: 'Walk-in note'
           }
         }, headers: { 'X-Inertia' => 'true', 'X-Requested-With' => 'XMLHttpRequest' }
-      }.not_to change(Appointment, :count)
+      }.to change(Appointment, :count).by(1)
 
       expect(response).to have_http_status(:see_other)
-      expect(session[:inertia_errors]).to include(start_time: 'must be in the future')
     end
   end
 

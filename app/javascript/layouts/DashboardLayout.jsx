@@ -5,7 +5,7 @@ import {
   BellRing, Settings, ChevronDown, HelpCircle, Globe,
   User, LogOut, KeyRound, ClipboardList,
   Stethoscope, Layers, Wallet, ClipboardPlus, Receipt, FileText,
-  Scan, Mic, BarChart3, Inbox,
+  Scan, Mic, BarChart3, Inbox, CalendarDays,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -15,7 +15,7 @@ import { useLanguage } from '../lib/LanguageContext'
 
 const NAV_ITEMS = [
   { key: 'nav_dashboard',     href: '/dashboard',     icon: LayoutDashboard },
-  { key: 'nav_appointments',  href: '/appointments',  icon: Calendar },
+  { key: 'nav_diary',         href: '/diary',         icon: CalendarDays },
   { key: 'nav_reminders',     href: '/reminders',     icon: BellRing },
   { key: 'nav_patients',      href: '/patients',      icon: Users },
   { key: 'nav_conversations', href: '/conversations', icon: MessageSquare },
@@ -227,7 +227,7 @@ export default function DashboardLayout({ children }) {
               <div className="absolute right-0 top-full z-50 mt-1.5 w-52 rounded-xl border border-brand-border bg-white py-1.5 shadow-[0_24px_60px_-16px_rgba(57,60,77,0.25)]">
                 <div className="border-b border-brand-border px-4 py-2.5">
                   <p className="text-xs font-semibold text-brand-ink">Dr Chalita le Roux</p>
-                  <p className="mt-0.5 text-[11px] text-brand-muted">General Practitioner</p>
+                  <p className="mt-0.5 text-[11px] text-brand-muted">Dentist</p>
                 </div>
                 <div className="py-1">
                   <DropdownItem

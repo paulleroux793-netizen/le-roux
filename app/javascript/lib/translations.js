@@ -8,6 +8,7 @@ const translations = {
     // ── Navigation ───────────────────────────────────────────
     nav_dashboard: 'Dashboard',
     nav_appointments: 'Appointments',
+    nav_diary: 'Diary',
     nav_reminders: 'Reminders',
     nav_patients: 'Patients',
     nav_conversations: 'Conversations',
@@ -52,6 +53,7 @@ const translations = {
     view: 'View',
     cancel_action: 'Cancel',
     reschedule_action: 'Reschedule',
+    edit_patient: 'Edit patient',
     all_caught_up: 'All caught up — no pending reminders',
     recent_patients: 'Recent Patients',
     recent_patients_subtitle: 'Latest patients registered in the system',
@@ -309,6 +311,7 @@ const translations = {
     // ── Navigation ───────────────────────────────────────────
     nav_dashboard: 'Paneelbord',
     nav_appointments: 'Afsprake',
+    nav_diary: 'Dagboek',
     nav_reminders: 'Herinnerings',
     nav_patients: 'Pasi\u00ebnte',
     nav_conversations: 'Gesprekke',
@@ -353,6 +356,7 @@ const translations = {
     view: 'Besigtig',
     cancel_action: 'Kanselleer',
     reschedule_action: 'Herskeduleer',
+    edit_patient: 'Wysig pasiënt',
     all_caught_up: 'Alles op datum \u2014 geen hangende herinnerings nie',
     recent_patients: 'Onlangse Pasi\u00ebnte',
     recent_patients_subtitle: 'Nuutste pasi\u00ebnte geregistreer in die stelsel',

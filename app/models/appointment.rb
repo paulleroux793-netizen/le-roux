@@ -1,5 +1,8 @@
 class Appointment < ApplicationRecord
   belongs_to :patient
+  # optional during the transition; the diary always sets it. Backfilled to the
+  # active provider for any pre-existing rows.
+  belongs_to :provider, optional: true
   has_one :cancellation_reason, dependent: :destroy
   has_many :confirmation_logs, dependent: :destroy
 
@@ -15,11 +18,31 @@ class Appointment < ApplicationRecord
     in_consultation: 8     # patient is in the chair with the dentist
   }
 
+  # Diary block colour follows the patient-journey STATUS (the practice's real
+  # workflow): booked=white, confirmed=green, arrived=yellow, in the chair=blue,
+  # completed=purple. (cancelled/no-show are muted; the diary hides cancelled.)
+  STATUS_COLORS = {
+    "scheduled"            => "#ffffff",
+    "pending_confirmation" => "#ffffff",
+    "rescheduled"          => "#ffffff",
+    "confirmed"            => "#22c55e",
+    "arrived"              => "#facc15",
+    "in_consultation"      => "#3b82f6",
+    "completed"            => "#8b5cf6",
+    "no_show"              => "#9ca3af",
+    "cancelled"            => "#e5e7eb"
+  }.freeze
+
+  def status_color
+    STATUS_COLORS[status] || "#ffffff"
+  end
+
   validates :start_time, presence: true
   validates :end_time, presence: true
   validates :google_event_id, uniqueness: true, allow_nil: true
   validate :end_time_after_start_time
-  validate :no_overlapping_appointments, on: :create
+  validate :no_overlapping_appointments, on: [ :create, :update ]
+  before_validation :set_diary_defaults, on: :create
 
   scope :upcoming, -> { where("start_time > ?", Time.current).where.not(status: :cancelled).order(:start_time) }
   scope :for_date, ->(date) { where(start_time: date.all_day) }
@@ -68,13 +91,21 @@ class Appointment < ApplicationRecord
   def no_overlapping_appointments
     return if start_time.blank? || end_time.blank?
 
+    # Scoped to the same provider: two dentists may hold the same clock time;
+    # one dentist may not double-book. (Mirrors the per-provider DB exclusion.)
     conflict = Appointment
       .where.not(status: :cancelled)
       .where.not(id: id)
+      .where(provider_id: provider_id)
       .where("start_time < ? AND end_time > ?", end_time, start_time)
       .exists?
 
     errors.add(:base, "This time slot conflicts with an existing appointment") if conflict
+  end
+
+  # On create: default to the active dentist if reception didn't pick one.
+  def set_diary_defaults
+    self.provider ||= Provider.active.ordered.first
   end
 
   # After-hours bookings are allowed per practice policy. The WhatsApp

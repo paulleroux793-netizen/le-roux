@@ -8,9 +8,24 @@ class Patient < ApplicationRecord
     [ "Phone", "Caller" ]
   ].freeze
 
+  # POPIA s19 — SA ID number is special personal information; encrypt at rest.
+  # Deterministic so find_by(id_number:) and the lookup index still work. Existing
+  # plaintext rows are re-encrypted by `bin/rails phi:encrypt` (see the encryption
+  # initializer); support_unencrypted_data keeps reads working until then.
+  encrypts :id_number, deterministic: true
+
   has_many :appointments, dependent: :destroy
   has_many :call_logs, dependent: :nullify
   has_many :conversations, dependent: :destroy
+  # Billing account(s) this patient sits on (as account holder or dependant).
+  # Used by the diary to show the [ACCOUNT] code on each block.
+  has_many :account_patients, dependent: :destroy
+  has_many :billing_accounts, through: :account_patients
+
+  # The patient's primary account code (e.g. "A0001") for diary blocks / matching.
+  def account_code
+    billing_accounts.first&.account_code
+  end
 
   # Phase 9.6 sub-area #4 — optional 1:1 medical history record.
   # `autosave: true` so nested attributes posted from the Patient form

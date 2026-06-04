@@ -22,6 +22,28 @@ class PatientFilesController < ApplicationController
     }
   end
 
+  # POST — send the patient their WhatsApp intake link (creates the pending
+  # FormSubmissions + a signed 14-day link). Reply on the line they messaged from
+  # if known; otherwise IntakeDispatch falls back to the env WhatsApp number.
+  def send_intake
+    patient = Patient.find(params[:patient_id])
+    IntakeDispatch.call(patient)
+    # 303 See Other so Inertia issues a fresh GET instead of replaying this POST.
+    redirect_to patient_file_path(patient), notice: "Intake link sent to #{patient.phone}.", status: :see_other
+  rescue IntakeDispatch::Error => e
+    redirect_to patient_file_path(patient), alert: "Could not send intake link: #{e.message}", status: :see_other
+  end
+
+  # GET — the printable, pre-filled intake pack for reception to print on arrival.
+  # Blank signature/initial blocks; the patient signs by hand (print-and-sign).
+  def intake_pdf
+    patient = Patient.find(params[:patient_id])
+    send_data IntakePdf.new(patient).render,
+              filename: "intake-#{patient.id}-#{patient.last_name.parameterize}.pdf",
+              type: "application/pdf",
+              disposition: "inline"
+  end
+
   private
 
   def doc_props(d)

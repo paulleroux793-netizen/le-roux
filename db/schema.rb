@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -71,6 +71,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
     t.string "google_event_id"
     t.text "notes"
     t.bigint "patient_id", null: false
+    t.bigint "provider_id"
     t.string "reason"
     t.datetime "start_time", null: false
     t.integer "status", default: 0, null: false
@@ -82,11 +83,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
     t.datetime "updated_at", null: false
     t.index ["google_event_id"], name: "index_appointments_on_google_event_id", unique: true
     t.index ["patient_id"], name: "index_appointments_on_patient_id"
+    t.index ["provider_id"], name: "index_appointments_on_provider_id"
     t.index ["start_time"], name: "index_appointments_on_start_time"
     t.index ["status"], name: "index_appointments_on_status"
     t.index ["summary_generated_at"], name: "index_appointments_on_summary_generated_at"
     t.index ["summary_scribe_session_id"], name: "index_appointments_on_summary_scribe_session_id"
-    t.exclusion_constraint "tsrange(start_time, end_time) WITH &&", where: "status <> 3", using: :gist, name: "no_overlapping_active_appointments"
+    t.exclusion_constraint "provider_id WITH =, tsrange(start_time, end_time) WITH &&", where: "status <> 3", using: :gist, name: "no_overlapping_appointments_per_provider"
   end
 
   create_table "audit_logs", force: :cascade do |t|
@@ -128,8 +130,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
     t.boolean "done", default: false, null: false
     t.datetime "ends_at", null: false
     t.string "note", null: false
+    t.bigint "provider_id"
     t.datetime "starts_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["provider_id"], name: "index_calendar_notes_on_provider_id"
     t.index ["starts_at"], name: "index_calendar_notes_on_starts_at"
   end
 
@@ -244,9 +248,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
     t.datetime "created_at", null: false
     t.integer "day_of_week"
     t.time "end_time"
+    t.bigint "provider_id"
     t.time "start_time"
     t.datetime "updated_at", null: false
-    t.index ["day_of_week"], name: "index_doctor_schedules_on_day_of_week", unique: true
+    t.index ["provider_id", "day_of_week"], name: "index_doctor_schedules_on_provider_and_day", unique: true
+    t.index ["provider_id"], name: "index_doctor_schedules_on_provider_id"
   end
 
   create_table "document_sequences", force: :cascade do |t|
@@ -436,7 +442,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
   create_table "form_submissions", force: :cascade do |t|
     t.datetime "completed_at"
     t.datetime "created_at", null: false
-    t.jsonb "data", default: {}, null: false
+    t.text "data", null: false
     t.bigint "document_id"
     t.datetime "expires_at"
     t.bigint "form_template_id", null: false
@@ -670,9 +676,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
     t.datetime "created_at", null: false
     t.text "current_medications"
     t.text "dental_notes"
-    t.string "emergency_contact_name"
-    t.string "emergency_contact_phone"
-    t.string "insurance_policy_number"
+    t.text "emergency_contact_name"
+    t.text "emergency_contact_phone"
+    t.text "insurance_policy_number"
     t.string "insurance_provider"
     t.date "last_dental_visit"
     t.bigint "patient_id", null: false
@@ -687,7 +693,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
     t.date "date_of_birth"
     t.string "email"
     t.string "first_name", null: false
-    t.string "id_number"
+    t.text "id_number"
     t.string "last_name", null: false
     t.text "notes"
     t.string "phone"
@@ -779,6 +785,17 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
     t.index ["active"], name: "index_procedure_codes_on_active"
     t.index ["category"], name: "index_procedure_codes_on_category"
     t.index ["code"], name: "index_procedure_codes_on_code", unique: true
+  end
+
+  create_table "providers", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.string "color", default: "#16a34a", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.integer "position", default: 0, null: false
+    t.string "short_name"
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_providers_on_name", unique: true
   end
 
   create_table "recalls", force: :cascade do |t|
@@ -1073,8 +1090,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "appointments", "patients"
+  add_foreign_key "appointments", "providers"
   add_foreign_key "appointments", "scribe_sessions", column: "summary_scribe_session_id"
   add_foreign_key "billing_accounts", "patients", column: "head_patient_id"
+  add_foreign_key "calendar_notes", "providers"
   add_foreign_key "call_logs", "patients"
   add_foreign_key "cancellation_reasons", "appointments"
   add_foreign_key "clinical_notes", "clinical_notes", column: "supersedes_id"
@@ -1085,6 +1104,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_05_27_000001) do
   add_foreign_key "courses_of_treatment", "billing_accounts"
   add_foreign_key "courses_of_treatment", "patients"
   add_foreign_key "courses_of_treatment", "scheme_memberships"
+  add_foreign_key "doctor_schedules", "providers"
   add_foreign_key "documents", "courses_of_treatment", column: "course_of_treatment_id"
   add_foreign_key "documents", "patients"
   add_foreign_key "estimate_lines", "estimates"

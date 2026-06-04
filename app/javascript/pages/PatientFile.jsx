@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Link } from '@inertiajs/react'
-import { FolderOpen, Folder, FileText, Image, FileSignature, StickyNote, ArrowLeft, ShieldCheck, MessageCircle } from 'lucide-react'
+import { Link, router } from '@inertiajs/react'
+import { FolderOpen, Folder, FileText, Image, FileSignature, StickyNote, ArrowLeft, ShieldCheck, MessageCircle, Send, Printer } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { cn } from '../lib/utils'
 
@@ -9,6 +9,18 @@ const fmtDate = (iso) => iso ? new Date(iso).toLocaleDateString('en-ZA', { day: 
 
 export default function PatientFile({ patient = {}, folders = [], forms = [], notes = [] }) {
   const [open, setOpen] = useState(folders.find((f) => f.count > 0)?.key || null)
+  const [sending, setSending] = useState(false)
+
+  const hasCompletedForm = forms.some((f) => f.status === 'completed')
+
+  const sendIntake = () => {
+    if (!window.confirm(`Send the intake forms link to ${patient.name} on WhatsApp?`)) return
+    setSending(true)
+    router.post(`/patients/${patient.id}/send-intake`, {}, {
+      preserveScroll: true,
+      onFinish: () => setSending(false),
+    })
+  }
 
   return (
     <DashboardLayout>
@@ -66,7 +78,28 @@ export default function PatientFile({ patient = {}, folders = [], forms = [], no
         {/* Forms + notepad */}
         <div className="space-y-6">
           <div>
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand-ink"><MessageCircle size={15} /> WhatsApp forms</h2>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-brand-ink"><MessageCircle size={15} /> WhatsApp forms</h2>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={sendIntake}
+                  disabled={sending}
+                  className="inline-flex items-center gap-1 rounded-lg bg-brand-primary px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-primary-dark disabled:opacity-60"
+                >
+                  <Send size={12} /> {sending ? 'Sending…' : 'Send intake'}
+                </button>
+                {hasCompletedForm && (
+                  <a
+                    href={`/patients/${patient.id}/intake.pdf`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded-lg border border-brand-border bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-ink-soft hover:bg-brand-surface"
+                  >
+                    <Printer size={12} /> Print pack
+                  </a>
+                )}
+              </div>
+            </div>
             <div className="rounded-xl border border-brand-border bg-white">
               {forms.length === 0 && <p className="px-4 py-3 text-xs text-brand-muted">No forms sent.</p>}
               {forms.map((s) => (

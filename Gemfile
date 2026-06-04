@@ -33,6 +33,10 @@ gem "image_processing", "~> 1.2"
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 gem "rack-cors"
 
+# Rate limiting / brute-force protection for the public patient-intake endpoint
+# (defence-in-depth behind Cloudflare's edge rate limiting).
+gem "rack-attack"
+
 # === Twilio - WhatsApp & Voice calls ===
 gem "twilio-ruby", "~> 7.0"
 

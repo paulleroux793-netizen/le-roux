@@ -42,7 +42,12 @@ export default function Patients({ patients = [], stats, schemes = [] }) {
       header: t('pat_col_name'),
       cell: ({ row }) => (
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-brand-ink">{row.original.full_name}</p>
+          <Link
+            href={`/patients/${row.original.id}`}
+            className="truncate text-sm font-medium text-brand-ink hover:text-brand-primary hover:underline"
+          >
+            {row.original.full_name}
+          </Link>
           {row.original.email && (
             <p className="truncate text-xs text-brand-muted">{row.original.email}</p>
           )}
@@ -116,8 +121,8 @@ export default function Patients({ patients = [], stats, schemes = [] }) {
           </Link>
           <button
             type="button"
-            title={t('reschedule_action')}
-            aria-label={t('reschedule_action')}
+            title={t('edit_patient')}
+            aria-label={t('edit_patient')}
             onClick={() => openEdit(row.original)}
             className="inline-flex rounded-xl p-1.5 text-brand-muted transition-colors hover:bg-brand-surface/45 hover:text-brand-ink"
           >

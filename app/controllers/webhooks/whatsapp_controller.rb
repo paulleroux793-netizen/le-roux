@@ -53,7 +53,11 @@ module Webhooks
     private
 
     def validate_twilio_signature
-      return if Rails.env.test? || Rails.env.development?
+      return if Rails.env.test?
+      # The rig runs RAILS_ENV=development but is reachable by Twilio over the public
+      # internet, so signatures MUST be validated there. ENFORCE_TWILIO_SIGNATURE=true
+      # (set in .env.rig) turns validation on in development; laptop dev stays exempt.
+      return if Rails.env.development? && ENV["ENFORCE_TWILIO_SIGNATURE"] != "true"
 
       validator = Twilio::Security::RequestValidator.new(ENV.fetch("TWILIO_AUTH_TOKEN"))
       # Use APP_BASE_URL so the URL matches what Twilio signed regardless of

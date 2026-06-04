@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { UserPlus, Users } from 'lucide-react'
+import { UserPlus, Users, Ban } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import Modal from './Modal'
+import PatientSearchSelect from './PatientSearchSelect'
 import { useLanguage } from '../lib/LanguageContext'
 
 // ── Appointment form modal (Create & Edit) ──────────────────────────
@@ -63,6 +64,10 @@ function buildSchema(t, getNewPatientMode) {
       duration: z.union([z.string(), z.number()]).optional(),
       reason: z.string().optional(),
       notes: z.string().optional(),
+      // MUST be in the schema or zodResolver strips it from the submitted data —
+      // that was why the chosen dentist was lost (bookings defaulted to the active
+      // dentist; Closed blocks got null → showed in BOTH columns).
+      provider_id: z.union([z.string(), z.number()]).optional(),
     })
     .refine((v) => new Date(v.end_time) > new Date(v.start_time), {
       path: ['end_time'],
@@ -90,6 +95,8 @@ export default function AppointmentFormModal({
   appointment,           // required for mode=edit
   patients = [],         // required for mode=create
   prefillStart = null,   // Date | null — opened from a calendar empty-slot click
+  providers = [],        // [{id, name, color}] — diary dentists (optional)
+  prefillProvider = null, // {id,...} — column the empty slot was clicked in
 }) {
   const { t } = useLanguage()
   const isEdit = mode === 'edit'
@@ -103,6 +110,8 @@ export default function AppointmentFormModal({
   //   - New patient:      type first name + last name + phone here
   // Server-side AppointmentsController#create accepts both shapes.
   const [newPatientMode, setNewPatientMode] = useState(false)
+  const [closedMode, setClosedMode] = useState(false) // block-out time (no patient)
+  const [selectedPatient, setSelectedPatient] = useState(null) // type-ahead pick
   const [newFirstName,   setNewFirstName]   = useState('')
   const [newLastName,    setNewLastName]    = useState('')
   const [newPhone,       setNewPhone]       = useState('')
@@ -115,7 +124,7 @@ export default function AppointmentFormModal({
     setValue,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(buildSchema(t, () => newPatientMode)),
+    resolver: zodResolver(buildSchema(t, () => newPatientMode || closedMode)),
     defaultValues: {
       patient_id: '',
       start_time: '',
@@ -123,6 +132,7 @@ export default function AppointmentFormModal({
       duration: 30,
       reason: '',
       notes: '',
+      provider_id: '',
     },
   })
 
@@ -141,10 +151,14 @@ export default function AppointmentFormModal({
   // When reason text changes, suggest a duration that matches the practice's
   // typical slot length (check-up 45, whitening 90, etc.). Doesn't lock — the
   // user can still pick a different duration from the dropdown.
+  // EDIT mode is exempt: a saved appointment's slot length is explicit, so we
+  // must never auto-shrink it (a 90-min whitening reopened for edit was silently
+  // becoming 30 min when this fired on hydration).
   useEffect(() => {
+    if (isEdit) return
     if (!reason) return
     setValue('duration', defaultDurationFor(reason))
-  }, [reason, setValue])
+  }, [reason, isEdit, setValue])
 
   // Whenever start_time or duration changes, derive end_time = start + duration.
   useEffect(() => {
@@ -160,22 +174,50 @@ export default function AppointmentFormModal({
   useEffect(() => {
     if (!open) return
     if (isEdit && appointment) {
+      // Seed duration from the appointment's REAL length so the derive-end effect
+      // reproduces the saved end_time instead of clobbering it with a default.
+      const mins = Math.round(
+        (new Date(appointment.end_time) - new Date(appointment.start_time)) / 60000
+      )
       reset({
         patient_id: appointment.patient_id || '',
         start_time: toLocalInput(appointment.start_time),
         end_time: toLocalInput(appointment.end_time),
+        duration: mins > 0 ? mins : 30,
         reason: appointment.reason || '',
         notes: appointment.notes || '',
+        provider_id: appointment.provider_id || '',
       })
     } else {
       const start = prefillStart ? dtLocal(prefillStart) : ''
-      reset({ patient_id: '', start_time: start, end_time: '', duration: 30, reason: '', notes: '' })
+      reset({
+        patient_id: '', start_time: start, end_time: '', duration: 30, reason: '', notes: '',
+        provider_id: prefillProvider?.id || providers[0]?.id || '',
+      })
     }
     setNewPatientMode(false)
+    setClosedMode(false)
+    setSelectedPatient(null)
     setNewFirstName(''); setNewLastName(''); setNewPhone('')
-  }, [open, isEdit, appointment, prefillStart, reset])
+  }, [open, isEdit, appointment, prefillStart, prefillProvider, reset])
 
   const onSubmit = (data) => {
+    // Closed / block-out: no patient — create a calendar note in this dentist's column.
+    if (closedMode) {
+      router.post('/calendar_notes', {
+        calendar_note: {
+          starts_at: new Date(data.start_time).toISOString(),
+          ends_at: new Date(data.end_time).toISOString(),
+          note: (data.reason || '').trim() || 'Closed',
+          provider_id: data.provider_id || null,
+        },
+      }, {
+        preserveScroll: true, preserveState: false,
+        onSuccess: () => { toast.success('Time blocked out'); onClose?.() },
+        onError: () => toast.error('Could not block out time'),
+      })
+      return
+    }
     // New-patient inline path: pre-flight check on required fields
     // (the zod schema lets these through because they live OUTSIDE
     // the form — they're plain useState — to keep the schema simple).
@@ -193,6 +235,7 @@ export default function AppointmentFormModal({
         end_time: new Date(data.end_time).toISOString(),
         reason: data.reason || null,
         notes: data.notes || null,
+        provider_id: data.provider_id || null,
       },
       // Server creates the patient first, then the appointment. Both
       // succeed or both roll back.
@@ -247,7 +290,7 @@ export default function AppointmentFormModal({
             disabled={isSubmitting}
             className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark disabled:opacity-50"
           >
-            {isEdit ? t('modal_save_btn') : t('modal_book_btn')}
+            {isEdit ? t('modal_save_btn') : (closedMode ? 'Block out time' : t('modal_book_btn'))}
           </button>
         </>
       }
@@ -257,33 +300,41 @@ export default function AppointmentFormModal({
         {!isEdit && (
           <div className="space-y-2">
             <div className="inline-flex rounded-2xl border border-brand-border bg-brand-surface p-1">
-              <button type="button" onClick={() => setNewPatientMode(false)}
+              <button type="button" onClick={() => { setNewPatientMode(false); setClosedMode(false) }}
                 className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  !newPatientMode ? 'bg-white text-brand-ink shadow-sm' : 'text-brand-muted hover:text-brand-ink'
+                  !newPatientMode && !closedMode ? 'bg-white text-brand-ink shadow-sm' : 'text-brand-muted hover:text-brand-ink'
                 }`}>
                 <Users size={13} /> Existing patient
               </button>
-              <button type="button" onClick={() => setNewPatientMode(true)}
+              <button type="button" onClick={() => { setNewPatientMode(true); setClosedMode(false) }}
                 className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  newPatientMode ? 'bg-white text-brand-primary shadow-sm' : 'text-brand-muted hover:text-brand-ink'
+                  newPatientMode && !closedMode ? 'bg-white text-brand-primary shadow-sm' : 'text-brand-muted hover:text-brand-ink'
                 }`}>
                 <UserPlus size={13} /> New patient
               </button>
+              <button type="button" onClick={() => { setClosedMode(true); setNewPatientMode(false) }}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  closedMode ? 'bg-white text-pink-600 shadow-sm' : 'text-brand-muted hover:text-brand-ink'
+                }`}>
+                <Ban size={13} /> Closed / block
+              </button>
             </div>
 
-            {!newPatientMode ? (
+            {closedMode ? (
+              <p className="rounded-2xl border border-brand-accent/60 bg-brand-surface/40 px-3 py-2.5 text-xs text-brand-muted">
+                Blocking out time (e.g. lunch, leave, closed) in the selected dentist’s column — no patient needed. Type a label in “Reason”.
+              </p>
+            ) : !newPatientMode ? (
               <Field label={t('modal_patient_label')} error={errors.patient_id?.message}>
-                <select
-                  {...register('patient_id')}
-                  className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
-                >
-                  <option value="">{t('modal_select_patient')}</option>
-                  {patients.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — {p.phone}
-                    </option>
-                  ))}
-                </select>
+                <input type="hidden" {...register('patient_id')} />
+                <PatientSearchSelect
+                  selected={selectedPatient}
+                  autoFocus
+                  onSelect={(p) => {
+                    setSelectedPatient(p)
+                    setValue('patient_id', p?.id || '', { shouldValidate: true })
+                  }}
+                />
               </Field>
             ) : (
               <div className="grid grid-cols-3 gap-3 rounded-2xl border border-brand-accent/80 bg-brand-surface/40 p-3">
@@ -307,6 +358,19 @@ export default function AppointmentFormModal({
               </div>
             )}
           </div>
+        )}
+
+        {providers.length > 0 && (
+          <Field label="Dentist">
+            <select
+              {...register('provider_id')}
+              className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
+            >
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </Field>
         )}
 
         <div className="grid grid-cols-3 gap-4">

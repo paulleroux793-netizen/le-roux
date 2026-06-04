@@ -1,6 +1,18 @@
 class ApplicationController < ActionController::Base
   include InertiaRails::Controller
 
+  # Defence-in-depth: the dashboard (everything inheriting this controller) must
+  # NEVER be served on the public intake hostname. The patient form lives in
+  # IntakesController < PublicController (not this class), so it is unaffected.
+  # Cloudflare also blocks non-/intake paths on that host; this is the app-layer
+  # backstop. No-op unless INTAKE_PUBLIC_HOST is set (i.e. only once a tunnel exists).
+  before_action :block_public_host
+
+  def block_public_host
+    public_host = ENV["INTAKE_PUBLIC_HOST"].presence
+    head :not_found if public_host && request.host.to_s.casecmp?(public_host)
+  end
+
   # Minimum-viable auth: HTTP basic auth on the dashboard.
   # The dashboard exposes patient PII so it MUST NOT be publicly browsable.
   # This is a stop-gap until Devise + per-user roles land in a follow-up PR;

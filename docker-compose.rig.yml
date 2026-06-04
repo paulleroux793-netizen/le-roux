@@ -1,0 +1,60 @@
+# Ivory @ the practice rig (chalita-5090, Linux). Development-mode Rails for fast
+# iteration, but hardened: HTTP-basic auth + PHI encryption ON via .env.rig.
+#
+# Single web container — NO separate Vite dev server. Vite assets are built to
+# disk (autoBuild) so the app serves everything from one port (3000); there is no
+# HMR websocket to break over the Tailscale link. Rebuild assets after a JS change
+# with:  docker compose -f docker-compose.rig.yml exec web bin/vite build
+#
+#   docker compose -f docker-compose.rig.yml up -d --build
+#   docker compose -f docker-compose.rig.yml logs -f web
+#
+# Elixir is mounted READ-ONLY (:ro) — Ivory can never write to the live system.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dr_leroux_receptionist_development
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    init: true
+    # Self-heal CRLF on bin/* (the source tree comes from a Windows host, whose
+    # \r line endings break the ruby shebangs). Then prepare DB, build Vite
+    # assets to disk, and serve from one port.
+    command: bash -lc "sed -i 's/\r$//' bin/* 2>/dev/null || true; chmod +x bin/* 2>/dev/null || true; bundle exec rails db:prepare && bundle exec bin/vite build && bundle exec rails server -b 0.0.0.0 -p 3000"
+    env_file: .env.rig
+    environment:
+      ELIXIR_DATA_ROOT: "/elixir_data"
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/rails
+      - node_modules:/rails/node_modules
+      - rails_tmp:/rails/tmp
+      - rails_log:/rails/log
+      # READ-ONLY snapshot of the Elixir export folder. The :ro flag is enforced by
+      # the Docker kernel layer — the importer can never write back to Elixir.
+      - "/opt/ivory/elixir_data:/elixir_data:ro"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  node_modules:
+  rails_tmp:
+  rails_log:

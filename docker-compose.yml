@@ -36,6 +36,8 @@ services:
       # Where the Elixir-mirror importer reads the live system's daily exports.
       # Mounted READ-ONLY below — Ivory can never write back to Dr Chalita's folder.
       ELIXIR_DATA_ROOT: "/elixir_data"
+      # Where completed intake packs are saved ("First Last YYYY-MM-DD.pdf").
+      INTAKE_FILE_DIR: "/patient_files"
     ports:
       - "3000:3000"
     volumes:
@@ -47,6 +49,10 @@ services:
       # by the Docker kernel layer — the hard constraint (never touch Elixir data)
       # cannot be violated even by a bug in the importer.
       - "D:/Paul le Roux/OneDrive/1. Dr Chalita le Roux:/elixir_data:ro"
+      # WRITABLE mount of ONLY the "1. Patient Files" folder, so completed intake
+      # packs land there for reception to print + file. Scoped to this one folder —
+      # the broad Dr Chalita le Roux mount above stays read-only.
+      - "D:/Paul le Roux/OneDrive/1. Dr Chalita le Roux/1. Policies and Procedures/1. Patient Files:/patient_files"
     depends_on:
       db:
         condition: service_healthy

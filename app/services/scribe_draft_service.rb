@@ -67,6 +67,7 @@ class ScribeDraftService
   private
 
   def claude_available?
+    return false if ENV["SCRIBE_DISABLE_LLM"] == "true" # deterministic mode for tests
     ENV["ANTHROPIC_API_KEY"].present? && !ENV["ANTHROPIC_API_KEY"].start_with?("dummy", "harness")
   end
 

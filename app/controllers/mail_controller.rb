@@ -11,6 +11,7 @@ class MailController < ApplicationController
     threads = MailThread.includes(:patient, :mail_account, :mail_messages)
                         .where(trashed: false, archived: false)
     threads = threads.where(mail_account_id: params[:account_id]) if params[:account_id].present?
+    threads = threads.where(folder: params[:folder])              if params[:folder].present?
     threads = threads.where(clinical_intent: params[:intent])      if params[:intent].present?
     threads = threads.unread                                       if params[:filter] == "unread"
     threads = threads.starred                                      if params[:filter] == "starred"
@@ -24,6 +25,7 @@ class MailController < ApplicationController
         {
           id: a.id, address: a.address, display_name: a.display_name,
           provider: a.provider, status: a.status, status_message: a.status_message,
+          folders: a.folders || [],
           unread_count: MailThread.where(mail_account_id: a.id).inbox.unread.count
         }
       },
@@ -31,7 +33,7 @@ class MailController < ApplicationController
       active_thread: active_thread && thread_detail_props(active_thread),
       pending_drafts_count: MailAppointmentDraft.pending.count,
       filters: {
-        account_id: params[:account_id], intent: params[:intent], filter: params[:filter]
+        account_id: params[:account_id], folder: params[:folder], intent: params[:intent], filter: params[:filter]
       }
     }
   end

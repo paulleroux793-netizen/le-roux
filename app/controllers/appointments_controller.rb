@@ -20,9 +20,9 @@ class AppointmentsController < ApplicationController
       calendar_view,
       calendar_date.iso8601
     ) do
-      appointments = Appointment.includes(:patient).order(start_time: :desc).limit(LIST_ROW_LIMIT).to_a
+      appointments = Appointment.includes(:provider, patient: :billing_accounts).order(start_time: :desc).limit(LIST_ROW_LIMIT).to_a
       calendar_appointments = Appointment
-        .includes(:patient)
+        .includes(:provider, patient: :billing_accounts)
         .where(start_time: range_start..range_end)
         .order(:start_time)
         .to_a
@@ -81,7 +81,7 @@ class AppointmentsController < ApplicationController
       calendar_date.iso8601
     ) do
       calendar_appointments = Appointment
-        .includes(:patient)
+        .includes(:provider, patient: :billing_accounts)
         .where(start_time: range_start..range_end)
         .order(:start_time)
         .to_a
@@ -102,6 +102,40 @@ class AppointmentsController < ApplicationController
     end
 
     render inertia: "CalendarFullscreen", props: page_data
+  end
+
+  # GET /diary?date=YYYY-MM-DD
+  # The Elixir-style day diary: one column per active dentist. Shows Ivory's own
+  # (editable) appointments plus the read-only Elixir history for the same day.
+  def diary
+    date = parse_diary_date(params[:date])
+    day_start = date.in_time_zone.beginning_of_day
+    day_end   = date.in_time_zone.end_of_day
+
+    providers = Provider.active.ordered.to_a
+    prov_by_norm = Provider.all.index_by { |p| normalize_provider_name(p.name) }
+
+    appts = Appointment.includes(:provider, patient: :billing_accounts)
+                       .where(start_time: day_start..day_end)
+                       .where.not(status: :cancelled)
+                       .order(:start_time).to_a
+
+    snapshots = ElixirDiarySnapshot.where(diary_date: date).order(:appointment_start_at).to_a
+
+    render inertia: "Diary", props: {
+      date: date.iso8601,
+      providers: providers.map { |p|
+        { id: p.id, name: p.display_name, full_name: p.name, color: p.color, position: p.position }
+      },
+      appointments: appts.map { |a| appointment_props(a) },
+      elixir_blocks: snapshots.filter_map { |s|
+        prov = prov_by_norm[normalize_provider_name(s.dentist)]
+        next unless prov&.active?
+        elixir_snapshot_props(s, prov)
+      },
+      closed_blocks: CalendarNote.between(day_start, day_end).order(:starts_at).map { |n| diary_closed_props(n) },
+      patients: []
+    }
   end
 
   def show
@@ -135,12 +169,9 @@ class AppointmentsController < ApplicationController
         status: :see_other
     end
 
-    if start_at <= Time.current
-      return redirect_back fallback_location: appointments_path,
-        alert: "Appointment must be in the future",
-        inertia: { errors: { start_time: "must be in the future" } },
-        status: :see_other
-    end
+    # NOTE: no "must be in the future" guard — reception books walk-ins for "now"
+    # and back-enters earlier-today / past visits for the record. The diary is a
+    # staff tool; the model still prevents per-dentist double-booking.
 
     # Calendar-fix path: reception clicked an empty slot, ticked
     # "New patient", typed first/last/phone — we create the Patient
@@ -164,23 +195,17 @@ class AppointmentsController < ApplicationController
         Patient.find(create_params[:patient_id])
       end
 
-    appointment =
-      if ENV["GOOGLE_CALENDAR_ID"].present?
-        GoogleCalendarService.new.book_appointment(
-          patient: patient,
-          start_time: start_at,
-          end_time: end_at,
-          reason: create_params[:reason]
-        )
-      else
-        patient.appointments.create!(
-          start_time: start_at,
-          end_time: end_at,
-          reason: create_params[:reason],
-          notes: create_params[:notes],
-          status: :scheduled
-        )
-      end
+    # Always persist the appointment locally. (Google Calendar sync is disabled
+    # dead code; routing through it silently dropped bookings when a dummy
+    # GOOGLE_CALENDAR_ID was set — the "booked but nothing saved" bug.)
+    appointment = patient.appointments.create!(
+      start_time: start_at,
+      end_time: end_at,
+      reason: create_params[:reason],
+      notes: create_params[:notes],
+      status: :scheduled,
+      provider_id: create_params[:provider_id].presence
+    )
 
     if appointment.is_a?(Appointment)
       # Create a pending confirmation log so the reminders page
@@ -205,7 +230,9 @@ class AppointmentsController < ApplicationController
     end
     expire_appointment_caches!
 
-    redirect_to appointments_location(appointment.start_time.to_date.iso8601),
+    # redirect_back so a booking made on the diary stays on the diary (and shows up);
+    # falls back to the calendar location when there's no referer (e.g. specs).
+    redirect_back fallback_location: appointments_location(appointment.start_time.to_date.iso8601),
       notice: "Appointment booked", status: :see_other
   rescue ActiveRecord::RecordNotFound
     redirect_back fallback_location: appointments_location,
@@ -264,6 +291,7 @@ class AppointmentsController < ApplicationController
     end
     attrs[:reason] = update_params[:reason] if update_params.key?(:reason)
     attrs[:notes]  = update_params[:notes]  if update_params.key?(:notes)
+    attrs[:provider_id] = update_params[:provider_id] if update_params.key?(:provider_id)
 
     Appointment.transaction do
       appointment.update!(attrs)
@@ -427,11 +455,11 @@ class AppointmentsController < ApplicationController
   private
 
   def create_params
-    params.require(:appointment).permit(:patient_id, :start_time, :end_time, :reason, :notes)
+    params.require(:appointment).permit(:patient_id, :start_time, :end_time, :reason, :notes, :provider_id)
   end
 
   def update_params
-    params.require(:appointment).permit(:start_time, :end_time, :reason, :notes)
+    params.require(:appointment).permit(:start_time, :end_time, :reason, :notes, :provider_id)
   end
 
   def cancel_params
@@ -476,11 +504,96 @@ class AppointmentsController < ApplicationController
       # "New" = this is the patient's only/earliest appointment. Lets the
       # pop-over show new-vs-existing without a server round-trip on click.
       is_new_patient: patient.appointments.where.not(id: appointment.id).none?,
+      account_code: patient.account_code,
+      provider_id: appointment.provider_id,
+      provider_name: appointment.provider&.display_name,
+      provider_color: appointment.provider&.color,
+      status_color: appointment.status_color,
       start_time: appointment.start_time.iso8601,
       end_time: appointment.end_time.iso8601,
       status: appointment.status,
       reason: appointment.reason,
       notes: appointment.notes
+    }
+  end
+
+  def parse_diary_date(value)
+    value.present? ? Date.iso8601(value) : Time.zone.today
+  rescue ArgumentError
+    Time.zone.today
+  end
+
+  # Comma-separated `dates` (Ctrl/Shift multi-select + Next-7/Month buttons),
+  # falling back to single `date`, falling back to today. Capped at 31 days.
+  def parse_diary_dates(dates_param, date_param)
+    if dates_param.present?
+      list = dates_param.to_s.split(",").filter_map { |s|
+        begin
+          Date.iso8601(s.strip)
+        rescue ArgumentError
+          nil
+        end
+      }.uniq.sort
+      return list.first(31) if list.any?
+    end
+    [ parse_diary_date(date_param) ]
+  end
+
+  def parse_int_list(value)
+    value.to_s.split(",").map(&:to_i).select(&:positive?)
+  end
+
+  # One day's worth of diary data (appointments + read-only Elixir history + closed blocks).
+  def diary_day_payload(date, prov_by_norm)
+    day_start = date.in_time_zone.beginning_of_day
+    day_end   = date.in_time_zone.end_of_day
+
+    appts = Appointment.includes(:provider, patient: :billing_accounts)
+                       .where(start_time: day_start..day_end)
+                       .where.not(status: :cancelled)
+                       .order(:start_time).to_a
+
+    snapshots = ElixirDiarySnapshot.where(diary_date: date).order(:appointment_start_at).to_a
+
+    {
+      date: date.iso8601,
+      appointments: appts.map { |a| appointment_props(a) },
+      elixir_blocks: snapshots.filter_map { |s|
+        prov = prov_by_norm[normalize_provider_name(s.dentist)]
+        next unless prov&.active?
+        elixir_snapshot_props(s, prov)
+      },
+      closed_blocks: CalendarNote.between(day_start, day_end).order(:starts_at).map { |n| diary_closed_props(n) }
+    }
+  end
+
+  def normalize_provider_name(value)
+    value.to_s.downcase.gsub(/[^a-z]/, "")
+  end
+
+  # Read-only block sourced from the Elixir diary mirror (not editable in Ivory).
+  # Rendered neutral/faded — it's historical context, its live status isn't tracked.
+  def elixir_snapshot_props(snapshot, provider)
+    {
+      id: "elixir-#{snapshot.id}",
+      source: "elixir",
+      provider_id: provider.id,
+      patient_name: snapshot.patient_name,
+      account_code: snapshot.account_code.presence,
+      reason: snapshot.reason,
+      is_new_patient: snapshot.is_new_patient,
+      start_time: snapshot.appointment_start_at.iso8601,
+      end_time: snapshot.appointment_end_at.iso8601
+    }
+  end
+
+  def diary_closed_props(note)
+    {
+      id: note.id,
+      provider_id: note.provider_id,
+      note: note.note,
+      starts_at: note.starts_at.iso8601,
+      ends_at: note.ends_at.iso8601
     }
   end
 
