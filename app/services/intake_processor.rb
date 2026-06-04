@@ -47,14 +47,16 @@ class IntakeProcessor
 
   attr_reader :patient, :answers
 
-  # Returns true if at least one submission was completed in this run.
+  # Submit completes the WHOLE intake, so complete every still-pending submission —
+  # even one a patient legitimately left blank (e.g. no medical history). Skipping
+  # empty sections used to leave them "opened" forever, so `completed` never went
+  # true and the thank-you screen never showed. Returns true if anything completed.
   def complete_submissions!
     completed_any = false
     self.class.pending_or_recent(patient).each do |submission|
-      data = answers[submission.form_template.key]
-      next if data.blank? || submission.status == "completed"
+      next if submission.status == "completed"
 
-      submission.complete!(data: data)
+      submission.complete!(data: answers[submission.form_template.key] || {})
       completed_any = true
     end
     completed_any

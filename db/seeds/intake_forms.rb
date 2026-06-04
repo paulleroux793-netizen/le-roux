@@ -58,7 +58,11 @@ upsert_template!(
           # which is designed to hold "SA ID / passport / DOB+zeros for kids".
           { key: "id_number", label: "ID or passport number", type: "text", required: true,
             help: "Your South African ID number — or your passport number if you are not a South African citizen." },
-          { key: "contact_number", label: "Contact number", type: "tel", required: false },
+          { key: "contact_number", label: "Cell number", type: "tel", required: false },
+          { key: "whatsapp_same", label: "Is your WhatsApp number the same as your cell number?",
+            type: "yesno", required: false },
+          { key: "whatsapp_number", label: "WhatsApp number", type: "tel", required: false,
+            reveal_when: { field: "whatsapp_same", equals: false } },
           { key: "email", label: "Email address", type: "email", required: false,
             help: "We email your settled account here so you can claim back from your medical aid." }
         ]
@@ -80,8 +84,7 @@ upsert_template!(
           { key: "rp_employer", label: "Employer", type: "text", required: false },
           { key: "rp_work_address", label: "Work address", type: "textarea", required: false },
           { key: "rp_work_phone", label: "Work tel number", type: "tel", required: false },
-          { key: "rp_postal_address", label: "Postal address", type: "textarea", required: false },
-          { key: "rp_email", label: "Email", type: "email", required: false }
+          { key: "rp_postal_address", label: "Postal address", type: "textarea", required: false }
         ]
       },
       {
@@ -255,9 +258,9 @@ upsert_template!(
                    "cannot fully guarantee results. I acknowledge that no guarantee has been made regarding " \
                    "the treatment I have requested and authorised." },
           { key: "payment_statement", type: "statement",
-            label: "This practice is contracted OUT of medical-aid tariffs and requires immediate payment " \
-                   "for all services rendered. A settled account will be emailed to me so I can claim back " \
-                   "from my medical aid. EFTs and month-end payments are not available." },
+            label: "We don't work directly with medical aid. Patients pay the practice directly and claim " \
+                   "back from their medical aid using the statement we provide. EFTs and month-end payments " \
+                   "are not available." },
           { key: "acknowledged",
             label: "I have read and understood the above, and will sign and initial the printed form on arrival.",
             type: "checkbox", required: true }

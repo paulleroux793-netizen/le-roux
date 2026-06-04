@@ -23,9 +23,9 @@ class IntakePrivacyNotice
       { title: "Why we collect it",
         body: "We process your personal and health information to assess your suitability for dental " \
               "treatment, to provide and manage your care, to keep clinical records as required by law " \
-              "and the HPCSA, to communicate with you about appointments, and to manage billing. We are " \
-              "contracted out of medical-aid tariffs — you pay the practice directly and we email you a " \
-              "settled account so you can claim back from your scheme." },
+              "and the HPCSA, to communicate with you about appointments, and to manage billing. We don't " \
+              "work directly with medical aid — you pay the practice directly and we provide a statement so " \
+              "you can claim back from your medical aid." },
 
       { title: "What we collect",
         body: "Your identification details (including your SA ID or passport number), contact details, " \

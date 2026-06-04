@@ -29,7 +29,7 @@ class IntakePdf
   # printed pack so the patient signs + initials it on arrival, acknowledging that
   # the practice does not claim from medical aid (patient pays, then claims back).
   POLICY_PARAGRAPHS = [
-    "This practice is contracted out of medical aid tariffs and requires IMMEDIATE payment for all services rendered.",
+    "We don't work directly with medical aid. You pay the practice directly for all services, and we provide a statement so you can claim back from your medical aid.",
     "You are kindly requested to settle your account straight after consultation.",
     "Credit / debit cards, masterpass and cash accepted.",
     "Settled accounts will be emailed to you in order for you to claim back from your medical aid.",
@@ -40,8 +40,8 @@ class IntakePdf
     "Please reschedule or cancel your appointment 24 hours before your appointment. Failing this, you " \
     "will be charged an appointment-not-kept fee should we not be able to fill your slot.".freeze
   POLICY_ACKNOWLEDGEMENT =
-    "I have read and understood the above. I understand that this practice does NOT claim from medical " \
-    "aid — I pay the practice directly for all services and claim back from my medical scheme myself.".freeze
+    "I have read and understood the above. I understand the practice does not work directly with medical " \
+    "aid — I pay the practice directly and claim back from my medical aid using the statement provided.".freeze
 
   def initialize(patient)
     @patient = patient

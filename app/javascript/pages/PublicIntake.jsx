@@ -152,9 +152,7 @@ function Wizard({ token, patient, practice, privacyNotice, templates }) {
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">
           {practice?.name || 'Dr Chalita le Roux Inc'}
         </p>
-        <h1 className="text-xl font-semibold mt-1">
-          {patient?.first_name ? `Hi ${patient.first_name} 👋` : 'Patient forms'}
-        </h1>
+        <h1 className="text-xl font-semibold mt-1">Hi Patient 👋</h1>
         <div className="mt-3 h-1.5 w-full rounded-full bg-brand-border">
           <div className="h-1.5 rounded-full bg-brand-primary transition-all" style={{ width: `${progress}%` }} />
         </div>
