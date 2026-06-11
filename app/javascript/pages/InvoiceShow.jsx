@@ -138,8 +138,6 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
               <th className="py-2 font-semibold">Description</th>
               <th className="py-2 text-center font-semibold">Tooth</th>
               <th className="py-2 text-center font-semibold">Qty</th>
-              <th className="py-2 text-right font-semibold">Medical</th>
-              <th className="py-2 text-right font-semibold">Self</th>
               <th className="py-2 text-right font-semibold">Amount</th>
             </tr>
           </thead>
@@ -153,8 +151,6 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
                 </td>
                 <td className="py-2 text-center text-brand-muted">{l.tooth_number || '—'}</td>
                 <td className="py-2 text-center text-brand-muted">{l.quantity}</td>
-                <td className="py-2 text-right text-brand-muted">{rand(l.medical)}</td>
-                <td className="py-2 text-right text-brand-muted">{rand(l.self_portion)}</td>
                 <td className="py-2 text-right text-brand-ink">{rand(l.line_total)}</td>
               </tr>
             ))}
@@ -163,9 +159,7 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
 
         {/* Totals */}
         <div className="mt-4 ml-auto w-64 space-y-1 text-sm">
-          <div className="flex justify-between text-brand-muted"><span>Medical (claim from your aid)</span><span>{rand(invoice.medical_total)}</span></div>
-          <div className="flex justify-between text-brand-muted"><span>Self (you pay)</span><span>{rand(invoice.self_total)}</span></div>
-          <div className="flex justify-between text-brand-muted"><span>VAT (incl.)</span><span>{rand(invoice.vat)}</span></div>
+          <div className="flex justify-between text-brand-muted"><span>VAT (15%, incl.)</span><span>{rand(invoice.vat)}</span></div>
           <div className="flex justify-between border-t border-brand-border pt-1 font-semibold text-brand-ink"><span>Total</span><span>{rand(invoice.total)}</span></div>
           <div className="flex justify-between text-brand-muted"><span>Paid</span><span>{rand(invoice.paid)}</span></div>
           <div className={cn('flex justify-between font-semibold', invoice.balance > 0 ? 'text-brand-danger' : 'text-emerald-600')}><span>Balance due</span><span>{rand(invoice.balance)}</span></div>

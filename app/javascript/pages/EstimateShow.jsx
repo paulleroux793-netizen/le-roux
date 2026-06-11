@@ -221,11 +221,8 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
               </select>
             </div>
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-brand-muted">Medical aid (for your claim)</p>
-            <p className="text-brand-ink">{patient.scheme || '— Private —'}</p>
-            {patient.member_number && <p className="text-brand-muted">Member no: {patient.member_number}</p>}
-          </div>
+          {/* Medical-aid block removed — the practice does not deal with medical aid. */}
+          <div></div>
         </div>
 
         {/* Multi-visit explainer (replaces the confusing "phases") */}
@@ -246,8 +243,8 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
                   {!patientView && <th className="py-1.5 font-semibold">Code</th>}
                   <th className="py-1.5 font-semibold">Treatment</th>
                   <th className="py-1.5 text-center font-semibold">Tooth</th>
-                  <th className="py-1.5 text-right font-semibold">Medical</th>
-                  <th className="py-1.5 text-right font-semibold">Self</th>
+                  <th className="py-1.5 text-center font-semibold">Qty</th>
+                  <th className="py-1.5 text-right font-semibold">Fee</th>
                   <th className="py-1.5 text-right font-semibold">Amount</th>
                 </tr>
               </thead>
@@ -257,11 +254,11 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
                     {!patientView && <td className="py-1.5 font-mono text-brand-ink">{l.code}</td>}
                     <td className="py-1.5 text-brand-ink">
                       {l.description}
-                      {!patientView && l.icd10_code && <span className="ml-2 text-xs text-brand-muted">ICD-10: {l.icd10_code}</span>}
+                      {l.icd10_code && <span className="ml-2 text-xs text-brand-muted">ICD-10: {l.icd10_code}</span>}
                     </td>
                     <td className="py-1.5 text-center text-brand-muted">{l.tooth_number || '—'}</td>
-                    <td className="py-1.5 text-right text-brand-muted">{rand(l.medical)}</td>
-                    <td className="py-1.5 text-right text-brand-muted">{rand(l.self_portion)}</td>
+                    <td className="py-1.5 text-center text-brand-ink">{l.quantity}</td>
+                    <td className="py-1.5 text-right text-brand-muted">{rand(l.unit_fee)}</td>
                     <td className="py-1.5 text-right text-brand-ink">{rand(l.line_total)}</td>
                   </tr>
                 ))}
@@ -269,9 +266,7 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
               {multiVisit && (
                 <tfoot>
                   <tr className="border-t border-brand-border">
-                    <td colSpan={patientView ? 2 : 3} className="py-1.5 text-right text-xs font-semibold uppercase tracking-wide text-brand-muted">Visit {v.visit} subtotal</td>
-                    <td className="py-1.5 text-right text-xs text-brand-muted">{rand(v.lines.reduce((s, l) => s + (l.medical || 0), 0))}</td>
-                    <td className="py-1.5 text-right text-xs font-semibold text-brand-ink">{rand(v.lines.reduce((s, l) => s + (l.self_portion || 0), 0))}</td>
+                    <td colSpan={patientView ? 4 : 5} className="py-1.5 text-right text-xs font-semibold uppercase tracking-wide text-brand-muted">Visit {v.visit} subtotal</td>
                     <td className="py-1.5 text-right text-sm font-bold text-brand-ink">{rand(v.lines.reduce((s, l) => s + (l.line_total || 0), 0))}</td>
                   </tr>
                 </tfoot>
@@ -280,22 +275,19 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
           </div>
         ))}
 
-        {/* Totals — emphasise what the patient pays (benchmark: biggest driver of case acceptance) */}
+        {/* Totals — one amount the patient pays. The practice does NOT split or claim from medical aid. */}
         <div className="mt-4 ml-auto w-72 space-y-1 text-sm">
-          <div className="flex justify-between text-brand-muted"><span>Total treatment fee</span><span>{rand(estimate.total)}</span></div>
-          <div className="flex justify-between text-brand-muted"><span>Less estimated medical-aid reimbursement</span><span>−{rand(estimate.medical_total)}</span></div>
           <div className="mt-1 flex items-baseline justify-between border-t-2 border-brand-primary pt-2">
-            <span className="font-semibold text-brand-ink">You pay our practice</span>
-            <span className="text-xl font-bold text-brand-primary">{rand(estimate.self_total)}</span>
+            <span className="font-semibold text-brand-ink">Total — amount payable (incl. VAT)</span>
+            <span className="text-xl font-bold text-brand-primary">{rand(estimate.total)}</span>
           </div>
-          <p className="pt-1 text-[11px] leading-snug text-brand-muted">Medical-aid reimbursement is an estimate and not guaranteed — schemes set their own rates. You pay the practice and submit this estimate to claim back.</p>
         </div>
 
         <div className="mt-6 border-t border-brand-border pt-4 text-xs text-brand-muted">
           <p className="font-medium text-brand-ink">Payment / banking</p>
           <p>{practice.bank}</p>
           <p className="mt-3 font-semibold text-brand-ink">ESTIMATE VALID FOR 14 DAYS</p>
-          <p className="mt-1">This is an estimate of planned treatment, not a final account. Actual fees may vary depending on what is clinically required on the day. You may submit the final invoice to your medical aid to claim back.</p>
+          <p className="mt-1">This is an estimate of planned treatment, not a final account. Actual fees may vary depending on what is clinically required on the day. The amount shown is payable to the practice. You are welcome to submit this document, with its procedure and ICD-10 codes, to your own medical scheme to claim back — the practice does not claim on your behalf.</p>
         </div>
       </div>
 

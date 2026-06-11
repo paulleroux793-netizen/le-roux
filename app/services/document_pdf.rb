@@ -109,9 +109,11 @@ class DocumentPdf
     dep = membership && SchemeMembershipPatient.find_by(scheme_membership_id: membership.id, patient_id: patient.id)&.dependant_code
 
     rows = [
-      [ "Patient",     winansi(patient.full_name) ],
-      [ "Phone",       patient.display_phone.to_s ],
-      [ "Medical aid", scheme_name + (membership ? " · Member #{membership.member_number}#{dep.present? ? " · Dependant #{dep}" : ''}" : "") ],
+      [ "Patient",        winansi(patient.full_name) ],
+      [ "ID number",      patient.try(:id_number).to_s.presence || "—" ],
+      [ "Date of birth",  patient.date_of_birth&.strftime("%-d %b %Y") || "—" ],
+      [ "Phone",          patient.display_phone.to_s ],
+      [ "Medical scheme", scheme_name + (membership ? " · Member #{membership.member_number}#{dep.present? ? " · Dependant #{dep}" : ''}" : "") ],
     ]
     rows << [ "Treating provider", winansi(doc.provider_name) ] if doc.try(:provider_name).present?
 
@@ -142,31 +144,34 @@ class DocumentPdf
   end
 
   def draw_line_table(line_list)
-    header = [ [ "Code", "Description", "Tooth", "Medical", "Self", "Amount" ] ]
+    # Columns match the SADA/HPCSA claim standard + the practice's Elixir claim form so the
+    # PATIENT can self-claim: Code · Qty · Description · ICD-10 · Tooth · NAPPI · Amount.
+    # ONE amount column — the practice does NOT split medical/self or claim on the patient's behalf.
+    header = [ [ "Code", "Qty", "Description", "ICD-10", "Tooth", "NAPPI", "Amount" ] ]
     rows = line_list.map do |l|
-      desc = winansi(l.description.to_s)
-      desc += "\nICD-10: #{l.icd10_code}" if l.icd10_code.present?
       [
         winansi(l.code.to_s),
-        desc,
+        "x #{l.quantity}",
+        winansi(l.description.to_s),
+        l.icd10_code.to_s.presence || "—",
         l.tooth_number.to_s.presence || "—",
-        money(l.medical_cents),
-        money(l.self_cents),
+        (l.try(:procedure_code)&.nappi_code).to_s.presence || "—",
         money(l.line_total_cents),
       ]
     end
-    rows = [ [ "(no lines)", "", "", "", "", "" ] ] if rows.empty?
+    rows = [ [ "(no lines)", "", "", "", "", "", "" ] ] if rows.empty?
 
     pdf.table(header + rows,
               header: true,
-              cell_style: { borders: [ :bottom ], border_color: "EEEEEE", padding: [ 5, 4, 5, 4 ], size: 9 },
-              column_widths: { 0 => 50, 2 => 40, 3 => 65, 4 => 65, 5 => 70 }) do
+              cell_style: { borders: [ :bottom ], border_color: "EEEEEE", padding: [ 5, 4, 5, 4 ], size: 8.5 },
+              column_widths: { 0 => 42, 1 => 28, 3 => 52, 4 => 38, 5 => 55, 6 => 62 }) do
       row(0).background_color = "F5F0E5"
       row(0).font_style = :bold
       row(0).text_color = "9A7521"
       row(0).borders = [ :bottom ]
-      columns(3..5).align = :right
-      column(2).align = :center
+      column(6).align = :right
+      columns(1).align = :center
+      column(4).align = :center
     end
   end
 
@@ -177,11 +182,9 @@ class DocumentPdf
 
     pdf.bounding_box([ box_x, pdf.cursor ], width: 240) do
       total_rows = [
-        [ "Subtotal",                       money(doc.subtotal_cents) ],
-        [ "VAT",                            money(doc.vat_cents) ],
-        [ "Medical (claim from your aid)",  money(doc.medical_total * 100) ],
-        [ "Self (you pay)",                 money(doc.self_total * 100) ],
-        [ @kind == :invoice ? "TOTAL DUE" : "TOTAL ESTIMATE", money(doc.total_cents) ]
+        [ "Subtotal",  money(doc.subtotal_cents) ],
+        [ "VAT (15%)", money(doc.vat_cents) ],
+        [ @kind == :invoice ? "TOTAL DUE" : "TOTAL", money(doc.total_cents) ]
       ]
       pdf.font_size 9
       pdf.table(total_rows, cell_style: { borders: [], padding: [ 3, 6, 3, 6 ], size: 9 }) do
