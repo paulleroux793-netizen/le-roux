@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { router, Link, Head } from '@inertiajs/react'
-import { ArrowLeft, Plus, ChevronLeft, ChevronRight, CalendarDays, Copy, X as XIcon } from 'lucide-react'
+import { ArrowLeft, Plus, ChevronLeft, ChevronRight, CalendarDays, Copy, X as XIcon, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 import AppointmentDetailModal from '../components/AppointmentDetailModal'
 import AppointmentFormModal from '../components/AppointmentFormModal'
@@ -332,6 +332,9 @@ export default function Diary({
 
         <div className="flex items-center gap-3">
           <Legend />
+          <a href={`/diary/print?date=${date}`} target="_blank" rel="noopener" title="Print the day's schedule (Elixir format) to post on the WhatsApp group" className="inline-flex items-center gap-1.5 rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-ink transition hover:bg-brand-surface/60">
+            <Printer size={15} /> Print schedule
+          </a>
           <button onClick={() => { setSelected(null); setPrefillStart(null); setPrefillProvider(providers.find((p) => !p.on_leave) || providers[0] || null); setModalMode('create') }} className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark">
             <Plus size={15} /> New appointment
           </button>

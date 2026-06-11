@@ -58,6 +58,8 @@ Rails.application.routes.draw do
   end
   # Elixir-style two-column day diary (one column per dentist).
   get "diary", to: "appointments#diary", as: :diary
+  # Printable day schedule (Elixir "APPOINTMENT DETAILS" layout) for the WhatsApp group.
+  get "diary/print", to: "appointments#print_schedule", as: :diary_print
 
   # Server-side Open-Graph link preview for the chat bubbles (SSRF-guarded). GET /link_preview?url=
   get "link_preview", to: "link_previews#show"

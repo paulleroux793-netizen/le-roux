@@ -142,6 +142,30 @@ class AppointmentsController < ApplicationController
     }
   end
 
+  # GET /diary/print?date=YYYY-MM-DD[&provider_id=] — printable day schedule in the
+  # Elixir "APPOINTMENT DETAILS" layout reception posts to the practice WhatsApp group.
+  # Plain print-friendly HTML (no Inertia); one page per dentist; window.print() on load.
+  def print_schedule
+    @date       = parse_diary_date(params[:date])
+    @printed_on = Time.zone.today
+    @open_time  = "08:00"
+    @close_time = "17:00"
+
+    providers = Provider.active.ordered.to_a
+    providers = providers.select { |p| p.id == params[:provider_id].to_i } if params[:provider_id].present?
+
+    day = @date.in_time_zone.beginning_of_day..@date.in_time_zone.end_of_day
+    @schedules = providers.map do |prov|
+      appts = Appointment.includes(:patient)
+                         .where(provider_id: prov.id, start_time: day)
+                         .where.not(status: :cancelled)
+                         .order(:start_time)
+      [ prov, appts ]
+    end
+
+    render "appointments/print_schedule", layout: false
+  end
+
   # GET /appointments/next_available?provider_id=&duration= — JSON list of the next
   # open slots for the booking modal's "Find next available" helper.
   def next_available
