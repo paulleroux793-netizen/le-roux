@@ -75,7 +75,7 @@ class RemindersController < ApplicationController
     {
       id: appointment.id,
       patient_name: appointment.patient.full_name,
-      patient_phone: appointment.patient.phone,
+      patient_phone: appointment.patient.display_phone,
       start_time: appointment.start_time.iso8601,
       end_time: appointment.end_time.iso8601,
       reason: appointment.reason,

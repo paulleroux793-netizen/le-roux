@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Accessibility (WCAG 2.4.7 Focus Visible) — a clear, consistent keyboard focus
+ * ring across every interactive element. :focus-visible targets keyboard nav only
+ * (not mouse clicks), so it never adds rings on click. Placed after the Tailwind
+ * layers so it overrides preflight's outline reset. */
+*:focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* ── Brand design tokens — mirror of tailwind.config.js ───────────
  * Phase 9.14 single source of truth. Tailwind classes
  * (`bg-brand-primary`, `text-brand-muted`, etc.) resolve via the

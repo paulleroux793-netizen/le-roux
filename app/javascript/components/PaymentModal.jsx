@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import { CreditCard, Banknote, Building2 } from 'lucide-react'
@@ -22,16 +22,28 @@ export default function PaymentModal({ open, onClose, invoice = {} }) {
   const [reference, setReference] = useState('')
   const [notes, setNotes]       = useState('')
   const [saving, setSaving]     = useState(false)
+  const [amountError, setAmountError] = useState('')
+  const amountRef = useRef(null)
 
   useEffect(() => {
     if (!open) return
     setAmount(balance > 0 ? balance.toFixed(2) : '')
-    setMethod('card'); setReference(''); setNotes(''); setSaving(false)
+    setMethod('card'); setReference(''); setNotes(''); setSaving(false); setAmountError('')
+    // Put the cursor on the amount, ready to type/Enter (keyboard-first).
+    setTimeout(() => { amountRef.current?.focus(); amountRef.current?.select() }, 0)
   }, [open, balance])
+
+  const overpay = (() => { const a = parseFloat(amount); return balance > 0 && a > balance ? a - balance : 0 })()
 
   const submit = () => {
     const amt = parseFloat(amount)
-    if (!amt || amt <= 0) { toast.error('Enter an amount greater than R0'); return }
+    if (!amt || amt <= 0) {
+      // Inline error + keep focus on the field — never lose what was typed.
+      setAmountError('Enter an amount greater than R0')
+      amountRef.current?.focus()
+      return
+    }
+    setAmountError('')
     setSaving(true)
     router.post(`/invoices/${invoice.id}/payments`, {
       amount: amt, method, reference: reference || null, notes: notes || null,
@@ -102,10 +114,16 @@ export default function PaymentModal({ open, onClose, invoice = {} }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-brand-muted">Amount (R)</label>
-            <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)}
-              className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45" />
+            <input ref={amountRef} type="number" step="0.01" value={amount}
+              onChange={(e) => { setAmount(e.target.value); if (amountError) setAmountError('') }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }}
+              className={`w-full rounded-2xl border bg-white px-3 py-2.5 text-sm text-brand-ink focus:outline-none focus:ring-4 ${amountError ? 'border-red-400 focus:ring-red-200' : 'border-brand-accent/80 focus:border-brand-primary focus:ring-brand-accent/45'}`} />
+            {amountError && <p className="mt-1 text-xs text-red-600">{amountError}</p>}
+            {overpay > 0 && (
+              <p className="mt-1 text-xs text-amber-700">R{overpay.toLocaleString('en-ZA', { minimumFractionDigits: 2 })} over the balance — recorded as a patient credit.</p>
+            )}
             {balance > 0 && (
-              <button type="button" onClick={() => setAmount(balance.toFixed(2))}
+              <button type="button" onClick={() => { setAmount(balance.toFixed(2)); setAmountError('') }}
                 className="mt-1 text-xs text-brand-primary hover:underline">
                 Pay full balance (R{balance.toFixed(2)})
               </button>

@@ -31,8 +31,10 @@ class SettingsController < ApplicationController
           address_line2: ps.address_line2,
           city:          ps.city,
           map_link:      ps.map_link,
-          emergency_phone: ps.emergency_phone
+          emergency_phone: ps.emergency_phone,
+          google_review_url: ps.google_review_url
         },
+        billing: billing_props,
         notifications: {
           email_confirmations: true,
           email_reminders: true,
@@ -66,6 +68,21 @@ class SettingsController < ApplicationController
         alert: ps.errors.full_messages.to_sentence,
         inertia: { errors: ps.errors.to_hash(true).transform_values { |m| m.first } },
         status: :see_other
+    end
+  end
+
+  # PATCH /settings/billing — practice billing/legal details shown on invoices,
+  # statements and medical-aid claims (HPCSA, BHF, VAT, bank).
+  def update_billing
+    bp = PracticeBillingProfile.current
+    if bp.update(billing_params)
+      expire_dev_page_cache("settings/index")
+      AuditService.log(action: "settings.billing_updated", summary: "Updated billing details",
+                       performed_by: audit_performer, ip_address: request.remote_ip)
+      redirect_to settings_path, notice: "Billing details saved", status: :see_other
+    else
+      redirect_to settings_path, alert: bp.errors.full_messages.to_sentence,
+        inertia: { errors: bp.errors.to_hash(true).transform_values { |m| m.first } }, status: :see_other
     end
   end
 
@@ -123,7 +140,25 @@ class SettingsController < ApplicationController
     { today: nil, last_7_days: nil, daily: {} }
   end
   def practice_params
-    params.require(:practice).permit(:name, :phone, :email, :address_line1, :address_line2, :city, :map_link, :emergency_phone)
+    params.require(:practice).permit(:name, :phone, :email, :address_line1, :address_line2, :city, :map_link, :emergency_phone, :google_review_url)
+  end
+
+  def billing_params
+    params.require(:billing).permit(:hpcsa_number, :bhf_practice_number, :vat_number, :vat_registered,
+      :company_reg, :practitioner_name, :practitioner_hpcsa_number, :practitioner_bhf_number,
+      :bank_name, :bank_account_name, :bank_account_number, :bank_branch_code)
+  end
+
+  def billing_props
+    bp = PracticeBillingProfile.current
+    {
+      hpcsa_number: bp.hpcsa_number, bhf_practice_number: bp.bhf_practice_number,
+      vat_number: bp.vat_number, vat_registered: bp.vat_registered, company_reg: bp.company_reg,
+      practitioner_name: bp.practitioner_name, practitioner_hpcsa_number: bp.practitioner_hpcsa_number,
+      practitioner_bhf_number: bp.practitioner_bhf_number,
+      bank_name: bp.bank_name, bank_account_name: bp.bank_account_name,
+      bank_account_number: bp.bank_account_number, bank_branch_code: bp.bank_branch_code
+    }
   end
 
   def pricing_params

@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { router, Link, Head } from '@inertiajs/react'
-import { ArrowLeft, Plus, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { ArrowLeft, Plus, ChevronLeft, ChevronRight, CalendarDays, Copy, X as XIcon } from 'lucide-react'
+import { toast } from 'sonner'
 import AppointmentDetailModal from '../components/AppointmentDetailModal'
 import AppointmentFormModal from '../components/AppointmentFormModal'
 import CancelAppointmentModal from '../components/CancelAppointmentModal'
+import DiaryContextMenu from '../components/DiaryContextMenu'
+
+// Friendly status labels for the right-click menu's success toast.
+const STATUS_TOAST = {
+  confirmed: 'Confirmed',
+  arrived: 'Marked as arrived',
+  in_consultation: 'Consultation started',
+  completed: 'Marked as completed',
+}
 
 // ── Elixir-style day diary: one column per dentist ────────────────────
 // Matches the practice's Elixir "express diary": a time axis down the left,
@@ -73,6 +83,10 @@ export default function Diary({
 
   // Live refresh every 30s so the diary stays current across machines — but NEVER
   // while a modal is open (it was interrupting clicks / making things feel stuck).
+  // NOTE: ctxMenu is declared further down, so it must NOT be referenced here
+  // (doing so crashed the whole page — temporal dead zone). The context menu
+  // closes itself on outside-click/Escape, so pausing the 30s refresh for it
+  // isn't needed.
   useEffect(() => {
     if (modalMode) return undefined
     const t = setInterval(() => {
@@ -111,16 +125,162 @@ export default function Diary({
   const onColumnClick = (provider, ev) => {
     // Only treat clicks on the column background (not on a block) as "book here".
     if (ev.target.closest('[data-block]')) return
+    // Provider is closed for bookings on this date (e.g. maternity leave) — don't book.
+    if (provider?.on_leave) {
+      window.alert(`${provider.name} is not taking bookings on this date. Please book with an available dentist.`)
+      return
+    }
     const rect = ev.currentTarget.getBoundingClientRect()
     const y = ev.clientY - rect.top
     const raw = DAY_START + Math.round((y / PX) / 15) * 15
     const snapped = Math.min(Math.max(raw, DAY_START), DAY_END - 15) // clamp to clinic hours
     const dt = new Date(date + 'T00:00:00')
     dt.setMinutes(snapped)
+    // Remember this empty slot so Ctrl+V can duplicate the copied appointment here.
+    lastSlotRef.current = { provider, start: dt }
     setPrefillProvider(provider)
     setPrefillStart(dt)
     setSelected(null)
     setModalMode('create')
+  }
+
+  // ── Drag-to-move: drag an Ivory appointment to a new time and/or dentist ──
+  // Elixir-parity reschedule. Keeps the duration; the dentist = the column you
+  // drop on. Server enforces the per-provider no-overlap constraint, so a drop
+  // onto a taken slot is rejected with a friendly message.
+  const dragRef = useRef(null)
+  const [dragId, setDragId] = useState(null)
+
+  // ── Right-click context menu (status / cancel / edit) ────────────────
+  // { x, y, appt } while open; null when closed. Acts ONLY on Ivory blocks.
+  const [ctxMenu, setCtxMenu] = useState(null)
+  // The currently-selected appointment (single click) — highlighted, and the
+  // target for Ctrl+C / Ctrl+X.
+  const [selectedId, setSelectedId] = useState(null)
+  const onApptContextMenu = (e, a) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setCtxMenu({ x: e.clientX, y: e.clientY, appt: a })
+  }
+  const onCtxPick = (key) => {
+    const appt = ctxMenu?.appt
+    setCtxMenu(null)
+    if (!appt) return
+    if (key === 'cancel') {
+      // Cancel = grey it out but KEEP it in the diary (never remove).
+      router.patch(`/appointments/${appt.id}/set_status`, { status: 'cancelled' }, {
+        preserveScroll: true, preserveState: true,
+        onSuccess: () => toast('Cancelled — greyed, kept in the diary'),
+        onError: () => toast.error('Could not cancel'),
+      })
+      return
+    }
+    if (key === 'edit') { openEdit(appt); return }
+    // A patient-journey status change — recolours server-side.
+    router.patch(`/appointments/${appt.id}/set_status`, { status: key }, {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: () => toast.success(STATUS_TOAST[key] || 'Status updated'),
+      onError: () => toast.error('Could not update'),
+    })
+  }
+
+  // ── Copy & paste (Ctrl/Cmd+C → duplicate, Ctrl/Cmd+V → place) ─────────
+  // `lastApptRef` = the most recently clicked Ivory block; `lastSlotRef` =
+  // the last empty slot clicked (provider + snapped start). `clipboard`
+  // holds what was copied so a banner can show and Ctrl+V can duplicate it.
+  const lastApptRef = useRef(null)
+  const lastSlotRef = useRef(null)
+  const [clipboard, setClipboard] = useState(null)
+
+  useEffect(() => {
+    const onKey = (e) => {
+      // Don't hijack copy/paste while typing in an input (e.g. the date picker).
+      const tag = (e.target?.tagName || '').toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return
+      const mod = e.ctrlKey || e.metaKey
+      // Ctrl+C = copy (duplicate on paste) · Ctrl+X = cut (move on paste).
+      if (mod && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X')) {
+        const a = lastApptRef.current
+        if (!a) return
+        e.preventDefault()
+        const cut = e.key === 'x' || e.key === 'X'
+        const durationMin = Math.max(
+          Math.round((new Date(a.end_time) - new Date(a.start_time)) / 60000), 15,
+        )
+        setClipboard({ apptId: a.id, patient_id: a.patient_id, patient_name: a.patient_name, reason: a.reason, durationMin, cut })
+        toast(`${cut ? 'Cut' : 'Copied'} ${a.patient_name} — click a slot and Ctrl+V`)
+      } else if (mod && (e.key === 'v' || e.key === 'V')) {
+        if (!clipboard || !lastSlotRef.current) return
+        e.preventDefault()
+        const slot = lastSlotRef.current
+        if (slot.provider?.on_leave) { window.alert(`${slot.provider.name} is not taking bookings on this date.`); return }
+        const start = new Date(slot.start)
+        const end = new Date(start.getTime() + clipboard.durationMin * 60000)
+        const when = { start_time: start.toISOString(), end_time: end.toISOString(), provider_id: slot.provider.id }
+        if (clipboard.cut) {
+          // MOVE the original appointment to the new slot/dentist.
+          router.patch(`/appointments/${clipboard.apptId}`, { appointment: when }, {
+            preserveScroll: true, preserveState: true,
+            onSuccess: () => { toast.success(`Moved ${clipboard.patient_name}`); setClipboard(null) },
+            onError: () => toast.error('Could not move — that slot may be taken'),
+          })
+        } else {
+          // DUPLICATE for the same patient.
+          router.post('/appointments', {
+            appointment: { ...when, patient_id: clipboard.patient_id, reason: clipboard.reason },
+          }, {
+            preserveScroll: true, preserveState: true,
+            onSuccess: () => toast.success(`Pasted ${clipboard.patient_name}`),
+            onError: () => toast.error('Could not paste — that slot may be taken'),
+          })
+        }
+      } else if (e.key === 'Escape' && clipboard) {
+        setClipboard(null)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [clipboard])
+
+  const onApptDragStart = (e, a) => {
+    const startMin = minsFromMidnight(a.start_time)
+    const endMin = minsFromMidnight(a.end_time)
+    const col = e.currentTarget.closest('[data-col]')
+    const blockTopPx = (Math.max(startMin, DAY_START) - DAY_START) * PX
+    const grabOffsetPx = col ? (e.clientY - col.getBoundingClientRect().top) - blockTopPx : 0
+    dragRef.current = {
+      id: a.id,
+      durationMin: Math.max(endMin - startMin, 15),
+      grabOffsetPx,
+      origStartMin: startMin,
+      origProviderId: a.provider_id,
+    }
+    e.dataTransfer.effectAllowed = 'move'
+    try { e.dataTransfer.setData('text/plain', String(a.id)) } catch (_) {}
+    setDragId(a.id)
+  }
+  const onApptDragEnd = () => { dragRef.current = null; setDragId(null) }
+  const onColumnDragOver = (e) => { if (dragRef.current) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }
+  const onColumnDrop = (e, provider) => {
+    const info = dragRef.current
+    if (!info) return
+    e.preventDefault()
+    onApptDragEnd()
+    if (provider?.on_leave) { window.alert(`${provider.name} is not taking bookings on this date.`); return }
+    const rect = e.currentTarget.getBoundingClientRect()
+    const topPx = (e.clientY - rect.top) - info.grabOffsetPx
+    let startMin = DAY_START + Math.round((topPx / PX) / 15) * 15
+    startMin = Math.min(Math.max(startMin, DAY_START), DAY_END - info.durationMin)
+    if (startMin === info.origStartMin && provider.id === info.origProviderId) return // dropped where it was
+    const start = new Date(date + 'T00:00:00'); start.setMinutes(startMin)
+    const end = new Date(start.getTime() + info.durationMin * 60000)
+    router.patch(`/appointments/${info.id}`, {
+      appointment: { start_time: start.toISOString(), end_time: end.toISOString(), provider_id: provider.id },
+    }, {
+      preserveScroll: true, preserveState: true,
+      onError: () => window.alert('Could not move — that slot may already be taken.'),
+    })
   }
 
   const apptsFor = (pid) => appointments.filter((a) => a.provider_id === pid)
@@ -139,9 +299,9 @@ export default function Diary({
           </Link>
           <span className="h-5 w-px bg-brand-border" />
           <div className="flex items-center gap-1">
-            <button onClick={() => goTo(shiftDate(date, -1))} title="Previous day" className="rounded-lg p-1.5 text-brand-muted hover:bg-brand-surface hover:text-brand-ink"><ChevronLeft size={18} /></button>
+            <button onClick={() => goTo(shiftDate(date, -1))} title="Previous day" aria-label="Previous day" className="rounded-lg p-1.5 text-brand-muted hover:bg-brand-surface hover:text-brand-ink"><ChevronLeft size={18} /></button>
             <button onClick={() => goTo(todayStr())} className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-brand-muted hover:bg-brand-surface hover:text-brand-ink">Today</button>
-            <button onClick={() => goTo(shiftDate(date, 1))} title="Next day" className="rounded-lg p-1.5 text-brand-muted hover:bg-brand-surface hover:text-brand-ink"><ChevronRight size={18} /></button>
+            <button onClick={() => goTo(shiftDate(date, 1))} title="Next day" aria-label="Next day" className="rounded-lg p-1.5 text-brand-muted hover:bg-brand-surface hover:text-brand-ink"><ChevronRight size={18} /></button>
           </div>
           <div className="flex items-center gap-2">
             <CalendarDays size={16} className="text-brand-primary" />
@@ -152,7 +312,7 @@ export default function Diary({
 
         <div className="flex items-center gap-3">
           <Legend />
-          <button onClick={() => { setSelected(null); setPrefillStart(null); setPrefillProvider(providers[0] || null); setModalMode('create') }} className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark">
+          <button onClick={() => { setSelected(null); setPrefillStart(null); setPrefillProvider(providers.find((p) => !p.on_leave) || providers[0] || null); setModalMode('create') }} className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark">
             <Plus size={15} /> New appointment
           </button>
         </div>
@@ -182,12 +342,21 @@ export default function Diary({
                 <div className="flex h-9 items-center justify-center gap-2 border-b border-brand-border bg-brand-surface/40 text-sm font-semibold text-brand-ink">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: prov.color }} />
                   {prov.name}
+                  {prov.on_leave && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700">On leave</span>}
                 </div>
-                <div className="relative cursor-copy" style={{ height: gridHeight }} onClick={(e) => onColumnClick(prov, e)}>
+                <div data-col className={`relative ${prov.on_leave ? 'cursor-not-allowed' : 'cursor-copy'}`} style={{ height: gridHeight }} onClick={(e) => onColumnClick(prov, e)} onDragOver={onColumnDragOver} onDrop={(e) => onColumnDrop(e, prov)}>
                   {/* hour lines */}
                   {hourRows.map((h) => (
                     <div key={h} className="pointer-events-none absolute inset-x-0 border-t border-brand-border/60" style={{ top: (h * 60 - DAY_START) * PX }} />
                   ))}
+
+                  {/* Maternity-leave / not-bookable overlay: diagonal hatch + label, blocks click-to-book */}
+                  {prov.on_leave && (
+                    <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-6"
+                         style={{ backgroundImage: 'repeating-linear-gradient(45deg, rgba(180,180,180,0.10) 0, rgba(180,180,180,0.10) 10px, rgba(180,180,180,0.18) 10px, rgba(180,180,180,0.18) 20px)' }}>
+                      <span className="rounded-lg bg-white/85 px-3 py-1.5 text-xs font-semibold text-brand-muted shadow-sm">Diary closed — not taking bookings</span>
+                    </div>
+                  )}
 
                   {/* Closed / blocked — click to remove */}
                   {closedFor(prov.id).map((c) => (
@@ -228,9 +397,14 @@ export default function Diary({
                     <button
                       key={a.id}
                       data-block
-                      onClick={(e) => { e.stopPropagation(); openDetail(a) }}
-                      title={`${a.patient_name} · ${a.status}`}
-                      className="absolute inset-x-1 overflow-hidden rounded-md px-2 py-1 text-left text-[11px] leading-tight shadow-sm transition hover:shadow-md hover:brightness-95"
+                      draggable={!prov.on_leave}
+                      onDragStart={(e) => onApptDragStart(e, a)}
+                      onDragEnd={onApptDragEnd}
+                      onClick={(e) => { e.stopPropagation(); lastApptRef.current = a; setSelectedId(a.id) }}
+                      onDoubleClick={(e) => { e.stopPropagation(); openDetail(a) }}
+                      onContextMenu={(e) => onApptContextMenu(e, a)}
+                      title={`${a.patient_name} · ${a.status} — click to select (Ctrl+C copy · Ctrl+X cut · Ctrl+V paste) · double-click to open · drag to move · right-click for status`}
+                      className={`absolute inset-x-1 cursor-move overflow-hidden rounded-md px-2 py-1 text-left text-[11px] leading-tight shadow-sm transition hover:shadow-md hover:brightness-95 ${dragId === a.id ? 'opacity-40 ring-2 ring-brand-primary' : selectedId === a.id ? 'ring-2 ring-brand-primary ring-offset-1' : ''}`}
                       style={{ ...blockBox(a.start_time, a.end_time), ...apptStyle(a) }}
                     >
                       <div className="flex items-center justify-between font-semibold">
@@ -246,6 +420,28 @@ export default function Diary({
           </div>
         )}
       </main>
+
+      {/* Copy banner — visible while an appointment is on the clipboard. */}
+      {clipboard && (
+        <div className="pointer-events-auto fixed bottom-4 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-brand-primary/40 bg-brand-primary/10 px-4 py-2 text-sm text-brand-ink shadow-lg">
+          <span className="flex items-center gap-2">
+            <Copy size={14} className="text-brand-primary" />
+            Copied <strong>{clipboard.patient_name}</strong> — click an empty slot then press Ctrl+V to duplicate. Esc to clear.
+          </span>
+          <button
+            type="button"
+            onClick={() => setClipboard(null)}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-brand-muted hover:bg-white hover:text-brand-ink"
+          >
+            <XIcon size={13} /> Clear
+          </button>
+        </div>
+      )}
+
+      {/* Right-click status menu (Ivory blocks only). */}
+      {ctxMenu && (
+        <DiaryContextMenu x={ctxMenu.x} y={ctxMenu.y} onPick={onCtxPick} onClose={() => setCtxMenu(null)} />
+      )}
 
       {/* Modals */}
       <AppointmentDetailModal appointment={selected} open={modalMode === 'detail'} onClose={closeModal} onEdit={() => openEdit(selected)} onCancel={() => openCancel(selected)} />

@@ -15,7 +15,7 @@ const TABS = [
   { key: 'appearance',    label: 'settings_tab_appearance',    labelAf: 'Voorkoms',       icon: Palette },
 ]
 
-export default function Settings({ schedules, pricing, practice, notifications, ai_costs }) {
+export default function Settings({ schedules, pricing, practice, billing, notifications, ai_costs }) {
   const { t, language, setLanguage } = useLanguage()
   const [activeTab, setActiveTab] = useState('practice')
 
@@ -69,7 +69,7 @@ export default function Settings({ schedules, pricing, practice, notifications, 
 
       {/* Tab content */}
       <div className="max-w-4xl">
-        {activeTab === 'practice' && <PracticeTab practice={practice} pricing={pricing} t={t} />}
+        {activeTab === 'practice' && <PracticeTab practice={practice} pricing={pricing} billing={billing} t={t} />}
         {activeTab === 'hours' && <HoursTab schedules={schedules} t={t} />}
         {activeTab === 'notifications' && <NotificationsTab notifications={notifications} t={t} />}
         {activeTab === 'appearance' && <AppearanceTab language={language} setLanguage={setLanguage} t={t} />}
@@ -79,11 +79,32 @@ export default function Settings({ schedules, pricing, practice, notifications, 
 }
 
 /* ── Practice Info Tab ──────────────────────────────────────────────── */
-function PracticeTab({ practice, pricing, t }) {
+function PracticeTab({ practice, pricing, billing = {}, t }) {
   const [practiceForm, setPracticeForm] = useState({ ...practice })
   const [pricingForm, setPricingForm] = useState({ ...pricing })
+  const [billingForm, setBillingForm] = useState({ ...billing })
   const [savingPractice, setSavingPractice] = useState(false)
   const [savingPricing, setSavingPricing] = useState(false)
+  const [savingBilling, setSavingBilling] = useState(false)
+
+  const saveBilling = (e) => {
+    e.preventDefault()
+    setSavingBilling(true)
+    router.patch('/settings/billing', { billing: billingForm }, {
+      preserveScroll: true,
+      onSuccess: () => toast.success('Billing details saved'),
+      onError: () => toast.error('Failed to save billing details'),
+      onFinish: () => setSavingBilling(false),
+    })
+  }
+  const billingField = (key, label, placeholder) => (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold uppercase tracking-wide text-brand-muted">{label}</label>
+      <input type="text" value={billingForm[key] || ''} placeholder={placeholder}
+        onChange={e => setBillingForm(f => ({ ...f, [key]: e.target.value }))}
+        className="h-9 rounded-lg border border-brand-border bg-brand-surface px-3 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/30" />
+    </div>
+  )
 
   const savePractice = (e) => {
     e.preventDefault()
@@ -160,6 +181,7 @@ function PracticeTab({ practice, pricing, t }) {
             {practiceField('address_line2', 'Address line 2', 'Corner of Street A & Street B')}
             {practiceField('city', 'City / Suburb', 'Roodepoort, Johannesburg, 2040')}
             {practiceField('map_link', 'Google Maps link', 'https://maps.app.goo.gl/...')}
+            {practiceField('google_review_url', 'Google review link (for review requests)', 'https://g.page/r/...')}
           </div>
           {practiceForm.map_link && (
             <a
@@ -181,6 +203,31 @@ function PracticeTab({ practice, pricing, t }) {
             >
               <Save size={15} />
               {savingPractice ? 'Saving…' : 'Save Practice Details'}
+            </button>
+          </div>
+        </form>
+      </Card>
+
+      {/* Billing details — shown on invoices, statements & medical-aid claims */}
+      <Card icon={Building2} title="Billing details (on invoices & statements)"
+        subtitle="HPCSA, BHF/practice number, VAT and banking — used on every invoice, statement and medical-aid claim.">
+        <form onSubmit={saveBilling} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {billingField('hpcsa_number', 'Practice HPCSA number', 'e.g. MP0123456')}
+            {billingField('bhf_practice_number', 'BHF / practice number', 'e.g. 0992801')}
+            {billingField('vat_number', 'VAT number', 'e.g. 4XXXXXXXXX')}
+            {billingField('company_reg', 'Company registration', 'e.g. 2021/XXXXXX/21')}
+            {billingField('practitioner_name', 'Treating practitioner name', 'Dr Chalita le Roux')}
+            {billingField('practitioner_hpcsa_number', 'Practitioner HPCSA', 'e.g. DP0118702')}
+            {billingField('bank_name', 'Bank name', 'e.g. FNB')}
+            {billingField('bank_account_name', 'Account name', 'Dr Chalita le Roux Inc')}
+            {billingField('bank_account_number', 'Account number', '')}
+            {billingField('bank_branch_code', 'Branch code', '')}
+          </div>
+          <div className="flex justify-end">
+            <button type="submit" disabled={savingBilling}
+              className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white hover:bg-brand-primary-dark disabled:opacity-50">
+              {savingBilling ? 'Saving…' : 'Save Billing Details'}
             </button>
           </div>
         </form>

@@ -2,11 +2,14 @@ import React, { useState } from 'react'
 import { Link, router } from '@inertiajs/react'
 import {
   Pencil, HeartPulse, Shield, Phone, Trash2, Calendar, ClipboardPlus,
-  FileText, Receipt, Wallet, ArrowRight, MessageSquare, Users, Plus, Scan,
+  FileText, Receipt, Wallet, ArrowRight, MessageSquare, Users, Plus, Scan, Grid3x3,
+  AlertTriangle, GitMerge, UserCheck,
 } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
+import Odontogram from '../components/Odontogram'
 import PatientFormModal from '../components/PatientFormModal'
 import AppointmentFormModal from '../components/AppointmentFormModal'
+import DicomViewer from '../components/DicomViewer'
 
 const STATUS_STYLES = {
   scheduled:   'bg-amber-100 text-amber-800',
@@ -42,21 +45,37 @@ export default function PatientShow({
   open_estimates: openEstimates = [],
   open_invoices: openInvoices = [],
   outstanding_balance: outstandingBalance = 0,
+  google_review_url: googleReviewUrl = null,
   next_appointment: nextAppointment = null,
+  tooth_chart: toothChart = {},
+  tooth_chart_detail: toothChartDetail = {},
+  likely_match: likelyMatch = null,
 }) {
   const [editOpen, setEditOpen] = useState(false)
   const [bookOpen, setBookOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [tab, setTab] = useState('overview')
+  const [dicomStudy, setDicomStudy] = useState(null)
 
   const handleDelete = () => {
     router.delete(`/patients/${patient.id}`, { onSuccess: () => setConfirmDelete(false) })
+  }
+  const mergeInto = () => {
+    if (!likelyMatch) return
+    const acct = likelyMatch.account_code ? ` (${likelyMatch.account_code})` : ''
+    if (!window.confirm(`Merge this self-registration INTO ${likelyMatch.name}${acct}? Their submitted form, medical history and details move onto that patient and this placeholder is removed.`)) return
+    router.post(`/patients/${patient.id}/merge_into`, { target_id: likelyMatch.id })
+  }
+  const confirmNew = () => {
+    if (!window.confirm('Confirm this is a NEW patient (not a duplicate)? They will get an account number and consent on file.')) return
+    router.post(`/patients/${patient.id}/confirm_new`)
   }
   const minimalPatientList = [{ id: patient.id, name: patient.full_name, phone: patient.phone }]
 
   const TABS = [
     { key: 'overview',   label: 'Overview',        icon: HeartPulse },
     { key: 'treatment',  label: 'Treatment Plans', icon: ClipboardPlus, count: courses.length },
+    { key: 'chart',      label: 'Dental Chart',    icon: Grid3x3,       count: Object.keys(toothChart).length },
     { key: 'estimates',  label: 'Estimates',       icon: FileText,      count: estimates.length },
     { key: 'invoices',   label: 'Invoices',        icon: Receipt,       count: invoices.length },
     { key: 'imaging',    label: 'Imaging (SIDEXIS)', icon: Scan,        count: imaging.length },
@@ -72,6 +91,34 @@ export default function PatientShow({
         </Link>
       </div>
 
+      {patient.needs_review && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={20} className="mt-0.5 flex-shrink-0 text-amber-600" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-900">Self-registered — needs review</p>
+              <p className="mt-0.5 text-sm text-amber-800">
+                {likelyMatch ? (
+                  <>This looks like an existing patient: <strong>{likelyMatch.name}</strong>{likelyMatch.account_code ? ` (${likelyMatch.account_code})` : ''}. Verify their identity, then merge — or keep as a new patient.</>
+                ) : (
+                  <>Verify this patient's identity, then confirm them as new (no obvious existing match was found).</>
+                )}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {likelyMatch && (
+                  <button onClick={mergeInto} className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-amber-700">
+                    <GitMerge size={15} /> Merge into {likelyMatch.name}
+                  </button>
+                )}
+                <button onClick={confirmNew} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400 bg-white px-3 py-2 text-sm font-semibold text-amber-800 transition-colors hover:bg-amber-100">
+                  <UserCheck size={15} /> Not a duplicate — keep as new
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Patient header (always visible — the spine of the record) ── */}
       <div className="bg-white rounded-xl border border-gray-200 p-6 mb-5">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
@@ -81,6 +128,17 @@ export default function PatientShow({
               {billingAccount && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-brand-cream px-2.5 py-0.5 text-xs font-semibold text-brand-brown">
                   <Wallet size={11} /> {billingAccount.account_code}
+                </span>
+              )}
+              {outstandingBalance > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-danger/10 px-2.5 py-0.5 text-xs font-semibold text-brand-danger" title="Outstanding balance on this account">
+                  <Wallet size={11} /> Owes {ZAR(outstandingBalance)}
+                </span>
+              )}
+              {(medical_history?.allergies || medical_history?.chronic_conditions) && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700"
+                  title={[medical_history.allergies && `Allergies: ${medical_history.allergies}`, medical_history.chronic_conditions && `Conditions: ${medical_history.chronic_conditions}`].filter(Boolean).join(' · ')}>
+                  <HeartPulse size={11} /> Medical alert
                 </span>
               )}
               {patient.ai_consent && (
@@ -104,6 +162,15 @@ export default function PatientShow({
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-brown hover:bg-brand-cream rounded-lg transition-colors border border-gray-200">
               <Pencil size={13} /> Edit
             </button>
+            {googleReviewUrl && patient.phone && (
+              <a
+                href={`https://wa.me/${(patient.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${patient.first_name || patient.full_name || 'there'}, thank you for visiting Dr Chalita le Roux! We'd really appreciate a quick Google review — it helps us a lot: ${googleReviewUrl}`)}`}
+                target="_blank" rel="noopener noreferrer"
+                title="Open WhatsApp with a pre-filled review request to send"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100">
+                <MessageSquare size={13} /> Request review
+              </a>
+            )}
             <button type="button" onClick={() => setConfirmDelete(true)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-danger hover:bg-brand-danger/5 rounded-lg transition-colors border border-brand-danger/20">
               <Trash2 size={13} /> Delete
@@ -141,6 +208,17 @@ export default function PatientShow({
           </Field>
         </div>
       </div>
+
+      {/* Persistent medical-alert banner — always visible (every tab) so the dentist never
+          misses a drug allergy / condition / medication before treatment. Allergies first. */}
+      {(medical_history?.allergies || medical_history?.chronic_conditions || medical_history?.current_medications) && (
+        <div className="mb-4 flex flex-wrap items-start gap-x-4 gap-y-1 rounded-lg border border-red-300 bg-red-50 px-4 py-2.5 text-sm">
+          <span className="inline-flex shrink-0 items-center gap-1.5 font-bold uppercase tracking-wide text-red-700"><HeartPulse size={15} /> Medical alert</span>
+          {medical_history.allergies && <span className="text-red-800"><span className="font-semibold">Allergies:</span> {medical_history.allergies}</span>}
+          {medical_history.chronic_conditions && <span className="text-red-800"><span className="font-semibold">Conditions:</span> {medical_history.chronic_conditions}</span>}
+          {medical_history.current_medications && <span className="text-red-800"><span className="font-semibold">Meds:</span> {medical_history.current_medications}</span>}
+        </div>
+      )}
 
       {/* ── Tab bar ── */}
       <div className="mb-5 flex flex-wrap gap-1 border-b border-gray-200">
@@ -181,6 +259,16 @@ export default function PatientShow({
       )}
 
       {tab === 'treatment' && (
+        <div>
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => router.post(`/patients/${patient.id}/courses_of_treatment`)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark"
+            >
+              <Plus size={14} /> New treatment plan
+            </button>
+          </div>
         <RecordList
           title="Treatment plans (Courses of Treatment)"
           emptyText="No treatment plans yet for this patient."
@@ -197,9 +285,20 @@ export default function PatientShow({
             />
           )}
         />
+        </div>
       )}
 
       {tab === 'estimates' && (
+        <div>
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => router.post(`/patients/${patient.id}/estimates`)}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark"
+            >
+              <Plus size={14} /> New estimate
+            </button>
+          </div>
         <RecordList
           title="Estimates"
           emptyText="No estimates yet for this patient."
@@ -209,17 +308,29 @@ export default function PatientShow({
               key={e.id}
               href={`/estimates/${e.id}`}
               icon={FileText}
-              primary={e.number || `Estimate #${e.id}`}
-              secondary={`Valid until ${dateZA(e.valid_until)}`}
+              primary={e.title || e.number || `Estimate #${e.id}`}
+              secondary={e.number || `Valid until ${dateZA(e.valid_until)}`}
               amount={ZAR(e.total)}
               status={e.status}
               meta={dateZA(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
             />
           )}
         />
+        </div>
       )}
 
       {tab === 'invoices' && (
+        <div>
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={() => router.post(`/patients/${patient.id}/estimates`, { intent: 'invoice' })}
+              title="Describe the treatment, let AI fill the codes, adjust, then create the invoice"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark"
+            >
+              <Plus size={14} /> New invoice
+            </button>
+          </div>
         <RecordList
           title="Invoices"
           emptyText="No invoices yet for this patient."
@@ -242,25 +353,63 @@ export default function PatientShow({
             />
           )}
         />
+        </div>
+      )}
+
+      {tab === 'chart' && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-brand-muted">
+            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-red-500" /> Needs work (outstanding)</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-gray-800" /> Done / existing</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded border border-brand-border bg-white" /> Healthy / unrecorded</span>
+          </div>
+          <Odontogram chart={toothChart} details={toothChartDetail} />
+          {Object.keys(toothChart).length === 0 && (
+            <p className="text-sm text-brand-muted">No charted work yet for this patient — planned treatment shows red, completed/existing work shows black.</p>
+          )}
+        </div>
       )}
 
       {tab === 'imaging' && (
-        <RecordList
-          title="Imaging studies (SIDEXIS)"
-          emptyText="No SIDEXIS scans linked to this patient yet. Run a SIDEXIS scan to match by name + date."
-          items={imaging}
-          renderRow={(s) => (
-            <RecordRow
-              key={s.id}
-              href={s.source_folder ? `/imaging?folder=${encodeURIComponent(s.source_folder)}` : '/imaging'}
-              icon={Scan}
-              primary={`${s.modality_label} — ${dateZA(s.captured_at, { day: 'numeric', month: 'short', year: 'numeric' })}`}
-              secondary={s.notes || s.sidexis_patient_name}
-              status={s.status === 'matched' ? 'accepted' : s.status}
-              meta={s.source_folder}
-            />
-          )}
-        />
+        imaging.length === 0 ? (
+          <p className="text-sm text-brand-muted">No SIDEXIS scans linked to this patient yet.</p>
+        ) : (
+          <div>
+            <h3 className="mb-3 text-sm font-medium text-brand-muted">
+              {imaging.length} SIDEXIS scan{imaging.length === 1 ? '' : 's'} on file — click any to open full size
+            </h3>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+              {imaging.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setDicomStudy(s)}
+                  className="group block w-full overflow-hidden rounded-lg border border-brand-border bg-white text-left transition hover:shadow-md"
+                >
+                  {s.has_image ? (
+                    <img
+                      src={`/imaging/${s.id}/image`}
+                      alt={s.modality_label}
+                      loading="lazy"
+                      className="h-32 w-full bg-black object-contain"
+                    />
+                  ) : (
+                    <div className="flex h-32 w-full items-center justify-center bg-gray-100">
+                      <Scan className="h-8 w-8 text-brand-muted" />
+                    </div>
+                  )}
+                  <div className="p-2">
+                    <div className="text-xs font-medium text-brand-ink">{s.modality_label}</div>
+                    <div className="text-xs text-brand-muted">
+                      {dateZA(s.captured_at, { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                    {s.notes && <div className="truncate text-[11px] text-brand-muted">{s.notes}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )
       )}
 
       {tab === 'account' && (
@@ -270,6 +419,8 @@ export default function PatientShow({
       {tab === 'history' && (
         <HistoryTab appointments={appointments} conversations={conversations} />
       )}
+
+      {dicomStudy && <DicomViewer study={dicomStudy} onClose={() => setDicomStudy(null)} />}
 
       <PatientFormModal
         open={editOpen}
@@ -410,9 +561,16 @@ function AccountTab({ account, summary, currentPatientId }) {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Wallet size={16} className="text-brand-taupe" />
-          <h2 className="text-base font-semibold text-brand-brown">Billing account</h2>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Wallet size={16} className="text-brand-taupe" />
+            <h2 className="text-base font-semibold text-brand-brown">Billing account</h2>
+          </div>
+          <Link href={`/accounts/${account.id}`}
+            className="inline-flex items-center gap-1 rounded-lg bg-brand-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-brand-primary-dark"
+            title="Open the account ledger + print a statement">
+            <Receipt size={13} /> View account &amp; statement
+          </Link>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-5">
           <Field label="Account code"><p className="text-sm font-mono text-gray-800">{account.account_code}</p></Field>

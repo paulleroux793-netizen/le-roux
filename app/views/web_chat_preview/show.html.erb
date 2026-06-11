@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Booking widget — Preview · Dr Chalita le Roux</title>
+  <style>
+    body{margin:0;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#2E2417;background:#FBF6EC}
+    .hero{max-width:880px;margin:0 auto;padding:64px 24px 40px;text-align:center}
+    .badge{display:inline-block;background:#F3E9D2;color:#8C6A1E;padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;margin-bottom:22px;letter-spacing:.3px}
+    h1{font-size:40px;margin:0 0 12px;line-height:1.15}
+    p.lead{font-size:18px;color:#7a6b50;max-width:640px;margin:0 auto 28px;line-height:1.55}
+    .note{margin:40px auto 0;font-size:13.5px;color:#5c4f38;background:#fff;border:1px solid #F3E9D2;border-radius:14px;padding:18px 20px;max-width:640px;text-align:left;line-height:1.6}
+    .note b{color:#8C6A1E}
+    .grid{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:30px}
+    .card{background:#fff;border:1px solid #F3E9D2;border-radius:14px;padding:18px;width:180px;text-align:left}
+    .card h3{margin:0 0 6px;font-size:15px;color:#8C6A1E}.card p{margin:0;font-size:13px;color:#7a6b50}
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="badge">PREVIEW · NOT live on the public website</div>
+    <h1>Gentle dental care in Roodepoort &amp; the West Rand</h1>
+    <p class="lead">A sample page to preview the booking widget. Look bottom-right — tap the gold chat bubble (or wait a few seconds for the prompt) and try booking a visit. It uses the <b>same AI brain and diary</b> as the WhatsApp line.</p>
+    <div class="grid">
+      <div class="card"><h3>Whitening</h3><p>Ask about the process &amp; pricing ranges.</p></div>
+      <div class="card"><h3>Check-up &amp; clean</h3><p>See real live availability.</p></div>
+      <div class="card"><h3>Toothache?</h3><p>Find the earliest slot.</p></div>
+    </div>
+    <div class="note">
+      <b>Try these:</b> ask <i>"do you do whitening?"</i> · try to book a <b>Saturday</b> or <b>7pm</b> (it must refuse and offer real alternatives) · book a weekday late-morning slot and watch it ask for your <b>name + WhatsApp number + consent</b> before confirming.<br><br>
+      <b>Safe to test:</b> no real WhatsApp is sent in preview (dry-run), and nothing here is on your public website yet.
+    </div>
+  </div>
+  <script src="/web-chat-widget.js" data-endpoint="/api/v1/web_chat"></script>
+</body>
+</html>

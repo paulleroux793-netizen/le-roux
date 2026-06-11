@@ -108,6 +108,42 @@ class ConversationsController < ApplicationController
       alert: "Send failed: #{e.message}", status: :see_other
   end
 
+  # POST /conversations/:id/forward — forward a message from this chat to ANOTHER WhatsApp
+  # conversation (like WhatsApp's forward). Params: message (text to forward), to_conversation_id.
+  def forward
+    source = Conversation.find(params[:id])
+    body   = params[:message].to_s.strip
+    target = Conversation.includes(:patient).find_by(id: params[:to_conversation_id])
+
+    return redirect_back(fallback_location: conversation_path(source), alert: "Nothing to forward.", status: :see_other) if body.blank?
+    return redirect_back(fallback_location: conversation_path(source), alert: "Pick a conversation to forward to.", status: :see_other) if target.nil?
+    if target.channel != "whatsapp" || target.patient&.phone.blank?
+      return redirect_back(fallback_location: conversation_path(source), alert: "Can only forward to a WhatsApp conversation that has a phone number.", status: :see_other)
+    end
+
+    WhatsappTemplateService.new.send_text(target.patient.phone, body)
+    target.add_message(role: "assistant", content: body, timestamp: Time.current)
+    target.update!(status: "active") if target.status == "closed"
+    target.pause_ai!
+
+    AuditService.log(
+      action: "conversation.forwarded",
+      summary: "Forwarded a message to #{target.patient&.full_name} via WhatsApp (from #{source.patient&.full_name})",
+      resource: target,
+      details: { from_conversation_id: source.id, body: body.truncate(120) },
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    expire_conversation_caches!
+
+    redirect_to conversation_path(target),
+      notice: "Message forwarded to #{target.patient&.full_name}. AI paused for #{PracticeConfig.ai_pause_hours} hours.",
+      status: :see_other
+  rescue WhatsappTemplateService::Error => e
+    redirect_back fallback_location: conversation_path(params[:id]),
+      alert: "Forward failed (patient may be outside the 24-hour window): #{e.message}", status: :see_other
+  end
+
   # PATCH /conversations/:id/resume_ai
   #
   # Reception clears the AI standby pause on a conversation, e.g. when the

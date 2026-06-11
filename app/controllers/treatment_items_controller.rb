@@ -19,7 +19,7 @@ class TreatmentItemsController < ApplicationController
     new_status = params[:status].to_s
 
     if new_status.present? && !ALLOWED_STATUSES.include?(new_status)
-      return redirect_back fallback_location: course_of_treatment_path(item.course_of_treatment_id),
+      return redirect_back fallback_location: "/courses-of-treatment/#{item.course_of_treatment_id}",
         alert: "Unknown status: #{new_status}", status: :see_other
     end
 
@@ -31,6 +31,11 @@ class TreatmentItemsController < ApplicationController
     attrs[:surface]      = params[:surface]      if params.key?(:surface)
     if params[:fee].present?
       attrs[:fee_cents] = (params[:fee].to_f * 100).round
+    end
+    # Lab-case fields — flag a crown/bridge/denture item as out at the lab with a
+    # due-back date; reception works the "Lab cases due" list to book the seat/fit.
+    %i[lab_name lab_sent_on lab_due_on lab_returned_on].each do |k|
+      attrs[k] = params[k].presence if params.key?(k)
     end
 
     item.update!(attrs)
@@ -55,7 +60,7 @@ class TreatmentItemsController < ApplicationController
              else "Updated"
              end
 
-    redirect_back fallback_location: course_of_treatment_path(item.course_of_treatment_id),
+    redirect_back fallback_location: "/courses-of-treatment/#{item.course_of_treatment_id}",
       notice: notice, status: :see_other
   rescue ActiveRecord::RecordInvalid => e
     redirect_back fallback_location: courses_of_treatment_path,

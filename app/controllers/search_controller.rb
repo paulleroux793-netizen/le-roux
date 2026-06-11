@@ -70,20 +70,24 @@ class SearchController < ApplicationController
   def search_patients(q)
     pattern = "%#{sanitize_like(q)}%"
     Patient
+      .left_joins(:billing_accounts)
       .where(
-        "first_name ILIKE :p OR last_name ILIKE :p OR " \
-        "(first_name || ' ' || last_name) ILIKE :p OR " \
-        "phone ILIKE :p OR email ILIKE :p",
+        "patients.first_name ILIKE :p OR patients.last_name ILIKE :p OR " \
+        "(patients.first_name || ' ' || patients.last_name) ILIKE :p OR " \
+        "patients.phone ILIKE :p OR patients.email ILIKE :p OR " \
+        "billing_accounts.account_code ILIKE :p",  # find by account code (W0046) → the whole family
         p: pattern
       )
       .order(:last_name, :first_name)
+      .distinct
       .limit(RESULT_LIMIT)
       .map { |p|
         {
           id: p.id,
           full_name: p.full_name,
-          phone: p.phone,
+          phone: p.display_phone,
           email: p.email,
+          account_code: p.account_code,
           url: "/patients/#{p.id}"
         }
       }

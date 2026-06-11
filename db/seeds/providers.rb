@@ -13,6 +13,15 @@ eliska = Provider.find_or_create_by!(name: "Dr Eliska Robinson") do |p|
   p.active = true
 end
 
+# Dr Chalita is on MATERNITY LEAVE — closed for NEW bookings; all AI/default
+# bookings route to Dr Eliska and her diary column is greyed/closed through the
+# date below (reopens automatically). This lives in the seed so a reseed can
+# never route patients to a dentist who isn't working. (Aug 1–2 2026 are a
+# weekend, so closing through 31 Jul = open again Mon 3 Aug when she returns.)
+# WHEN SHE RETURNS: set accepting_bookings: true, unavailable_until: nil (here + on the rig DB).
+chalita.update!(accepting_bookings: false, unavailable_until: Date.new(2026, 7, 31))
+eliska.update!(accepting_bookings: true, unavailable_until: nil)
+
 # Per-provider weekly schedule: Mon–Fri 08:00–17:00, closed weekends.
 [ chalita, eliska ].each do |prov|
   (0..6).each do |dow|

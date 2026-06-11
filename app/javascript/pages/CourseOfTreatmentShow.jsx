@@ -3,6 +3,7 @@ import { Link, router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import { ArrowLeft, ClipboardPlus, Lock, Plus, Check, X, RotateCcw, FileText, Receipt, Layers } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
+import SmartBack from '../components/SmartBack'
 import Odontogram from '../components/Odontogram'
 import ToothActionModal from '../components/ToothActionModal'
 import AddProcedureModal from '../components/AddProcedureModal'
@@ -28,6 +29,9 @@ export default function CourseOfTreatmentShow({
   procedure_suggestions: procedureSuggestions = {},
   procedure_codes: procedureCodes = [],
   treatment_macros: treatmentMacros = [],
+  suggested_macros: suggestedMacros = [],
+  visit_reason: visitReason = null,
+  providers = [],
 }) {
   const [activeTooth, setActiveTooth] = useState(null)
   const [addOpen, setAddOpen]         = useState(false)
@@ -57,6 +61,13 @@ export default function CourseOfTreatmentShow({
       onError:   (errs) => toast.error(Object.values(errs || {})[0] || 'Could not update'),
     })
   }
+  const setLab = (id, fields) => {
+    router.patch(`/treatment_items/${id}`, fields, {
+      preserveScroll: true,
+      onSuccess: () => toast.success('Lab case updated'),
+      onError:   (errs) => toast.error(Object.values(errs || {})[0] || 'Could not update'),
+    })
+  }
   const generateEstimate = () => {
     router.post(`/courses-of-treatment/${course.id}/generate_estimate`, {}, {
       onSuccess: (page) => toast.success(page?.props?.flash?.notice || 'Estimate created'),
@@ -72,9 +83,7 @@ export default function CourseOfTreatmentShow({
 
   return (
     <DashboardLayout>
-      <Link href="/courses-of-treatment" className="mb-4 inline-flex items-center gap-1 text-sm text-brand-muted hover:text-brand-ink">
-        <ArrowLeft size={14} /> All courses
-      </Link>
+      <div className="mb-4"><SmartBack fallback="/courses-of-treatment" /></div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary">
@@ -89,6 +98,17 @@ export default function CourseOfTreatmentShow({
             {' · '}{SETTING_LABELS[course.setting] || course.setting} · <span className="capitalize">{course.status}</span>
             {course.authorisation_number ? ` · Auth ${course.authorisation_number}` : ''}
           </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-brand-muted">Treating dentist</label>
+            <select
+              value={course.provider_name || ''}
+              onChange={(e) => router.patch(`/courses-of-treatment/${course.id}/set_provider`, { provider_name: e.target.value }, { preserveScroll: true })}
+              className="rounded-lg border border-brand-border bg-white px-2 py-1 text-xs text-brand-ink focus:border-brand-primary focus:outline-none"
+              title="Carries to invoices/estimates generated from this plan">
+              <option value="">— not set —</option>
+              {providers.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
         </div>
         <div className="ml-auto flex items-end gap-6">
           <div className="text-right">
@@ -103,6 +123,24 @@ export default function CourseOfTreatmentShow({
       </div>
 
       {/* ── Primary actions ─────────────────────────────────────────── */}
+      {suggestedMacros.length > 0 && (
+        <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+            Suggested for this visit{visitReason ? <span className="font-normal normal-case"> — “{visitReason}”</span> : null} · please review
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {suggestedMacros.map((m) => (
+              <button key={m.id} type="button" onClick={() => applyMacro(m.id)}
+                title={`Add the ${m.name} template (review the items after)`}
+                className="rounded-full border border-amber-400 bg-white px-2.5 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100">
+                + {m.name}
+              </button>
+            ))}
+            <span className="text-[11px] text-amber-700/80">AI-suggested from the booking — check before billing.</span>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 flex flex-wrap gap-2">
         <button onClick={() => setAddOpen(true)}
           className="inline-flex items-center gap-1.5 rounded-xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-primary-dark">
@@ -184,7 +222,14 @@ export default function CourseOfTreatmentShow({
                 {items.map((i) => (
                   <tr key={i.id} className={cn('border-b border-brand-border/60 last:border-0', i.status === 'voided' && 'opacity-60')}>
                     <td className="px-3 py-2 font-mono text-brand-ink">{i.code}</td>
-                    <td className="px-3 py-2 text-brand-ink">{i.description}</td>
+                    <td className="px-3 py-2 text-brand-ink">
+                      {i.description}
+                      {i.lab_due_on && !i.lab_returned_on && (
+                        <span className="ml-1.5 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">
+                          at lab{i.lab_name ? ` (${i.lab_name})` : ''} · due {new Date(i.lab_due_on).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-brand-muted">{i.tooth_number || '—'}</td>
                     <td className="px-3 py-2">
                       <span className={cn('inline-flex rounded border px-1.5 py-0.5 text-[11px] font-medium', ITEM_STATUS_STYLE[i.status])}>
@@ -193,7 +238,10 @@ export default function CourseOfTreatmentShow({
                     </td>
                     <td className="px-3 py-2 text-right text-brand-ink">{rand(i.fee)}</td>
                     <td className="px-3 py-2 text-right">
-                      <ItemActions item={i} updateStatus={updateStatus} />
+                      <div className="flex items-center justify-end gap-1.5">
+                        <LabControl item={i} setLab={setLab} />
+                        <ItemActions item={i} updateStatus={updateStatus} />
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -262,4 +310,45 @@ function ItemActions({ item, updateStatus }) {
     )
   }
   return <span className="text-xs text-brand-muted">—</span>
+}
+
+// Lab-case control per item: "Send to lab" (lab name + due-back date) / "Returned".
+function LabControl({ item, setLab }) {
+  const [open, setOpen] = useState(false)
+  const [lab, setLabName] = useState(item.lab_name || '')
+  const [due, setDue] = useState(item.lab_due_on ? item.lab_due_on.slice(0, 10) : '')
+  const today = () => new Date().toISOString().slice(0, 10)
+  const atLab = item.lab_due_on && !item.lab_returned_on
+
+  if (atLab) {
+    return (
+      <button type="button" onClick={() => setLab(item.id, { lab_returned_on: today() })}
+        title="Mark this lab case as returned"
+        className="rounded-lg border border-indigo-300 bg-indigo-50 px-2 py-1 text-[11px] font-medium text-indigo-700 hover:bg-indigo-100">
+        Returned
+      </button>
+    )
+  }
+  if (item.lab_returned_on) return <span className="text-[11px] text-brand-muted" title="Lab case returned">lab ✓</span>
+  if (item.status === 'voided') return null
+  if (!open) {
+    return (
+      <button type="button" onClick={() => setOpen(true)} title="Send this item to the lab"
+        className="rounded-lg border border-brand-border px-2 py-1 text-[11px] text-brand-muted hover:bg-brand-surface">
+        Send to lab
+      </button>
+    )
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <input value={lab} onChange={(e) => setLabName(e.target.value)} placeholder="Lab"
+        className="w-16 rounded border border-brand-border px-1 py-0.5 text-[11px]" />
+      <input type="date" value={due} onChange={(e) => setDue(e.target.value)}
+        className="rounded border border-brand-border px-1 py-0.5 text-[11px]" />
+      <button type="button" disabled={!due}
+        onClick={() => { setLab(item.id, { lab_name: lab, lab_sent_on: today(), lab_due_on: due }); setOpen(false) }}
+        className="rounded bg-indigo-600 px-1.5 py-0.5 text-[11px] font-medium text-white disabled:opacity-50">Save</button>
+      <button type="button" onClick={() => setOpen(false)} className="rounded px-1 text-[11px] text-brand-muted">✕</button>
+    </div>
+  )
 }

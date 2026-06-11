@@ -66,7 +66,18 @@ class AiService
   end
 
   def initialize
-    @client = Anthropic::Client.new(access_token: ENV.fetch("ANTHROPIC_API_KEY"))
+    # AI_PROVIDER=local routes model calls to on-prem inference (the rig's RTX-5090 via
+    # Ollama's OpenAI-compatible API) instead of the Anthropic cloud — no usage cap, no
+    # per-token cost, PHI never leaves the building. AI_FALLBACK=anthropic adds the HYBRID
+    # pattern: try the rig first, silently fall back to Claude if the rig errors/is down
+    # (resilience + a frontier-quality safety net). Defaults to "anthropic" (cloud-only) so
+    # behaviour is unchanged until explicitly configured.
+    # .presence guards an empty AI_PROVIDER="" (present-but-blank): ENV.fetch's default only
+    # fires on a MISSING key, so "" would slip through, leave @client nil, and break every call.
+    @provider = (ENV["AI_PROVIDER"].presence || "anthropic").to_s.downcase
+    @fallback = ENV["AI_FALLBACK"].to_s.downcase.presence
+    need_anthropic = @provider == "anthropic" || @fallback == "anthropic"
+    @client = Anthropic::Client.new(access_token: ENV.fetch("ANTHROPIC_API_KEY")) if need_anthropic
   end
 
   # Classify the intent of a patient message.
@@ -83,7 +94,7 @@ class AiService
     )
 
     parse_intent_response(response)
-  rescue Anthropic::Error, Faraday::Error => e
+  rescue Anthropic::Error, Faraday::Error, AiService::Error => e
     raise Error, "Intent classification failed: #{e.message}"
   end
 
@@ -103,7 +114,7 @@ class AiService
     )
 
     extract_text(response)
-  rescue Anthropic::Error, Faraday::Error => e
+  rescue Anthropic::Error, Faraday::Error, AiService::Error => e
     raise Error, "Response generation failed: #{e.message}"
   end
 
@@ -117,8 +128,98 @@ class AiService
     )
 
     parse_entities_response(response)
-  rescue Anthropic::Error, Faraday::Error => e
+  rescue Anthropic::Error, Faraday::Error, AiService::Error => e
     raise Error, "Entity extraction failed: #{e.message}"
+  end
+
+  # Turn a free-text treatment description ("two crowns on 21 and 11", "root canal on 26") into
+  # estimate/invoice LINE ITEMS, coded the way THIS practice codes. The brain is the practice's own
+  # Estimate Assistant knowledge (system/reference/estimate_assistant) — the Treatment Code Recipes
+  # (setup codes, the RCT canal-by-tooth table, materials/lab/sundries, "give more codes not fewer")
+  # + ICD-10 list — grounded against the LIVE catalogue for valid codes + current Elixir fees.
+  # Returns { "lines" => [{code, tooth_number, quantity, icd10}], "notes" => ... }.
+  def compose_treatment_lines(prompt)
+    catalogue = ProcedureCode.where(active: true).order(:code).map { |c|
+      "#{c.code} — #{c.description} — R#{format('%.2f', c.default_fee_cents.to_i / 100.0)}"
+    }.join("\n")
+    recipes = estimate_knowledge("treatment_code_recipes.md")
+    icd10   = estimate_knowledge("icd10_codes.md")
+
+    system = <<~SYS
+      You are Dr Chalita le Roux's Estimate Assistant. Convert the dentist/receptionist's free-text
+      treatment description into estimate LINE ITEMS, coded EXACTLY the way this practice codes.
+
+      Follow the practice's TREATMENT CODE RECIPES below as the authority:
+      - GIVE MORE CODES, NOT FEWER — include the setup codes (8109×2, 8110, 8145 per quadrant numbed,
+        8304 per arch isolated), x-rays as implied, the procedure code(s), materials, lab and sundries
+        per the recipe for that treatment. Better to list a code the dentist removes than under-charge.
+      - PER-TOOTH procedures → ONE line per tooth with its FDI tooth_number. "tooth 2 1 and 1 1" = 21 and 11.
+      - ROOT CANALS → use the RCT CANAL TABLE (anteriors/premolars = 8338; molars = 8339 + 8340 per extra
+        canal, i.e. a normal 3-canal molar = 8339 + 8340×2).
+      - Put an ICD-10 on every line (from the recipe / ICD-10 list).
+      - Use ONLY codes that exist in the CATALOGUE. NEVER invent a code or ICD-10. If a requested item
+        isn't in our codes, omit it and say so in "notes".
+      - Do NOT set or change prices — fees come from the live CATALOGUE (current Elixir prices).
+      - For uncertain/unusual cases, still give the candidate codes and add a "confirm with Dr Chalita"
+        line in "notes".
+
+      Return STRICT JSON ONLY, no prose:
+      {"lines":[{"code":"8409","tooth_number":"11","quantity":1,"icd10":"K02.8"}],"notes":"items to confirm with the dentist / anything unmapped"}
+
+      === PRACTICE TREATMENT CODE RECIPES (authoritative) ===
+      #{recipes}
+
+      === ICD-10 CODES ===
+      #{icd10}
+
+      === CATALOGUE (the only valid codes — code — description — current fee) ===
+      #{catalogue}
+    SYS
+
+    response = create_message(model: DEFAULT_MODEL, max_tokens: 2200, system: system,
+                              messages: [ { role: "user", content: prompt.to_s } ])
+    raw = extract_text(response).to_s
+    apply_recipe_floors(JSON.parse(raw[/\{.*\}/m] || "{}"), prompt.to_s)
+  rescue StandardError => e
+    # Never let an AI/API hiccup (incl. the wrapped AiService::Error from create_message, a
+    # transient 4xx/5xx, or malformed JSON) crash the caller — ai_compose shows a friendly
+    # "couldn't map that" and the user falls back to manual entry.
+    Rails.logger.warn("[compose_treatment_lines] #{e.class}: #{e.message}")
+    { "lines" => [], "error" => e.message }
+  end
+
+  # Deterministic safety floor on the composer's lines: the 32B occasionally omits a code the
+  # recipe makes mandatory (a partial denture is always retained by clasps → 8255; a cobalt-chrome
+  # frame → 8281). Forcing it via the recipe WORDING rippled into unrelated cases (2026-06-08:
+  # fixing cobalt-chrome broke "check up and clean", reverted), so we enforce the few hard floors
+  # here instead — additive, idempotent, and only ever adding codes that exist in the live catalogue.
+  def apply_recipe_floors(parsed, prompt)
+    return parsed unless parsed.is_a?(Hash) && parsed["lines"].is_a?(Array)
+    lines = parsed["lines"]
+    has   = ->(code) { lines.any? { |l| l.is_a?(Hash) && l["code"].to_s == code } }
+    valid = ->(code) { ProcedureCode.where(active: true, code: code).exists? }
+    added = []
+    if prompt.match?(/partial\s+denture/i)
+      if !has.call("8255") && valid.call("8255")
+        lines << { "code" => "8255", "quantity" => 1, "icd10" => "K08.1" }; added << "8255"
+      end
+      if prompt.match?(/cobalt|chrome/i) && !has.call("8281") && valid.call("8281")
+        lines << { "code" => "8281", "quantity" => 1, "icd10" => "K08.1" }; added << "8281"
+      end
+    end
+    if added.any?
+      note = "Auto-added per partial-denture recipe: #{added.join(', ')} (confirm clasp count with the dentist)."
+      parsed["notes"] = [ parsed["notes"].presence, note ].compact.join(" ")
+    end
+    parsed
+  end
+
+  # Cached read of a de-identified Estimate-Assistant knowledge file.
+  def estimate_knowledge(filename)
+    (@estimate_knowledge ||= {})[filename] ||= begin
+      path = Rails.root.join("system/reference/estimate_assistant", filename)
+      File.exist?(path) ? File.read(path) : ""
+    end
   end
 
   # Handle a full conversation turn: classify, respond, and return structured result.
@@ -175,13 +276,28 @@ class AiService
   private
 
   def create_message(**parameters)
+    if @provider == "local"
+      begin
+        return local_chat(**parameters)
+      rescue StandardError => e
+        # No fallback configured → surface the error (compose_treatment_lines etc. rescue it).
+        raise Error, "Local AI failed: #{e.message}" unless @fallback == "anthropic"
+        # HYBRID: rig down/errored → fall through to Claude so the feature keeps working.
+        Rails.logger.warn("[AiService] local→Anthropic fallback (#{e.class}: #{e.message})")
+      end
+    end
+
+    anthropic_message(**parameters)
+  end
+
+  def anthropic_message(**parameters)
     attempts = 0
 
     response = begin
       attempts += 1
       @client.messages(parameters: parameters)
     rescue Faraday::Error => e
-      raise Error, "Anthropic API error: #{e.message}" if attempts >= 3 || !retryable_error?(e)
+      raise Error, "Anthropic API error: #{e.message}" if attempts > MAX_RETRIES || !retryable_error?(e)
 
       sleep(0.25 * attempts)
       retry
@@ -189,6 +305,43 @@ class AiService
 
     log_anthropic_usage(parameters, response)
     response
+  end
+
+  # On-prem inference via the rig's Ollama OpenAI-compatible endpoint. Returns an
+  # Anthropic-SHAPED hash ({"content"=>[{"text"=>…}], "usage"=>…}) so extract_text and
+  # every parse_* helper work unchanged — the rest of the app doesn't know the difference.
+  # Tuned by LOCAL_AI_URL (default the rig host) + LOCAL_AI_MODEL (default qwen2.5:32b).
+  def local_chat(model:, max_tokens:, system:, messages:, **_)
+    base   = ENV.fetch("LOCAL_AI_URL", "http://host.docker.internal:11434/v1")
+    lmodel = ENV.fetch("LOCAL_AI_MODEL", "qwen2.5:32b")
+
+    oai = [ { role: "system", content: system.to_s } ]
+    messages.each do |m|
+      oai << { role: (m[:role] || m["role"]).to_s, content: local_text(m[:content] || m["content"]) }
+    end
+
+    conn = Faraday.new(url: base) { |f| f.options.timeout = 180; f.options.open_timeout = 10 }
+    resp = conn.post("chat/completions") do |req|
+      req.headers["Content-Type"] = "application/json"
+      req.body = { model: lmodel, messages: oai, max_tokens: max_tokens, temperature: 0, stream: false }.to_json
+    end
+    raise Error, "Local AI HTTP #{resp.status}: #{resp.body.to_s[0, 220]}" unless resp.status == 200
+
+    data  = JSON.parse(resp.body)
+    text  = data.dig("choices", 0, "message", "content").to_s
+    usage = data["usage"] || {}
+    Rails.logger.info("[AiLocal] model=#{lmodel} in=#{usage['prompt_tokens']} out=#{usage['completion_tokens']} (on-prem, $0)")
+
+    { "content" => [ { "type" => "text", "text" => text } ],
+      "usage"   => { "input_tokens" => usage["prompt_tokens"].to_i, "output_tokens" => usage["completion_tokens"].to_i },
+      "model"   => lmodel }
+  end
+
+  # Local text models can't accept Anthropic media blocks — flatten any block array to its text.
+  def local_text(content)
+    return content if content.is_a?(String)
+    return content.filter_map { |b| (b[:text] || b["text"]) if (b[:type] || b["type"]) == "text" }.join("\n") if content.is_a?(Array)
+    content.to_s
   end
 
   ANTHROPIC_RATES = {
@@ -262,6 +415,25 @@ class AiService
       IMPORTANT: The practice is CLOSED on Saturday and Sunday. If the patient requests a weekend date, still extract it but note the practice is only open Monday–Friday.
       Never return null for date if the patient named any day or relative phrase.
 
+      ## Selecting an offered slot (CRITICAL)
+      If your PREVIOUS message in the conversation offered a numbered list of
+      available time slots (e.g. "1. Friday, 5 June at 08:00  2. Friday, 5 June at
+      08:30") and the patient replies with a selection — a bare number ("2"),
+      "option 2", "the second one", "the first one", "the last one", or by naming
+      one of those exact times — classify intent as "book" and set date + time to
+      the EXACT offered slot they picked (read it from your previous message in the
+      history). Do NOT fall back to the patient's earlier requested time.
+
+      ## Day-of-week self-check (CRITICAL — relative dates)
+      Whenever you resolve a date, ALSO return the English day-of-week name you
+      believe that resolved date falls on, in a "day_of_week" entity field
+      (e.g. "Tuesday"). This is a self-consistency check: a downstream guard
+      asserts your day_of_week matches the actual calendar weekday of the ISO
+      date you returned. If they disagree the booking is held for clarification
+      instead of being made on the wrong day. So make sure your day_of_week and
+      your date are consistent with each other. Omit day_of_week (null) only
+      when no date is present.
+
       ## Multi-turn reschedule context (CRITICAL)
       If the conversation history shows a reschedule is in progress — e.g., the patient tapped "RESCHEDULE APPOINTMENT" or the bot asked "please send your preferred date and time" — classify follow-up messages as "reschedule" even without the word "reschedule". Examples:
       - "Same time at 2pm" → {"intent": "reschedule", "entities": {"time": "14:00"}}
@@ -278,17 +450,20 @@ class AiService
       Any mention of teeth whitening, Biolase, bleiking, tandebleiking, or laser whitening is a BOOK intent with treatment="whitening". Duration is 90 minutes (handled downstream).
 
       ## Few-shot examples
-      Input: "Book me a cleaning Monday 4 May 2026 at 10:00"
-      Output: {"intent": "book", "entities": {"date": "2026-05-04", "time": "10:00", "treatment": "cleaning"}}
+      (In every example, "date" is resolved against today = #{today.iso8601},
+      and "day_of_week" is the weekday name that resolved date falls on.)
 
-      Input: "I need a check-up Thursday 15 May 09:30 please"
-      Output: {"intent": "book", "entities": {"date": "2026-05-15", "time": "09:30", "treatment": "check-up"}}
+      Input: "Book me a cleaning for tomorrow at 10:00"
+      Output: {"intent": "book", "entities": {"date": "#{(today + 1).iso8601}", "time": "10:00", "day_of_week": "#{(today + 1).strftime('%A')}", "treatment": "cleaning"}}
+
+      Input: "I need a check-up next Thursday 09:30 please"
+      Output: {"intent": "book", "entities": {"date": "<next Thursday in ISO>", "time": "09:30", "day_of_week": "Thursday", "treatment": "check-up"}}
 
       Input: "Can I book whitening for tomorrow at 11am"
-      Output: {"intent": "book", "entities": {"date": "#{(today + 1).iso8601}", "time": "11:00", "treatment": "whitening"}}
+      Output: {"intent": "book", "entities": {"date": "#{(today + 1).iso8601}", "time": "11:00", "day_of_week": "#{(today + 1).strftime('%A')}", "treatment": "whitening"}}
 
-      Input: "My name is Jane Doe, phone 0712345678, new patient. 20 May at 2pm cosmetic"
-      Output: {"intent": "book", "entities": {"date": "2026-05-20", "time": "14:00", "treatment": "cosmetic consultation", "name": "Jane Doe"}}
+      Input: "My name is Jane Doe, phone 0712345678, new patient. Next Tuesday at 2pm cosmetic"
+      Output: {"intent": "book", "entities": {"date": "<next Tuesday in ISO>", "time": "14:00", "day_of_week": "Tuesday", "treatment": "cosmetic consultation", "name": "Jane Doe"}}
 
       Input: "What time do you open?"
       Output: {"intent": "faq", "entities": {}}
@@ -296,16 +471,16 @@ class AiService
       Input: "I have severe pain, this is urgent"
       Output: {"intent": "urgent", "entities": {}}
 
-      Input: "Please reschedule to Friday 09:30"
-      Output: {"intent": "reschedule", "entities": {"date": "2026-05-15", "time": "09:30"}}
+      Input: "Please reschedule to next Friday 09:30"
+      Output: {"intent": "reschedule", "entities": {"date": "<next Friday in ISO>", "time": "09:30", "day_of_week": "Friday"}}
 
       Input: "yes please confirm"
       Output: {"intent": "confirm", "entities": {}}
 
       Respond ONLY with valid JSON:
-      {"intent": "book", "entities": {"date": "2026-04-17", "time": "11:00", "name": "John", "treatment": "cleaning"}}
+      {"intent": "book", "entities": {"date": "#{(today + 1).iso8601}", "time": "11:00", "day_of_week": "#{(today + 1).strftime('%A')}", "name": "John", "treatment": "cleaning"}}
 
-      Use null only for entities the patient genuinely did not mention. Dates ISO YYYY-MM-DD, times HH:MM 24-hour.
+      Use null only for entities the patient genuinely did not mention. Dates ISO YYYY-MM-DD, times HH:MM 24-hour, day_of_week the full English weekday name (e.g. "Tuesday").
     PROMPT
   end
 
@@ -409,7 +584,12 @@ class AiService
         date: json.dig("entities", "date"),
         time: json.dig("entities", "time"),
         name: json.dig("entities", "name"),
-        treatment: json.dig("entities", "treatment")
+        treatment: json.dig("entities", "treatment"),
+        # Model's self-reported weekday for the resolved date. Used by
+        # WhatsappService#attempt_booking to catch relative-date resolution
+        # errors ("next Tuesday" landing on the wrong calendar day) before
+        # an appointment is created. nil when no date was extracted.
+        day_of_week: json.dig("entities", "day_of_week")
       }
     }
   rescue JSON::ParserError

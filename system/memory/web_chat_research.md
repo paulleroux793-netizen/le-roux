@@ -1,0 +1,22 @@
+# WEB CHAT WIDGET — Perplexity research (2026-06-09, sonar-pro). Backing for web_chat_build.md.
+
+## TECHNICAL ARCHITECTURE (backed)
+- **Delivery**: single `<script>` snippet → mounts a **Shadow-DOM web component** (CSS-isolated from host site); iframe fallback for hostile CSP/CMS. Serve assets from Ivory.
+- **Sessions**: anonymous UUID v4 in `localStorage` (`dental_chat_session_id`); send as `X-Widget-Session`; NO cookies (avoids consent-banner/CORS pain).
+- **Transport**: HTTP POST JSON now (SSE/streaming = nice-to-have later). `POST /api/v1/web_chat/messages` {channel:"web", session_id, message}; `/state`; `/confirm`; `/telemetry`.
+- **Security w/o login**: signed embed token (JWT: practice_id, allowed_origin, exp) verified server-side + Origin check; **Rack::Attack** rate-limits (~10/min/IP, 50/hr/session); cheap off-topic/spam filter BEFORE calling the model; optional invisible captcha before first model call or booking.
+- **One booking brain**: channel-agnostic domain service + thin adapters. Claude PROPOSES intent+params (tool calls); **Rails validates + writes to Postgres** via the shared booking service (never trust NL alone). DB guarantees: per-provider unique/exclusion constraint = no double-book; DoctorSchedule/policy = no weekend/after-hours. Web + WhatsApp call the SAME reserve method.
+- **WhatsApp follow-up**: collect name + E.164 phone via a structured mini-form (tool: collect_contact_details); on BookingConfirmed domain event → existing WhatsApp sender delivers the pack.
+- **POPIA**: special personal info. Minimise fields (name, phone, high-level reason only); consent checkbox before phone ("I consent to WhatsApp contact about this appointment"); privacy link; discourage medical detail in chat; encrypt phone at rest; don't log raw transcripts/PII; retention + delete-on-request.
+
+## CONVERSION + ENGAGEMENT (backed) — KPI = qualified booked appointments, not FAQs answered
+- **Proactive triggers** (desktop): teaser after 8–12s on core pages; on 40–60% scroll of services/pricing show a service-specific prompt; exit-intent → urgent mini-modal. (mobile): 10–15s or 30–40% scroll; sticky bottom "Chat & Book — under 60 sec" bar. **Anti-annoyance**: auto-open max 1×/session; if closed, don't re-open for 24h (localStorage); sound off; auto-minimise after 20–30s idle.
+- **Opening hook**: human-avatar (not robot). "Hi, I'm the Book-Now Assistant for Dr Chalita le Roux. I can check real-time availability and book your visit in under 60 seconds — even after hours. What brings you here today?" Quick replies: Book a check-up · I'm in pain/emergency · Whitening/cosmetic · Ask a question first.
+- **Branches**: Book · Ask a question · Costs & medical aid · Nervous about the dentist. Ask ONE question at a time; echo answers inline ("Got it — teeth cleaning"); progress hint ("Step 1 of 3"); persistent "Skip to booking".
+- **Ethical persuasion**: social proof ("hundreds of patients in Roodepoort this year"); real-time availability ("2 open slots this week: Wed 15:30 / Thu 10:00 — these are live and can fill quickly"); friction reduction ("just 3 quick details: name, mobile, medical aid?"); reassurance ("kept confidential, only for your booking + reminder"); anxiety reduction ("many feel nervous — gentle dentistry, we explain each step").
+- **Educational micro-flows**: whitening (~60–90 min, 2–3 shades, book assessment); pricing RANGES only (never diagnose; "exact fee after the dentist examines"); medical aid (patients self-claim — practice does NOT bill medical aids directly); anxiety-friendly consult (label reason "Anxiety-friendly consult").
+- **Booking flow**: reason → new/existing → micro-education on what to expect → show 3–5 REAL live times (or inline date picker) → collect name + WhatsApp mobile (tel keyboard, E.164 validate) + consent → confirm + echo summary → "I'll send directions, address, intake form + details to your WhatsApp ✅".
+- **Metrics**: open-rate, engagement-rate (≥1 user msg), booking-intent-rate, completed-booking-rate, drop-off step, % booked-in-widget vs handed-to-WhatsApp, after-hours booking share, no-show vs phone bookings. Tag bookings source="Web Chat".
+
+## DR CHALITA SPECIFICS to honour (don't regress brand rules)
+- Open Mon–Fri 8am–5pm, CLOSED weekends + public holidays. Roodepoort/Amorosa (Amorosa not Amarosa). Canonical phone +27 71 884 3204 + the wired WhatsApp +27 83 710 9131. NO medical-aid direct billing (patients self-claim). NO after-hours/24-7/weekend promises in copy (compliance filter). Pricing allowed in 1:1 chat with scan-cost warning.

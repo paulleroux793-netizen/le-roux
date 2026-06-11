@@ -8,15 +8,28 @@ class Patient < ApplicationRecord
     [ "Phone", "Caller" ]
   ].freeze
 
+  # Patients who self-registered via the public online intake link carry a real name but
+  # an UNVERIFIED identity (their ID/phone live in the captured form data, not the unique
+  # columns). The flag is a prefix on `notes`; needs_review? picks it up so they surface
+  # in the review queue until reception confirms identity and merges any duplicate.
+  SELF_REG_MARKER = "[SELF-REGISTERED — UNVERIFIED]"
+
   # POPIA s19 — SA ID number is special personal information; encrypt at rest.
   # Deterministic so find_by(id_number:) and the lookup index still work. Existing
   # plaintext rows are re-encrypted by `bin/rails phi:encrypt` (see the encryption
   # initializer); support_unencrypted_data keeps reads working until then.
   encrypts :id_number, deterministic: true
 
+  # Practice-policy AI consent (Paul, 2026-06-09): every new patient is consented to AI
+  # processing by default so the chair-side scribe + AI tools work for everyone. Covered by
+  # the practice POPIA notice. Reversible per-patient — clear consent_to_ai_processing_at to
+  # opt a patient out (the ||= never re-sets a value, so a manual opt-out sticks).
+  before_create { self.consent_to_ai_processing_at ||= Time.current }
+
   has_many :appointments, dependent: :destroy
   has_many :call_logs, dependent: :nullify
   has_many :conversations, dependent: :destroy
+  has_many :notifications, dependent: :destroy  # else hard-deleting a patient FK-errors
   # Billing account(s) this patient sits on (as account holder or dependant).
   # Used by the diary to show the [ACCOUNT] code on each block.
   has_many :account_patients, dependent: :destroy
@@ -110,14 +123,36 @@ class Patient < ApplicationRecord
   def needs_review?
     auto_created_placeholder_profile? ||
       last_name == "(imported)" ||
-      first_name == "Unknown"
+      first_name == "Unknown" ||
+      notes.to_s.start_with?(SELF_REG_MARKER)
+  end
+
+  # Human-readable SA national format for display/print: "+27649029044" → "064 902 9044".
+  def display_phone
+    return phone if phone.blank?
+    d = phone.gsub(/\D/, "")
+    d = "0#{d[2..]}" if d.start_with?("27") && d.length == 11
+    d.length == 10 ? "#{d[0..2]} #{d[3..5]} #{d[6..]}" : phone
+  end
+
+  # Canonical SA E.164, shared by the model AND PatientRegistrationService so both
+  # produce identical phones (else the dup-check misses and "+0…" leaks back in).
+  def self.canonical_phone(value)
+    digits = value.to_s.gsub(/[^\d+]/, "").presence
+    return nil if digits.nil?
+    if    digits.start_with?("+")                        then digits
+    elsif digits.start_with?("0") && digits.length == 10 then "+27#{digits[1..]}"
+    elsif digits.start_with?("27")                       then "+#{digits}"
+    else  "+#{digits}"
+    end
   end
 
   private
 
+  # Store SA numbers as proper E.164 (+27…) for WhatsApp/Twilio. A national
+  # "0XX XXX XXXX" becomes "+27XXXXXXXXX" — NOT "+0XXXXXXXXX" (the old bug).
   def normalize_phone!
-    normalized = phone.to_s.gsub(/\s+/, "").presence
-    self.phone = normalized&.start_with?("+") ? normalized : normalized&.then { |value| "+#{value}" }
+    self.phone = self.class.canonical_phone(phone) if phone.present?
   end
 
   # A patient must be identifiable by at least a phone OR an id_number.

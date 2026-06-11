@@ -42,6 +42,11 @@ export default function Dashboard({
   reminders = [],
   patients = [],
   checkout_ready: checkoutReady = [],
+  asap_list: asapList = [],
+  intake_outstanding: intakeOutstanding = [],
+  no_shows_to_rebook: noShows = [],
+  lab_cases_due: labCases = [],
+  unscheduled_treatment: unscheduledTx = [],
 }) {
   const { t, language } = useLanguage()
 
@@ -82,6 +87,14 @@ export default function Dashboard({
 
   const dateFmt = language === 'af' ? 'af-ZA' : 'en-ZA'
 
+  const [showQuickStart, setShowQuickStart] = useState(() => {
+    try { return localStorage.getItem('ivory_quickstart_dismissed') !== '1' } catch { return false }
+  })
+  const dismissQuickStart = () => {
+    try { localStorage.setItem('ivory_quickstart_dismissed', '1') } catch { /* ignore */ }
+    setShowQuickStart(false)
+  }
+
   return (
     <DashboardLayout>
       {/* Header */}
@@ -100,6 +113,29 @@ export default function Dashboard({
           {t('new_appointment')}
         </button>
       </div>
+
+      {/* New-staff onboarding — dismissible quick-start with the core daily actions */}
+      {showQuickStart && (
+        <div className="mb-6 rounded-xl border border-brand-primary/30 bg-brand-primary/5 p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-sm font-semibold text-brand-ink">New here? Quick start</p>
+            <button type="button" onClick={dismissQuickStart} className="rounded-md px-2 py-1 text-xs text-brand-muted hover:bg-white hover:text-brand-ink">Hide</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-5">
+            {[
+              { label: 'Book an appointment', href: '/diary' },
+              { label: 'Add a patient', href: '/patients' },
+              { label: 'Take a payment', href: '/invoices' },
+              { label: 'Work recalls', href: '/recalls' },
+              { label: 'Statements', href: '/accounts' },
+            ].map((a) => (
+              <Link key={a.href} href={a.href} className="rounded-lg border border-brand-border bg-white px-3 py-2 font-medium text-brand-ink transition hover:border-brand-primary hover:text-brand-primary">
+                {a.label} →
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* N4 — Real-time checkout banners. Patient in chair → draft estimate
           is ready to hand them at the desk before they leave. */}
@@ -125,8 +161,164 @@ export default function Dashboard({
         </div>
       )}
 
+      {/* Patient flow today — live arrivals board (Waiting → In chair → Ready for checkout) */}
+      {(() => {
+        const groups = [
+          { key: 'waiting',  label: 'Waiting',            statuses: ['arrived'],         dot: 'bg-amber-400' },
+          { key: 'inchair',  label: 'In chair',           statuses: ['in_consultation'], dot: 'bg-blue-500' },
+          { key: 'checkout', label: 'Ready for checkout', statuses: ['completed'],        dot: 'bg-purple-500' },
+        ]
+        const fmt = (s) => new Date(s).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' })
+        const data = groups.map((g) => ({ ...g, items: todays_appointments.filter((a) => g.statuses.includes(a.status)) }))
+        if (!data.some((g) => g.items.length > 0)) return null
+        return (
+          <div className="mb-8">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-muted">Patient flow today</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {data.map((g) => (
+                <div key={g.key} className="rounded-xl border border-brand-border bg-white p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className={`h-2 w-2 rounded-full ${g.dot}`} />
+                    <p className="text-sm font-semibold text-brand-ink">{g.label}</p>
+                    <span className="ml-auto rounded-full bg-brand-surface px-2 py-0.5 text-xs font-medium text-brand-muted">{g.items.length}</span>
+                  </div>
+                  {g.items.length === 0
+                    ? <p className="text-xs text-brand-muted">—</p>
+                    : <ul className="space-y-1">{g.items.map((a) => (
+                        <li key={a.id} className="flex items-center justify-between text-sm">
+                          <span className="truncate text-brand-ink">{a.patient_name}</span>
+                          <span className="ml-2 flex-shrink-0 text-xs text-brand-muted">{fmt(a.start_time)}</span>
+                        </li>
+                      ))}</ul>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ASAP — patients who want an earlier slot; offer when a gap opens (cut empty chairs) */}
+      {asapList.length > 0 && (
+        <div className="mb-8 rounded-xl border border-brand-border bg-white p-4">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            <p className="text-sm font-semibold text-brand-ink">Wants an earlier slot</p>
+            <span className="ml-auto rounded-full bg-brand-surface px-2 py-0.5 text-xs font-medium text-brand-muted">{asapList.length}</span>
+          </div>
+          <p className="mb-2 text-xs text-brand-muted">A slot opened up? Offer it to these patients first.</p>
+          <ul className="divide-y divide-brand-border/40">
+            {asapList.map((a) => (
+              <li key={a.id} className="flex items-center justify-between py-1.5 text-sm">
+                <span className="truncate text-brand-ink">{a.patient_name}<span className="ml-1 text-xs text-brand-muted">· currently {new Date(a.start_time).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}</span></span>
+                {a.patient_phone && (
+                  <span className="ml-2 flex flex-shrink-0 items-center gap-3">
+                    <a href={`https://wa.me/${a.patient_phone.replace(/\D/g, '')}?text=${encodeURIComponent(`Hi ${a.patient_name}, an earlier appointment slot has just opened up at Dr Chalita le Roux — would you like it? Let me know and I'll book it for you.`)}`}
+                      target="_blank" rel="noopener noreferrer" title="Send a WhatsApp offering the earlier slot"
+                      className="text-xs font-medium text-emerald-700 hover:underline">WhatsApp offer</a>
+                    <a href={`tel:${a.patient_phone.replace(/\s/g, '')}`} className="text-xs font-medium text-brand-primary hover:underline">Call</a>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Intake outstanding before visit — chase/resend the form so the chart is ready */}
+      {intakeOutstanding.length > 0 && (
+        <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            <p className="text-sm font-semibold text-brand-ink">Intake outstanding before visit</p>
+            <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-xs font-medium text-amber-700">{intakeOutstanding.length}</span>
+          </div>
+          <p className="mb-2 text-xs text-brand-muted">These patients have an upcoming visit but haven't completed their intake form.</p>
+          <ul className="divide-y divide-amber-200/60">
+            {intakeOutstanding.map((p) => (
+              <li key={p.patient_id} className="flex items-center justify-between py-1.5 text-sm">
+                <span className="truncate text-brand-ink">{p.patient_name}<span className="ml-1 text-xs text-brand-muted">· {new Date(p.start_time).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })} · {p.intake_status}</span></span>
+                <button type="button" onClick={() => router.post(`/patients/${p.patient_id}/send-intake`, {}, { preserveScroll: true })} className="ml-2 flex-shrink-0 rounded-lg border border-amber-300 bg-white px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">Send intake</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Recent no-shows — call/message to rebook (speed recovers the revenue) */}
+      {noShows.length > 0 && (
+        <div className="mb-8 rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-rose-500" />
+            <p className="text-sm font-semibold text-brand-ink">Recent no-shows — rebook them</p>
+            <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-xs font-medium text-rose-700">{noShows.length}</span>
+          </div>
+          <p className="mb-2 text-xs text-brand-muted">Reach out fast — most patients rebook with whoever responds first.</p>
+          <ul className="divide-y divide-rose-200/60">
+            {noShows.map((p) => (
+              <li key={`${p.patient_id}-${p.start_time}`} className="flex items-center justify-between py-1.5 text-sm">
+                <span className="truncate text-brand-ink">{p.patient_name}<span className="ml-1 text-xs text-brand-muted">· missed {new Date(p.start_time).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}</span></span>
+                <span className="ml-2 flex flex-shrink-0 items-center gap-3">
+                  {p.patient_phone && <a href={`tel:${p.patient_phone.replace(/\s/g, '')}`} className="text-xs font-medium text-brand-primary hover:underline">Call</a>}
+                  <Link href={`/patients/${p.patient_id}`} className="text-xs font-medium text-brand-primary hover:underline">Rebook →</Link>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Lab cases due back — book the seat/fit when the crown/bridge returns */}
+      {labCases.length > 0 && (
+        <div className="mb-8 rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-indigo-500" />
+            <p className="text-sm font-semibold text-brand-ink">Lab cases due back</p>
+            <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-xs font-medium text-indigo-700">{labCases.length}</span>
+          </div>
+          <p className="mb-2 text-xs text-brand-muted">When these return from the lab, book the seat/fit appointment.</p>
+          <ul className="divide-y divide-indigo-200/60">
+            {labCases.map((c) => (
+              <li key={c.item_id} className="flex items-center justify-between py-1.5 text-sm">
+                <span className="truncate text-brand-ink">
+                  {c.patient_id ? <Link href={`/patients/${c.patient_id}`} className="hover:underline">{c.patient_name}</Link> : c.patient_name}
+                  <span className="ml-1 text-xs text-brand-muted">· {c.description}{c.tooth ? ` #${c.tooth}` : ''}{c.lab_name ? ` · ${c.lab_name}` : ''}</span>
+                </span>
+                <span className={`ml-2 flex-shrink-0 text-xs ${c.overdue ? 'font-semibold text-brand-danger' : 'text-brand-muted'}`}>
+                  {c.overdue ? 'overdue · ' : 'due '}{new Date(c.due_on).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Accepted-but-unscheduled treatment — planned work with no future booking = recoverable production */}
+      {unscheduledTx.length > 0 && (
+        <div className="mb-8 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+          <div className="mb-1 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            <p className="text-sm font-semibold text-brand-ink">Unscheduled treatment — rebook</p>
+            <span className="ml-auto rounded-full bg-white px-2 py-0.5 text-xs font-medium text-amber-700">{unscheduledTx.length}</span>
+          </div>
+          <p className="mb-2 text-xs text-brand-muted">Planned treatment with no upcoming appointment — call/message to book it in.</p>
+          <ul className="divide-y divide-amber-200/60">
+            {unscheduledTx.map((u) => (
+              <li key={u.patient_id} className="flex items-center justify-between py-1.5 text-sm">
+                <span className="truncate text-brand-ink">
+                  <Link href={`/patients/${u.patient_id}`} className="hover:underline">{u.patient_name}</Link>
+                  <span className="ml-1 text-xs text-brand-muted">· {u.item_count} item{u.item_count === 1 ? '' : 's'}</span>
+                </span>
+                <span className="ml-2 flex-shrink-0 text-xs font-semibold text-amber-700">
+                  R{Number(u.value || 0).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Stat Cards */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           title={t('stat_total_patients')}
           value={stats?.total_patients ?? 0}
@@ -148,13 +340,24 @@ export default function Dashboard({
           icon={UserPlus}
           accent="info"
         />
-        <StatCard
-          title={t('stat_total_appointments')}
-          value={stats?.total_appointments ?? 0}
-          subtitle={`${stats?.completed_today ?? 0} ${t('stat_completed_today')}`}
-          icon={Activity}
-          accent="warning"
-        />
+        <Link href="/accounts" className="block">
+          <StatCard
+            title="Outstanding"
+            value={`R${(stats?.outstanding_balance ?? 0).toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`}
+            subtitle="owed across accounts →"
+            icon={Activity}
+            accent="warning"
+          />
+        </Link>
+        <Link href="/estimates" className="block">
+          <StatCard
+            title="Estimate pipeline"
+            value={`R${(stats?.estimates_pipeline ?? 0).toLocaleString('en-ZA', { maximumFractionDigits: 0 })}`}
+            subtitle={`${stats?.estimates_awaiting ?? 0} awaiting acceptance →`}
+            icon={TrendingUp}
+            accent="info"
+          />
+        </Link>
       </div>
 
       {/* Main Content Grid */}

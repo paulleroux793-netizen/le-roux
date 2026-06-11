@@ -16,6 +16,10 @@ class MailController < ApplicationController
     threads = threads.unread                                       if params[:filter] == "unread"
     threads = threads.starred                                      if params[:filter] == "starred"
     threads = threads.appointment_requests                         if params[:filter] == "appointment_requests"
+    if params[:filter] == "drafts"
+      thread_ids = MailMessage.where(id: MailAppointmentDraft.pending.select(:mail_message_id)).distinct.pluck(:mail_thread_id)
+      threads = threads.where(id: thread_ids)
+    end
     threads = threads.order(last_message_at: :desc).limit(200).to_a
 
     active_thread = (MailThread.find_by(id: params[:thread_id]) if params[:thread_id].present?)
@@ -46,7 +50,75 @@ class MailController < ApplicationController
     redirect_back fallback_location: mail_path, status: :see_other
   end
 
+  # Reply to the sender via the practice's own SMTP (REAL outbound email).
+  def reply
+    thread = MailThread.find(params[:id])
+    body = params[:body].to_s
+    return redirect_back(fallback_location: mail_path, alert: "Reply is empty.", status: :see_other) if body.strip.empty?
+
+    own = thread.mail_account.address.to_s
+    # Reply to the last message from someone OTHER than us (the external party),
+    # falling back to the last inbound, then the last message overall.
+    last = thread.mail_messages.where(sent_by_us: false)
+                 .reject { |m| m.from_address.to_s.casecmp?(own) }.max_by(&:received_at)
+    last ||= thread.mail_messages.where(sent_by_us: false).order(:received_at).last
+    last ||= thread.mail_messages.last
+    to = last&.from_address
+    # Refuse to send if there's no external recipient (blank, or our own address).
+    if to.blank? || to.to_s.casecmp?(own)
+      return redirect_back(fallback_location: mail_path, alert: "Can't reply — no external recipient on this thread.", status: :see_other)
+    end
+
+    # Idempotency guard: a fast double-click / Inertia retry must not send twice.
+    # SolidCache is DB-backed/shared, so unless_exist works across processes.
+    guard_key = "mail_reply:#{thread.id}:#{Digest::SHA256.hexdigest(body)}"
+    unless Rails.cache.write(guard_key, 1, expires_in: 30.seconds, unless_exist: true)
+      return redirect_back(fallback_location: "#{mail_path}?thread_id=#{thread.id}", notice: "Reply already sent.", status: :see_other)
+    end
+
+    subject = thread.subject.to_s
+    subject = "Re: #{subject}" unless subject.match?(/\Are:/i)
+
+    begin
+      MailReplySender.send_reply(account: thread.mail_account, to: to, subject: subject, body: body,
+                                 in_reply_to: last&.message_id_header)
+    rescue => e
+      # Release the idempotency guard so the user can retry immediately after a
+      # transient SMTP failure (the send did not go through).
+      Rails.cache.delete(guard_key)
+      return redirect_back(fallback_location: mail_path, alert: "Send failed: #{e.message.to_s.truncate(140)}", status: :see_other)
+    end
+
+    thread.mail_messages.create!(
+      mail_account: thread.mail_account, provider_message_id: "sent-#{SecureRandom.hex(8)}", folder: "Sent",
+      from_address: thread.mail_account.address, to_addresses: [ to ], subject: subject,
+      body_text: body, snippet: body[0, 200], received_at: Time.current, read_at: Time.current, sent_by_us: true
+    )
+    thread.update!(message_count: thread.mail_messages.count, last_message_at: Time.current)
+    # audit_logs.summary is NOT encrypted — redact PHI: mask the recipient and drop
+    # the subject (which can contain patient names / clinical detail).
+    AuditService.log(action: "mail.replied", summary: "Replied to #{redact_email(to)} (reply sent)",
+                     resource: thread, performed_by: audit_performer, ip_address: request.remote_ip) rescue nil
+    redirect_back fallback_location: "#{mail_path}?thread_id=#{thread.id}", notice: "Reply sent to #{to}.", status: :see_other
+  end
+
+  # Remove a thread from the Ivory inbox (local only — does NOT delete from the
+  # mail server / Outlook; this is "clear it from my view").
+  def trash
+    MailThread.find(params[:id]).update!(trashed: true)
+    redirect_back fallback_location: mail_path, notice: "Removed from inbox.", status: :see_other
+  end
+
   private
+
+  # Mask an email for the (unencrypted) audit log: first char + ***@domain.
+  # Falls back to domain-only if the local part is too short to mask.
+  def redact_email(addr)
+    local, domain = addr.to_s.split("@", 2)
+    return "(unknown recipient)" if domain.blank?
+    masked_local = local.present? ? "#{local[0]}***" : "***"
+    "#{masked_local}@#{domain}"
+  end
 
   def thread_list_props(t)
     last = t.mail_messages.last
@@ -90,6 +162,7 @@ class MailController < ApplicationController
           requested_duration_minutes: d.requested_duration_minutes,
           requested_reason: d.requested_reason,
           confidence: d.confidence, status: d.status,
+          draft_reply: d.extraction_metadata["draft_reply"],
           patient: d.patient && { id: d.patient.id, name: d.patient.full_name }
         }
       }

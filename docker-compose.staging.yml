@@ -1,0 +1,51 @@
+# Ivory STAGING — an isolated offline copy for safe development + testing.
+# Runs on port 3001 with its OWN database (separate volumes via the -p ivory-staging project),
+# so changes here NEVER touch the live system on :3000. Promote to live only after hours.
+#   docker compose -p ivory-staging -f docker-compose.staging.yml up -d
+#   (seed: pg_dump live db | psql staging db — see script/staging_setup.sh)
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: dr_leroux_receptionist_development
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    init: true
+    command: bash -lc "sed -i 's/\r$//' bin/* 2>/dev/null || true; chmod +x bin/* 2>/dev/null || true; bundle exec rails db:prepare && bundle exec bin/vite build && bundle exec rails server -b 0.0.0.0 -p 3000"
+    env_file: .env.rig
+    environment:
+      ELIXIR_DATA_ROOT: "/elixir_data"
+    ports:
+      - "3001:3000"
+    volumes:
+      - .:/rails
+      - node_modules:/rails/node_modules
+      - rails_tmp:/rails/tmp
+      - rails_log:/rails/log
+      - "/opt/ivory/elixir_data:/elixir_data:ro"
+      - "/var/lib/docker/_sidexis_archive:/sidexis_archive:ro"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  node_modules:
+  rails_tmp:
+  rails_log:

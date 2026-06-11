@@ -76,6 +76,9 @@ function Wizard({ token, patient, practice, privacyNotice, templates }) {
   const [stepIndex, setStepIndex] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  // Honeypot: hidden from humans, bots fill it. Submitted as `website`; the server silently
+  // drops any submission where it's non-empty (see IntakesController#create_generic).
+  const [hp, setHp] = useState('')
 
   const steps = useMemo(() => {
     const list = [{ kind: 'privacy' }]
@@ -135,7 +138,7 @@ function Wizard({ token, patient, practice, privacyNotice, templates }) {
 
   const submit = () => {
     setSubmitting(true)
-    router.patch(`/intake/${token}`, { answers }, {
+    router.patch(`/intake/${token}`, { answers, website: hp }, {
       preserveScroll: true,
       onError: () => {
         setSubmitting(false)
@@ -147,6 +150,12 @@ function Wizard({ token, patient, practice, privacyNotice, templates }) {
 
   return (
     <Shell>
+      {/* Honeypot — visually hidden, off-screen; only bots fill it. */}
+      <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px', overflow: 'hidden' }}>
+        <label>Website
+          <input type="text" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)} />
+        </label>
+      </div>
       {/* Header + progress */}
       <div className="mb-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">

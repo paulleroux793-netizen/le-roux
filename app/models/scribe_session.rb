@@ -4,6 +4,13 @@
 class ScribeSession < ApplicationRecord
   STATUSES = %w[recording transcribing drafted reviewed discarded].freeze
 
+  # PHI at rest: a chair-side transcript + clinical notes are the most sensitive
+  # health data in the system. Encrypt them (non-deterministic — never searched
+  # by exact value). `draft` (jsonb proposed COT/estimate) is left unencrypted
+  # for now; encrypting a jsonb column needs care and there is no scribe data yet.
+  encrypts :transcript
+  encrypts :notes
+
   belongs_to :patient
   belongs_to :appointment, optional: true
   belongs_to :course_of_treatment, optional: true

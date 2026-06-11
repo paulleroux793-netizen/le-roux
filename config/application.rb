@@ -24,8 +24,12 @@ module DrLerouxReceptionist
     config.time_zone = "Africa/Johannesburg"
     # config.eager_load_paths << Rails.root.join("extras")
 
-    # Session store for Inertia dashboard (middleware already included via rails/all)
-    config.session_store :cookie_store, key: "_dr_leroux_receptionist_session"
+    # Session store for Inertia dashboard (middleware already included via rails/all).
+    # secure:false — assume_ssl (needed for the Twilio webhook) would otherwise mark this
+    # cookie Secure, but reception reaches the dashboard over plain http (LAN/Tailscale) and
+    # browsers drop Secure cookies there → per-user login can't hold a session. The dashboard
+    # is internal-only (the public tunnel blocks it) + httponly + same_site lax, so this is safe.
+    config.session_store :cookie_store, key: "_dr_leroux_receptionist_session", secure: false, same_site: :lax
 
     # Route exceptions through our own ErrorsController so Inertia renders
     # branded 404/422/500 pages instead of the default Rails HTML pages.

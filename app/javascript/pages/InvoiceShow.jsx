@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Link } from '@inertiajs/react'
-import { ArrowLeft, Printer, MessageCircle, Download, Wallet } from 'lucide-react'
+import { Link, router } from '@inertiajs/react'
+import { ArrowLeft, Printer, MessageCircle, Download, Wallet, Ban, Undo2, CreditCard } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import BrandLogo from '../components/BrandLogo'
+import SmartBack from '../components/SmartBack'
 import PaymentModal from '../components/PaymentModal'
 import { cn } from '../lib/utils'
 
@@ -13,13 +14,27 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
   const [payOpen, setPayOpen] = useState(false)
   const balance = Number(invoice.balance || 0)
   const isPaid  = balance <= 0 && !invoice.void
+  const credit  = Number(invoice.credit_available || 0)
+
+  const applyCredit = () => {
+    if (!invoice.account_id) return
+    router.post(`/accounts/${invoice.account_id}/apply_credit`, { invoice_id: invoice.id }, { preserveScroll: true })
+  }
+  const writeOff = () => {
+    const reason = window.prompt('Write this invoice off as bad debt? Enter a reason:')
+    if (reason === null) return
+    router.post(`/invoices/${invoice.id}/write_off`, { reason }, { preserveScroll: true })
+  }
+  const reversePayment = (p) => {
+    const reason = window.prompt(`Reverse this ${p.method?.toUpperCase()} payment of R${Number(p.amount).toFixed(2)}? Enter a reason:`)
+    if (reason === null) return
+    router.post(`/payments/${p.id}/reverse`, { reason }, { preserveScroll: true })
+  }
 
   return (
     <DashboardLayout>
       <div className="mb-4 flex items-center justify-between no-print">
-        <Link href="/invoices" className="inline-flex items-center gap-1 text-sm text-brand-muted hover:text-brand-ink">
-          <ArrowLeft size={14} /> All invoices
-        </Link>
+        <SmartBack fallback="/invoices" />
         <div className="flex flex-wrap gap-2">
           <button onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-ink hover:bg-brand-surface">
             <Printer size={14} /> Print
@@ -52,6 +67,18 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
           >
             <Wallet size={14} /> {isPaid ? 'Add payment' : `Record payment · R${balance.toFixed(2)}`}
           </button>
+          {credit > 0 && balance > 0 && invoice.writeable && (
+            <button onClick={applyCredit} title={`Apply R${credit.toFixed(2)} account credit to this invoice`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-sm font-medium text-indigo-700 hover:bg-indigo-100">
+              <CreditCard size={14} /> Apply credit · R{credit.toFixed(2)}
+            </button>
+          )}
+          {invoice.writeable && balance > 0 && (
+            <button onClick={writeOff} title="Write off as bad debt"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-muted hover:bg-brand-surface">
+              <Ban size={14} /> Write off
+            </button>
+          )}
         </div>
       </div>
 
@@ -80,6 +107,11 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
             <p className="text-xs uppercase tracking-wide text-brand-muted">Tax Invoice</p>
             <p className="font-mono text-sm font-semibold text-brand-ink">{invoice.number}</p>
             <p className="mt-1 text-xs text-brand-muted">Date: {fmtDate(invoice.date)}</p>
+            {!isPaid && !invoice.void && invoice.date && (() => {
+              const days = Math.floor((new Date(new Date().toDateString()) - new Date(invoice.date)) / 86400000)
+              if (days <= 30) return null
+              return <p className={`mt-1 inline-block rounded-md px-2 py-0.5 text-xs font-semibold ${days > 60 ? 'bg-brand-danger/10 text-brand-danger' : 'bg-amber-50 text-amber-700'}`}>{days} days overdue</p>
+            })()}
           </div>
         </div>
 
@@ -89,6 +121,7 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
             <p className="text-xs uppercase tracking-wide text-brand-muted">Patient</p>
             <p className="font-medium text-brand-ink">{patient.name}</p>
             <p className="text-brand-muted">{patient.phone}</p>
+            {invoice.provider_name && <p className="mt-1 text-brand-muted"><span className="text-xs uppercase tracking-wide">Provider:</span> {invoice.provider_name}</p>}
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-brand-muted">Medical aid (for your claim)</p>
@@ -151,11 +184,20 @@ export default function InvoiceShow({ invoice = {}, practice = {}, patient = {} 
             <table className="w-full text-sm">
               <tbody>
                 {invoice.payments.map((p) => (
-                  <tr key={p.id} className="border-b border-brand-border/40 last:border-0">
+                  <tr key={p.id} className={cn('border-b border-brand-border/40 last:border-0', p.reversed && 'opacity-50')}>
                     <td className="py-1.5 text-brand-muted">{fmtDate(p.received_at)}</td>
-                    <td className="py-1.5 capitalize text-brand-ink">{p.method}</td>
+                    <td className="py-1.5 capitalize text-brand-ink">{p.method}{p.kind === 'credit_applied' ? ' (credit)' : ''}{p.reversed ? ' · reversed' : ''}</td>
                     <td className="py-1.5 text-xs text-brand-muted">{p.reference || p.notes || ''}</td>
-                    <td className="py-1.5 text-right font-medium text-emerald-700">{rand(p.amount)}</td>
+                    <td className={cn('py-1.5 text-right font-medium', p.reversed ? 'text-brand-muted line-through' : 'text-emerald-700')}>{rand(p.amount)}</td>
+                    <td className="py-1.5 pl-3 text-right no-print">
+                      <a href={`/payments/${p.id}/receipt`} target="_blank" rel="noreferrer" className="text-xs text-brand-primary hover:underline">Receipt</a>
+                      {!p.reversed && (p.kind === 'payment') && (
+                        <button onClick={() => reversePayment(p)} title="Reverse this payment"
+                          className="ml-2 inline-flex items-center gap-0.5 text-xs text-brand-danger hover:underline">
+                          <Undo2 size={11} /> Reverse
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

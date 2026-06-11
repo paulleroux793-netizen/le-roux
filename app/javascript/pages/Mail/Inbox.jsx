@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, router } from '@inertiajs/react'
-import { Inbox as InboxIcon, Star, Search, Mail, Calendar, AlertCircle, PlusCircle, Paperclip, ChevronRight, Folder } from 'lucide-react'
+import { Inbox as InboxIcon, Star, Search, Mail, Calendar, AlertCircle, PlusCircle, Paperclip, ChevronRight, Folder, Reply, Trash2, Send } from 'lucide-react'
 import DashboardLayout from '../../layouts/DashboardLayout'
 import { cn } from '../../lib/utils'
 
@@ -74,6 +74,18 @@ export default function MailInbox({
         <div className="grid grid-cols-12 gap-4 h-[calc(100vh-200px)]">
           {/* ── Left rail: accounts + filters ─────────────────────── */}
           <aside className="col-span-2 overflow-y-auto rounded-xl border border-brand-border bg-white p-3">
+            {/* AI Drafts pinned at the very top — the responses the AI wants to send patients */}
+            <button onClick={() => goto({ filter: filters.filter === 'drafts' ? null : 'drafts' })}
+              className={cn(
+                'mb-3 flex w-full items-center justify-between gap-1 rounded-lg border px-2.5 py-2 text-xs font-semibold',
+                filters.filter === 'drafts'
+                  ? 'border-amber-400 bg-amber-100 text-amber-900'
+                  : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100'
+              )}>
+              <span className="flex items-center gap-1.5"><Star size={13} /> AI Drafts</span>
+              <span className="rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">{pendingDraftsCount}</span>
+            </button>
+
             <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">Accounts</p>
             <button onClick={() => goto({})}
               className={cn(
@@ -212,11 +224,49 @@ export default function MailInbox({
 }
 
 function ReadingPane({ thread }) {
+  const [replyBody, setReplyBody] = useState('')
+  const [sending, setSending] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const sendReply = () => {
+    const trimmed = replyBody.trim()
+    if (!trimmed) return
+    setSending(true)
+    router.post(`/mail/threads/${thread.id}/reply`, { body: trimmed }, {
+      preserveScroll: true,
+      onSuccess: () => setReplyBody(''),
+      onError:   (errors) => alert(errors?.error || 'Could not send the reply. Please try again.'),
+      onFinish:  () => setSending(false),
+    })
+  }
+
+  const removeFromIvory = () => {
+    if (!window.confirm('Remove this email from Ivory? It stays in Outlook.')) return
+    setDeleting(true)
+    router.patch(`/mail/threads/${thread.id}/trash`, {}, {
+      preserveScroll: true,
+      onError:   (errors) => alert(errors?.error || 'Could not remove this email. Please try again.'),
+      onFinish: () => setDeleting(false),
+    })
+  }
+
   return (
     <div className="flex h-full flex-col">
       <header className="border-b border-brand-border p-4">
-        <h2 className="text-base font-semibold text-brand-ink">{thread.subject}</h2>
-        <p className="mt-0.5 text-xs text-brand-muted">{thread.message_count} message{thread.message_count === 1 ? '' : 's'} · {thread.participants?.join(', ')}</p>
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold text-brand-ink">{thread.subject}</h2>
+            <p className="mt-0.5 text-xs text-brand-muted">{thread.message_count} message{thread.message_count === 1 ? '' : 's'} · {thread.participants?.join(', ')}</p>
+          </div>
+          <div className="flex flex-shrink-0 flex-col items-end">
+            <button onClick={removeFromIvory} disabled={deleting}
+              title="Removes this email from Ivory only — it stays in your Outlook mailbox."
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-border px-2.5 py-1.5 text-xs font-medium text-brand-ink hover:bg-brand-surface disabled:opacity-50">
+              <Trash2 size={13} /> {deleting ? 'Removing…' : 'Remove from Ivory'}
+            </button>
+            <span className="mt-1 text-[10px] text-brand-muted">Stays in Outlook</span>
+          </div>
+        </div>
         {thread.patient && (
           <Link href={`/patients/${thread.patient.id}`}
             className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-primary hover:underline">
@@ -235,6 +285,12 @@ function ReadingPane({ thread }) {
                 {' '}{d.requested_duration_minutes || '?'}m · {d.requested_reason || '(reason TBC)'}
               </p>
               <p className="mt-0.5 text-xs text-brand-muted">Confidence {Math.round((d.confidence || 0) * 100)}% · status {d.status}</p>
+              {d.draft_reply && (
+                <div className="mt-2 rounded-md border border-brand-border bg-brand-surface/40 p-2">
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">Draft reply to the patient (not sent)</p>
+                  <p className="whitespace-pre-wrap text-xs text-brand-ink">{d.draft_reply}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -258,6 +314,26 @@ function ReadingPane({ thread }) {
             </div>
           </article>
         ))}
+      </div>
+
+      {/* Reply composer — sends a real email via the mail provider */}
+      <div className="border-t border-brand-border bg-brand-surface/30 p-3">
+        <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-brand-muted">
+          <Reply size={12} /> Reply
+        </div>
+        <textarea
+          value={replyBody}
+          onChange={(e) => setReplyBody(e.target.value)}
+          rows={3}
+          placeholder="Write your reply…"
+          className="w-full resize-y rounded-lg border border-brand-border bg-white p-2.5 text-sm text-brand-ink outline-none placeholder:text-brand-muted focus:border-brand-primary"
+        />
+        <div className="mt-2 flex justify-end">
+          <button onClick={sendReply} disabled={sending || !replyBody.trim()}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-brand-primary px-3.5 py-2 text-sm font-semibold text-white hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-50">
+            <Send size={13} /> {sending ? 'Sending…' : 'Send reply'}
+          </button>
+        </div>
       </div>
     </div>
   )

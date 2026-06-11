@@ -139,6 +139,20 @@ export default function ConversationShow({ conversation }) {
   )
 }
 
+// Approved quick replies — must follow the practice rules (no after-hours/24h/
+// "see you today", no medical-aid billing claims, Roodepoort positioning).
+// Reception inserts then edits before sending. (Should be synced from PRACTICE_CONFIG.)
+const CANNED_REPLIES = [
+  { label: 'Greeting', text: 'Thank you for messaging Dr Chalita le Roux Inc. How can we help you today?' },
+  { label: 'Directions', text: 'We are at Unit 2 Amorosa Office Park, cnr Doreen & Lawrence Road, Roodepoort.' },
+  { label: 'Appt confirmed', text: 'Your appointment is confirmed. Please reply here if you need to change it.' },
+  { label: 'Rooms hours', text: 'We have received your message and will reply during our rooms hours.' },
+  { label: 'Public holiday', text: 'Our rooms are closed for the public holiday. We will respond as soon as we reopen.' },
+  { label: 'Banking', text: 'Our banking details: Investec, Dr Chalita le Roux Inc, Acc 100 1349 4325, Branch 580105.' },
+  { label: 'Reschedule', text: 'No problem — we can change your appointment. Please let us know which day suits you and we will confirm a time during our rooms hours.' },
+  { label: 'Running late', text: 'Thank you for letting us know. Please come through when you arrive and we will assist you.' },
+]
+
 function MessageComposer({ body, setBody, onSend, onKeyDown, canReply, sending }) {
   const charCount = body.length
   const showCounter = charCount > 140
@@ -150,6 +164,22 @@ function MessageComposer({ body, setBody, onSend, onKeyDown, canReply, sending }
           <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
             Replies are only supported on WhatsApp conversations.
           </p>
+        </div>
+      )}
+
+      {canReply && (
+        <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+          {CANNED_REPLIES.map((r) => (
+            <button
+              key={r.label}
+              type="button"
+              onClick={() => setBody(body ? `${body}\n${r.text}` : r.text)}
+              title={r.text}
+              className="rounded-full border border-brand-border px-2.5 py-1 text-xs text-brand-ink transition-colors hover:bg-brand-surface"
+            >
+              {r.label}
+            </button>
+          ))}
         </div>
       )}
 

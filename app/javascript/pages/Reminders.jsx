@@ -337,9 +337,11 @@ function ReminderRow({ reminder, t, dateFmt, onSend, onConfirm, onCancel }) {
         </span>
       </td>
 
-      {/* Phone */}
-      <td className="whitespace-nowrap px-4 py-3.5 text-sm text-brand-muted">
-        {reminder.patient_phone}
+      {/* Phone — click to call */}
+      <td className="whitespace-nowrap px-4 py-3.5 text-sm">
+        {reminder.patient_phone
+          ? <a href={`tel:${reminder.patient_phone.replace(/\s/g, '')}`} className="text-brand-primary hover:underline" title="Click to call">{reminder.patient_phone}</a>
+          : <span className="text-brand-muted">—</span>}
       </td>
 
       {/* Actions */}

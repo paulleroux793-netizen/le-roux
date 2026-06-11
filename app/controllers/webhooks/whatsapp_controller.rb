@@ -12,10 +12,17 @@ module Webhooks
     def incoming
       # Idempotency guard: Twilio retries webhooks if it doesn't get a fast 200.
       # Re-processing the same message duplicates Anthropic calls + bloats conversation
-      # history. Cache on MessageSid for 2 minutes; second+ hit returns immediately.
+      # history. Primary dedupe is a DB-UNIQUE record on MessageSid (bulletproof,
+      # survives restarts/cache eviction — Twilio is at-least-once and reuses the
+      # SID on retry). The 2-minute cache is kept as a fast first-line check.
       sid = params["MessageSid"].to_s.presence
       if sid && !Rails.cache.write("twilio_webhook:#{sid}", Time.current.to_i, expires_in: 2.minutes, unless_exist: true)
-        Rails.logger.info("[WhatsApp Webhook] Duplicate webhook #{sid}, skipping")
+        Rails.logger.info("[WhatsApp Webhook] Duplicate webhook (cache) #{sid}, skipping")
+        respond_with_empty_twiml
+        return
+      end
+      if sid && !WebhookReceipt.first_seen?(sid, type: "whatsapp_inbound")
+        Rails.logger.info("[WhatsApp Webhook] Duplicate webhook (db) #{sid}, skipping")
         respond_with_empty_twiml
         return
       end
@@ -26,6 +33,18 @@ module Webhooks
 
       if sender.blank? || (body.blank? && button_payload.blank?)
         head :bad_request
+        return
+      end
+
+      # Per-sender abuse rate limit. This number is PUBLIC (Google Ads + website),
+      # so a single sender flooding it would otherwise rack up Anthropic + Twilio
+      # cost and could drown out real patients. A genuine booking conversation is
+      # well under this. Over the limit → silently drop (no AI call, no reply) so
+      # we don't feed a spam loop. Window is a rolling 10-minute bucket in the
+      # shared SolidCache.
+      if rate_limited?(sender)
+        Rails.logger.warn("[WhatsApp Webhook] Rate limit exceeded for #{sender}; dropping message")
+        respond_with_empty_twiml
         return
       end
 
@@ -60,17 +79,44 @@ module Webhooks
       return if Rails.env.development? && ENV["ENFORCE_TWILIO_SIGNATURE"] != "true"
 
       validator = Twilio::Security::RequestValidator.new(ENV.fetch("TWILIO_AUTH_TOKEN"))
-      # Use APP_BASE_URL so the URL matches what Twilio signed regardless of
-      # how the reverse proxy reconstructs the scheme/host.
-      base = ENV.fetch("APP_BASE_URL", request.base_url).delete_suffix("/")
-      url  = "#{base}#{request.path}"
-      url += "?#{request.query_string}" if request.query_string.present?
-      twilio_signature = request.headers["X-Twilio-Signature"]
+      twilio_signature = request.headers["X-Twilio-Signature"].to_s
 
-      unless validator.validate(url, request.POST, twilio_signature.to_s)
-        Rails.logger.warn("[WhatsApp Webhook] Invalid Twilio signature from #{request.remote_ip}")
+      # Twilio signs the EXACT public URL it posted to. Behind a tunnel/proxy the
+      # host can change (e.g. a self-healing Cloudflare quick-tunnel whose subdomain
+      # rotates on restart), so we don't pin a single URL: we accept the request if
+      # the signature matches ANY plausible reconstruction of the public URL —
+      # the configured APP_BASE_URL, the proxy-reconstructed base_url, or
+      # original_url. This stays secure (the HMAC still has to match the auth token)
+      # while surviving URL changes without a redeploy.
+      bases = [ ENV["APP_BASE_URL"], request.base_url ].compact_blank.map { |b| b.delete_suffix("/") }
+      candidates = bases.map { |b|
+        u = "#{b}#{request.path}"
+        request.query_string.present? ? "#{u}?#{request.query_string}" : u
+      }
+      candidates << request.original_url
+      ok = candidates.uniq.any? { |u| validator.validate(u, request.POST, twilio_signature) }
+
+      unless ok
+        Rails.logger.warn("[WhatsApp Webhook] Invalid Twilio signature from #{request.remote_ip} (tried: #{candidates.uniq.join(' | ')})")
         head :forbidden
       end
+    end
+
+    # Max inbound messages we'll process per sender per rolling 10-minute window.
+    # 40 is very generous for a real booking chat; it only catches floods/abuse.
+    RATE_LIMIT_PER_10_MIN = 40
+
+    def rate_limited?(sender)
+      return false if sender.blank?
+
+      bucket = Time.current.to_i / 600 # 10-minute window
+      key = "wa_rate:#{sender}:#{bucket}"
+      count = Rails.cache.increment(key, 1, expires_in: 11.minutes)
+      # SolidCache returns the new count; if the store ever returns nil, fail open.
+      count.present? && count > RATE_LIMIT_PER_10_MIN
+    rescue StandardError => e
+      Rails.logger.warn("[WhatsApp Webhook] rate_limited? error (failing open): #{e.message}")
+      false
     end
 
     def respond_with_empty_twiml

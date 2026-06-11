@@ -103,9 +103,11 @@ class Appointment < ApplicationRecord
     errors.add(:base, "This time slot conflicts with an existing appointment") if conflict
   end
 
-  # On create: default to the active dentist if reception didn't pick one.
+  # On create: default to the first BOOKABLE dentist if reception didn't pick one.
+  # This keeps new AI/default bookings off a dentist who's closed for bookings
+  # (e.g. on maternity leave) and routes them to whoever is currently covering.
   def set_diary_defaults
-    self.provider ||= Provider.active.ordered.first
+    self.provider ||= Provider.default_booking_provider
   end
 
   # After-hours bookings are allowed per practice policy. The WhatsApp

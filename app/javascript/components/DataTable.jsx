@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react'
+import EmptyState from './EmptyState'
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,6 +12,65 @@ import {
   ArrowUpDown, ArrowUp, ArrowDown,
   Search, ChevronLeft, ChevronRight,
 } from 'lucide-react'
+
+// ── Fuzzy global filter ─────────────────────────────────────────────
+// Receptionists mistype surnames constantly (e.g. "Justynarski" for the
+// record "Justyniarski", or "Muller" for "Müller"). Plain substring misses
+// those. This normalizes diacritics, splits the query into tokens, and
+// matches each token against any word in the row via substring OR a bounded
+// Damerau-Levenshtein distance (handles 1-2 char typos + transpositions).
+const stripDiacritics = (s) =>
+  (s ?? '').toString().normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+
+// Bounded Damerau-Levenshtein (insert/delete/substitute/transpose).
+function editDistance(a, b) {
+  const al = a.length, bl = b.length
+  if (Math.abs(al - bl) > 2) return 3 // beyond our tolerance — short-circuit
+  const d = Array.from({ length: al + 1 }, () => new Array(bl + 1).fill(0))
+  for (let i = 0; i <= al; i++) d[i][0] = i
+  for (let j = 0; j <= bl; j++) d[0][j] = j
+  for (let i = 1; i <= al; i++) {
+    for (let j = 1; j <= bl; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost)
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1)
+      }
+    }
+  }
+  return d[al][bl]
+}
+
+// A query token "hits" if any word contains it, or (for 3+ chars) is within
+// a small edit distance: <=1 for short words (<=4), <=2 otherwise.
+const tokenHits = (token, words) => {
+  for (const w of words) if (w.includes(token)) return true
+  if (token.length >= 3) {
+    const maxDist = token.length <= 4 ? 1 : 2
+    for (const w of words) {
+      if (Math.abs(w.length - token.length) <= maxDist && editDistance(token, w) <= maxDist) return true
+    }
+  }
+  return false
+}
+
+// TanStack global filter: keep a row when EVERY query token hits some word in
+// the row's globally-filterable cells. Forgiving include/exclude; the table's
+// own sort handles ordering.
+export const fuzzyGlobalFilter = (row, _columnId, filterValue) => {
+  const q = stripDiacritics(filterValue)
+  if (!q) return true
+  const tokens = q.split(/\s+/).filter(Boolean)
+  const words = []
+  for (const cell of row.getAllCells()) {
+    const col = cell.column
+    if (col.getCanGlobalFilter && !col.getCanGlobalFilter()) continue
+    const v = stripDiacritics(cell.getValue())
+    if (v) for (const w of v.split(/\s+/)) if (w) words.push(w)
+  }
+  if (!words.length) return false
+  return tokens.every((tok) => tokenHits(tok, words))
+}
 
 // ── Shared headless DataTable ───────────────────────────────────────
 // A thin wrapper around @tanstack/react-table that gives us:
@@ -36,6 +96,9 @@ export default function DataTable({
   filters,           // optional render-prop: ({ columnFilters, setColumnFilter }) => ReactNode
   rightActions,      // optional render-prop: () => ReactNode — buttons next to search
   emptyMessage = 'No results',
+  emptyDescription,  // optional explanation under the empty title
+  emptyIcon,         // optional lucide icon for the empty state
+  emptyAction,       // optional primary action (e.g. an "Add" button)
   totalLabel,        // optional string shown below the table in the footer
 }) {
   const [sorting, setSorting]               = useState(initialSort)
@@ -75,9 +138,9 @@ export default function DataTable({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    // Default global filter: case-insensitive substring across every
-    // cell value. Any column can opt out with `enableGlobalFilter: false`.
-    globalFilterFn: 'includesString',
+    // Forgiving fuzzy global filter — diacritics + 1-2 char typos/transposes
+    // (see fuzzyGlobalFilter). Any column opts out with `enableGlobalFilter: false`.
+    globalFilterFn: fuzzyGlobalFilter,
   })
 
   // Helper for per-page filter UI — lets the parent read/write a
@@ -163,8 +226,13 @@ export default function DataTable({
           <tbody>
             {table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-5 py-16 text-center text-sm text-brand-muted">
-                  {data.length === 0 ? emptyMessage : 'No rows match the current filters'}
+                <td colSpan={columns.length} className="px-5 py-8">
+                  {data.length === 0 ? (
+                    <EmptyState icon={emptyIcon} title={emptyMessage} description={emptyDescription} action={emptyAction} compact />
+                  ) : (
+                    <EmptyState icon={Search} title="No matches" description="No records match your search — try fewer or different words." compact
+                      action={<button type="button" onClick={() => setGlobalFilter('')} className="rounded-lg border border-brand-border px-3 py-1.5 text-sm text-brand-ink hover:bg-brand-surface">Clear search</button>} />
+                  )}
                 </td>
               </tr>
             ) : (

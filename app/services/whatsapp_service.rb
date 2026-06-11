@@ -464,6 +464,70 @@ class WhatsappService
     "en" => "Sorry — that slot isn't available or falls outside our working hours. Would you like to try a different day or time?",
     "af" => "Jammer — daardie tyd is nie beskikbaar nie of val buite ons werksure. Wil jy 'n ander dag of tyd probeer?"
   }.freeze
+
+  # Reason-specific intro lines used when a requested slot can't be booked but the
+  # conversation should continue with concrete alternatives (see
+  # booking_alternatives_response). Each is followed by a bulleted list of real
+  # open slots and a "reply with the one that suits you" prompt — so a failed
+  # booking is never a dead end.
+  BOOKING_ALT_INTRO = {
+    too_soon: {
+      "en" => "That time is a little too soon for us to prepare for you (we ask for a bit of notice). Here are the next available times:",
+      "af" => "Daardie tyd is 'n bietjie te gou — ons benodig 'n bietjie kennisgewing. Hier is die volgende beskikbare tye:"
+    },
+    slot_taken: {
+      "en" => "Ah, that time is already booked. Here are the next available times:",
+      "af" => "Ai, daardie tyd is reeds bespreek. Hier is die volgende beskikbare tye:"
+    },
+    outside_working_hours: {
+      "en" => "That time is outside our hours (we're open *Monday to Friday, 8am–5pm*). Here are the next available times:",
+      "af" => "Daardie tyd is buite ons werksure (*Maandag tot Vrydag, 8vm–5nm*). Hier is die volgende beskikbare tye:"
+    },
+    after_hours_today: {
+      "en" => "We've closed for today, but I'd love to get you booked. Here are the next available times:",
+      "af" => "Ons is reeds gesluit vir vandag, maar ek wil jou graag inskryf. Hier is die volgende beskikbare tye:"
+    },
+    public_holiday: {
+      "en" => "That day is a public holiday and we're closed. Here are the next available times:",
+      "af" => "Daardie dag is 'n openbare vakansiedag en ons is gesluit. Hier is die volgende beskikbare tye:"
+    },
+    default: {
+      "en" => "That didn't quite work, but here are the next available times:",
+      "af" => "Dit het nie heeltemal uitgewerk nie, maar hier is die volgende beskikbare tye:"
+    }
+  }.freeze
+
+  BOOKING_ALT_PICK = {
+    "en" => "Just reply with the one that suits you and I'll book it in. 😊",
+    "af" => "Antwoord net met die een wat jou pas, en ek sal dit inskryf. 😊"
+  }.freeze
+
+  # Patient is confirming / repeating an appointment they already hold.
+  ALREADY_BOOKED = {
+    "en" => "You're all set — you're already booked in for *%{when}*. 😊 There's nothing more you need to do. If you'd like to change or cancel it, just let me know.",
+    "af" => "Jy is reg — jy is reeds ingeskryf vir *%{when}*. 😊 Daar is niks verder wat jy hoef te doen nie. Laat my weet as jy dit wil verander of kanselleer."
+  }.freeze
+
+  ALREADY_BOOKED_GENERIC = {
+    "en" => "You're already booked in with us 😊 — nothing more you need to do. If you'd like to change or cancel, just let me know.",
+    "af" => "Jy is reeds by ons ingeskryf 😊 — niks verder nodig nie. Laat my weet as jy wil verander of kanselleer."
+  }.freeze
+
+  # No open slots within the lookahead window — fall back to a gentle ask.
+  BOOKING_ALT_NONE = {
+    "en" => "I'm not seeing open times in the next couple of weeks — could you suggest a day that suits you and I'll find the closest slot?",
+    "af" => "Ek sien nie oop tye in die volgende paar weke nie — kan jy 'n dag voorstel wat jou pas, en ek sal die naaste gleuf vind?"
+  }.freeze
+
+  # Asked when the classifier's self-reported day_of_week does NOT match the
+  # actual weekday of the ISO date it resolved (a sign the relative phrase like
+  # "next Tuesday" was resolved to the wrong calendar date). We do NOT book —
+  # we ask the patient to confirm the actual day + date instead. %{day_date}
+  # is filled with e.g. "Thursday, 12 June".
+  DATE_DAY_MISMATCH_CLARIFY = {
+    "en" => "Just to confirm — did you mean %{day_date}? Reply with the day and time that suits you and I'll get you booked in.",
+    "af" => "Net om te bevestig — het jy %{day_date} bedoel? Antwoord met die dag en tyd wat jou pas, en ek sal jou inskryf."
+  }.freeze
   # Whitening deterministic info message (EN + AF) is now sourced from
   # config/practice_config.yml under services[whitening].full_info_message.
   # Read via PracticeConfig.whitening[:full_info_message][lang.to_sym].
@@ -492,15 +556,45 @@ class WhatsappService
     "all set for",
     "see you on",
     "see you at",
+    # Confirmation-style phrasings the AI uses when it THINKS it booked. These
+    # must be caught so a failed/never-attempted booking can't slip out as a
+    # false confirmation (the Paul le Roux false-confirmation bug, 2026-06-04).
+    "booking confirmation",
+    "here is your booking",
+    "here's your booking",
+    "heres your booking",
+    "securing this appointment",
+    "securing your appointment",
+    "i'm securing",
+    "im securing",
+    "i am securing",
+    "i'm booking you",
+    "im booking you",
+    "booked you in",
+    "booked in for",
+    "i've reserved",
+    "ive reserved",
+    "reserved your",
+    "your appointment is set",
+    "appointment is set",
+    "you're all set",
+    "youre all set",
+    "you are all set",
+    "confirmed for",
     # Afrikaans
     "jy is bespreek",
     "afspraak is bevestig",
     "afspraak is bespreek",
     "ek het jou bespreek",
     "ek het jou ingeskryf",
+    "ek bespreek nou",
+    "besig om te bespreek",
+    "jou afspraak is gestel",
+    "bevestiging van jou",
     "sien jou op",
     "sien jou om",
-    "alles is reg vir"
+    "alles is reg vir",
+    "jy is reg vir"
   ].freeze
 
   def handle_booking(result, patient, conversation)
@@ -519,26 +613,44 @@ class WhatsappService
     # have the placeholder "WhatsApp Patient" name.
     update_patient_name(patient, entities[:name]) if entities[:name].present?
 
+    # Relative-date day-of-week assertion. The classifier returns the weekday
+    # name it BELIEVES the resolved date falls on (day_of_week). If that
+    # disagrees with the actual calendar weekday of the ISO date, the model
+    # likely mis-resolved a relative phrase ("next Tuesday") to the wrong day.
+    # Do NOT book — ask the patient to confirm the real day + date instead.
+    if date.present? && date_day_of_week_mismatch?(date, entities[:day_of_week])
+      actual = Date.parse(date)
+      day_date = "#{localized_day_name(actual, lang)}, #{localized_date(actual, lang)}"
+      Rails.logger.warn(
+        "[WhatsApp] day_of_week mismatch — model said #{entities[:day_of_week].inspect} " \
+        "but #{date} is a #{actual.strftime('%A')}; holding for clarification instead of booking."
+      )
+      template = DATE_DAY_MISMATCH_CLARIFY[lang] || DATE_DAY_MISMATCH_CLARIFY["en"]
+      result[:response] = template % { day_date: day_date }
+      return
+    end
+
     booking_result = nil
     if date.present? && time.present?
       booking_result = attempt_booking(patient, date, time, entities[:treatment], language: lang)
     end
 
-    # After-hours booking for today — blocked, rewrite response
-    if booking_result == :after_hours_today
-      lang = conversation&.language || "en"
-      result[:response] = AFTER_HOURS_TODAY_BLOCKED[lang] || AFTER_HOURS_TODAY_BLOCKED["en"]
+    # The patient already has this exact appointment (e.g. they replied "yes,
+    # tomorrow at 8 is good" to confirm a booking we just made). Don't re-book or
+    # report a clash — reassure them it's already in the diary.
+    if booking_result == :already_booked
+      appt = @already_booked_appt
+      whenstr = appt ? "#{localized_day_name(appt.start_time, lang)}, #{localized_date(appt.start_time, lang)} at #{appt.start_time.strftime('%H:%M')}" : nil
+      tmpl = ALREADY_BOOKED[lang] || ALREADY_BOOKED["en"]
+      result[:response] = whenstr ? (tmpl % { when: whenstr }) : (ALREADY_BOOKED_GENERIC[lang] || ALREADY_BOOKED_GENERIC["en"])
       return
     end
-    # Public holiday → always blocked (never bookable).
-    if booking_result == :public_holiday
-      result[:response] = PUBLIC_HOLIDAY_BLOCKED[lang] || PUBLIC_HOLIDAY_BLOCKED["en"]
-      return
-    end
-    # Slot itself is outside working hours (e.g. 06:00 or 18:00). Hard-reject.
-    # See attempt_booking — distinct from message-arrived-after-hours.
-    if booking_result == :outside_working_hours
-      result[:response] = OUTSIDE_WORKING_HOURS_BLOCKED[lang] || OUTSIDE_WORKING_HOURS_BLOCKED["en"]
+
+    # Recoverable failure (too soon, slot taken, outside hours, after-hours-today,
+    # public holiday): never dead-end. Tell the patient why and OFFER the next
+    # available slots so the conversation moves forward to a real booking.
+    if %i[too_soon slot_taken outside_working_hours after_hours_today public_holiday].include?(booking_result)
+      result[:response] = booking_alternatives_response(booking_result, date, lang)
       return
     end
 
@@ -585,6 +697,29 @@ class WhatsappService
     BOOKING_CLAIM_PHRASES.any? { |phrase| text.include?(phrase) }
   end
 
+  # True only when the model supplied a day_of_week that genuinely contradicts
+  # the actual weekday of the resolved ISO date. Conservative by design:
+  #   * returns false when day_of_week is blank (model didn't assert one),
+  #   * returns false when the date can't be parsed (let downstream handle it),
+  #   * returns false when the stated weekday isn't a recognised day name
+  #     (don't block on a malformed value).
+  # Matches on the first three letters so "Tues"/"Tuesday"/"tuesday" all align
+  # with the actual weekday.
+  def date_day_of_week_mismatch?(date, claimed_day_of_week)
+    return false if claimed_day_of_week.blank?
+
+    actual_day = Date.parse(date.to_s).strftime("%A")
+    claimed = claimed_day_of_week.to_s.strip
+    # Only assert when the claimed value looks like a real weekday name.
+    valid_days = %w[Monday Tuesday Wednesday Thursday Friday Saturday Sunday]
+    return false unless valid_days.any? { |d| d[0, 3].casecmp?(claimed[0, 3]) }
+
+    !actual_day[0, 3].casecmp?(claimed[0, 3])
+  rescue ArgumentError, TypeError
+    # Unparseable date — don't block; downstream booking logic handles it.
+    false
+  end
+
   # Returns the persisted Appointment on success, or nil on any
   # failure. Never raises — the caller relies on the nil sentinel.
   #
@@ -595,6 +730,52 @@ class WhatsappService
   # the in-app calendar. The previous implementation made Google
   # the gatekeeper, so any creds/API issue silently swallowed the
   # booking with no row written and no error surfaced.
+  # Build a helpful "that didn't work — here's what IS open" reply, listing the
+  # next real available slots so a failed booking always moves forward. `reason`
+  # is one of the recoverable symbols returned by attempt_booking.
+  def booking_alternatives_response(reason, requested_date, lang)
+    from = begin
+      d = Date.parse(requested_date.to_s)
+      d > Date.current ? d : Date.current
+    rescue ArgumentError, TypeError
+      Date.current
+    end
+
+    slots = AvailabilityService.new.next_available_slots(from_date: from, limit: 3)
+    intro_set = BOOKING_ALT_INTRO[reason] || BOOKING_ALT_INTRO[:default]
+    intro = intro_set[lang] || intro_set["en"]
+
+    if slots.empty?
+      return BOOKING_ALT_NONE[lang] || BOOKING_ALT_NONE["en"]
+    end
+
+    # Numbered (not bulleted) so a patient can reply "2" and the classifier can
+    # resolve it to the 2nd offered slot from the conversation history.
+    listed = slots.each_with_index.map { |s, i| "#{i + 1}. #{s}" }.join("\n")
+    pick = BOOKING_ALT_PICK[lang] || BOOKING_ALT_PICK["en"]
+    "#{intro}\n\n#{listed}\n\n#{pick}"
+  rescue StandardError => e
+    Rails.logger.error("[WhatsApp] booking_alternatives_response failed: #{e.class}: #{e.message}")
+    BOOKING_FAILED_FALLBACK[lang] || BOOKING_FAILED_FALLBACK["en"]
+  end
+
+  # Send the digital intake form link to a patient who doesn't have one on file
+  # yet (genuinely new, or a returning patient who never did the digital form).
+  # IntakeDispatch creates the FormSubmission records, so once sent we won't
+  # re-send on their next booking. Never raises into the booking path.
+  def send_intake_form_if_needed(patient)
+    return if patient.blank?
+    return if patient.form_submissions.exists? # already sent/completed — don't nag
+    return if patient.phone.blank?
+
+    IntakeDispatch.call(patient)
+    Rails.logger.info("[WhatsApp] Sent intake form link to patient ##{patient.id} after booking")
+  rescue StandardError => e
+    # Templates not seeded, Twilio window closed, etc. — log and move on; the
+    # appointment is already confirmed. Reception can resend from the dashboard.
+    Rails.logger.warn("[WhatsApp] Intake form not sent for patient ##{patient&.id}: #{e.class}: #{e.message}")
+  end
+
   def attempt_booking(patient, date, time, treatment, language: "en")
     start_time = Time.zone.parse("#{date} #{time}")
     duration = duration_for_treatment(treatment)
@@ -613,7 +794,7 @@ class WhatsappService
         "[WhatsApp] Booking rejected: within #{PracticeConfig.booking_buffer_minutes}-min buffer " \
         "(start=#{start_time}, earliest=#{earliest_bookable})"
       )
-      return nil
+      return :too_soon
     end
     if public_holiday?(start_time.to_date)
       Rails.logger.info("[WhatsApp] Booking rejected: #{start_time.to_date} is a SA public holiday")
@@ -653,8 +834,18 @@ class WhatsappService
     end
 
     if slot_conflicts_locally?(start_time, end_time)
+      # Is the conflict the patient's OWN appointment? Then they're confirming /
+      # repeating a booking they already have — don't tell them it's "taken".
+      own = patient.appointments.where.not(status: :cancelled)
+                   .where("start_time < ? AND end_time > ?", end_time, start_time)
+                   .order(:start_time).first
+      if own
+        Rails.logger.info("[WhatsApp] Patient ##{patient.id} already booked at #{start_time} (appt ##{own.id}) — already_booked")
+        @already_booked_appt = own
+        return :already_booked
+      end
       Rails.logger.info("[WhatsApp] Booking rejected: conflicts with existing appointment (#{start_time})")
-      return nil
+      return :slot_taken
     end
 
     # Whitening is paid via R2,000 deposit upfront. Until proof of payment
@@ -693,6 +884,15 @@ class WhatsappService
     send_confirmation_email(appointment)
     send_confirmation_sms(appointment)
 
+    # Digital patient intake: right after the confirmation, send the patient a
+    # secure, per-patient tokenised intake form link (medical history + details)
+    # so they complete it before arriving — paperless + saves reception time.
+    # Best practice (Perplexity research 2026-06-04): send at booking, to patients
+    # without an intake on file, via a tokenised link (not a generic form). We
+    # rely on the existing IntakeDispatch (signed 14-day link, completion tracking).
+    # Wrapped so an intake-send failure NEVER affects the confirmed booking.
+    send_intake_form_if_needed(patient)
+
     # Path B: report after-hours bookings to the main WhatsApp line so
     # reception sees the activity in web.whatsapp.com without logging
     # into the dashboard. Only fires for AI-driven bookings (this method);
@@ -704,6 +904,30 @@ class WhatsappService
     report_to_main_line("BOOKING", patient: patient, summary: summary)
 
     appointment
+  rescue ActiveRecord::RecordNotUnique, ActiveRecord::StatementInvalid => e
+    # Concurrent/duplicate booking race: the per-provider exclusion constraint
+    # (or a unique index) rejected this insert because another request — often a
+    # Twilio retry of the SAME message, or the patient sending it twice — booked
+    # the slot a moment earlier. The slot check passed for both before either
+    # committed. Resolve gracefully: if the patient now owns that slot, tell them
+    # they're booked; otherwise it's genuinely taken. Never a generic failure
+    # (which previously slipped a false confirmation through).
+    if e.message.include?("no_overlapping_appointments") ||
+       (defined?(PG::ExclusionViolation) && e.cause.is_a?(PG::ExclusionViolation)) ||
+       e.is_a?(ActiveRecord::RecordNotUnique)
+      own = patient.appointments.where.not(status: :cancelled)
+                   .where("start_time < ? AND end_time > ?", end_time, start_time)
+                   .order(:start_time).first
+      if own
+        @already_booked_appt = own
+        Rails.logger.info("[WhatsApp] Booking race resolved: patient ##{patient.id} already booked at #{start_time} (appt ##{own.id})")
+        return :already_booked
+      end
+      Rails.logger.info("[WhatsApp] Booking race: slot taken by another request (#{start_time})")
+      return :slot_taken
+    end
+    Rails.logger.error("[WhatsApp] Booking failed: #{e.class}: #{e.message}")
+    nil
   rescue StandardError => e
     Rails.logger.error("[WhatsApp] Booking failed: #{e.class}: #{e.message}")
     nil
@@ -729,12 +953,44 @@ class WhatsappService
   # whose time range overlaps the requested slot.
   # Pass exclude_appointment_id when rescheduling to avoid the
   # appointment conflicting with its own current slot.
-  def slot_conflicts_locally?(start_time, end_time, exclude_appointment_id: nil)
+  def slot_conflicts_locally?(start_time, end_time, provider: nil, exclude_appointment_id: nil)
+    # 1) Ivory's own appointments (scoped to the booking provider when known).
     query = Appointment
       .where.not(status: :cancelled)
       .where("start_time < ? AND end_time > ?", end_time, start_time)
+    query = query.where(provider_id: provider.id) if provider
     query = query.where.not(id: exclude_appointment_id) if exclude_appointment_id
-    query.exists?
+    return true if query.exists?
+
+    # 2) The LIVE Elixir diary (mirrored read-only into ElixirDiarySnapshot).
+    # The practice still books in Elixir; we must treat those as occupied so a
+    # public WhatsApp booking can NEVER double-book over an existing appointment.
+    elixir_slot_taken?(start_time, end_time, provider)
+  end
+
+  # True if a mirrored Elixir appointment overlaps this slot for this provider.
+  # Provider is matched by normalised dentist name (Elixir stores e.g.
+  # "DR ELISKA ROBINSON"; provider is "Dr Eliska Robinson"). When provider is
+  # nil (no scoping), any overlapping Elixir appointment counts.
+  def elixir_slot_taken?(start_time, end_time, provider)
+    overlapping = ElixirDiarySnapshot
+      .where.not(appointment_start_at: nil)
+      .where("appointment_start_at < ? AND COALESCE(appointment_end_at, appointment_start_at + interval '30 minutes') > ?", end_time, start_time)
+      .to_a
+    return false if overlapping.empty?
+    return true if provider.nil?
+
+    want = normalize_dentist_name(provider.name)
+    overlapping.any? { |s| normalize_dentist_name(s.dentist.to_s) == want }
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] elixir_slot_taken? error (failing safe = not taken): #{e.class}: #{e.message}")
+    false
+  end
+
+  # Normalise a dentist/provider name for matching across Elixir + Ivory:
+  # downcase, drop the "dr" prefix and punctuation, collapse whitespace.
+  def normalize_dentist_name(name)
+    name.to_s.downcase.gsub(/\bdr\b\.?/, "").gsub(/[^a-z]/, " ").split.join(" ")
   end
 
   # Best-effort Google Calendar sync. Failure here does NOT roll
@@ -755,13 +1011,55 @@ class WhatsappService
     Rails.logger.warn("[WhatsApp] Google Calendar sync skipped: #{e.class}: #{e.message}")
   end
 
+  # --- Multiple-appointment disambiguation ---
+  #
+  # When a patient has more than one upcoming appointment, "reschedule" /
+  # "cancel" is ambiguous — acting on appointments.first silently mutates the
+  # wrong booking. Instead we list the upcoming appointments and ask which one,
+  # mutating nothing until the patient specifies. Single-appointment flows are
+  # unchanged (the happy path).
+  WHICH_APPOINTMENT_RESCHEDULE = {
+    "en" => "You have more than one upcoming appointment. Which one would you like to reschedule?\n\n%{list}\n\nReply with the date (or the number) and your preferred new day and time.",
+    "af" => "Jy het meer as een komende afspraak. Watter een wil jy verskuif?\n\n%{list}\n\nAntwoord met die datum (of die nommer) en jou voorkeur nuwe dag en tyd."
+  }.freeze
+
+  WHICH_APPOINTMENT_CANCEL = {
+    "en" => "You have more than one upcoming appointment. Which one would you like to cancel?\n\n%{list}\n\nReply with the date (or the number) of the appointment to cancel.",
+    "af" => "Jy het meer as een komende afspraak. Watter een wil jy kanselleer?\n\n%{list}\n\nAntwoord met die datum (of die nommer) van die afspraak om te kanselleer."
+  }.freeze
+
+  # Builds a numbered, human-readable list of the patient's upcoming
+  # appointments for disambiguation prompts. Localised day/date.
+  def upcoming_appointments_list(appointments, language)
+    appointments.each_with_index.map do |appt, i|
+      day  = localized_day_name(appt.start_time, language)
+      date = localized_date(appt.start_time, language)
+      time = appt.start_time.strftime("%H:%M")
+      "#{i + 1}. #{appt.reason} — #{day}, #{date} at #{time}"
+    end.join("\n")
+  end
+
   # --- Reschedule Flow ---
 
   def handle_reschedule(result, patient, conversation)
     entities = result[:entities] || {}
-    appointments = patient.appointments.upcoming
+    appointments = patient.appointments.upcoming.to_a
 
     return if appointments.empty?
+
+    lang = conversation&.language || "en"
+
+    # Disambiguate when more than one upcoming appointment exists — don't guess
+    # which one the patient means. List them and ask; mutate nothing yet.
+    if appointments.count > 1
+      template = WHICH_APPOINTMENT_RESCHEDULE[lang] || WHICH_APPOINTMENT_RESCHEDULE["en"]
+      result[:response] = template % { list: upcoming_appointments_list(appointments, lang) }
+      Rails.logger.info(
+        "[WhatsApp] Reschedule disambiguation: patient ##{patient.id} has " \
+        "#{appointments.count} upcoming appointments — asking which one."
+      )
+      return
+    end
 
     # Bail early only when we have neither a date nor a time.
     # A time-only response ("same time at 2pm") is valid — we'll
@@ -770,7 +1068,6 @@ class WhatsappService
 
     appointment = appointments.first
     duration = appointment.end_time - appointment.start_time
-    lang = conversation&.language || "en"
 
     new_start = if entities[:date].present? && entities[:time].present?
       Time.zone.parse("#{entities[:date]} #{entities[:time]}")
@@ -800,6 +1097,14 @@ class WhatsappService
     unless slot_within_working_hours?(new_start, new_end)
       result[:response] = RESCHEDULE_REJECTED[lang] || RESCHEDULE_REJECTED["en"]
       Rails.logger.info("[WhatsApp] Reschedule rejected: outside working hours (#{new_start})")
+      return
+    end
+
+    # Guardrail: new slot must not fall on a weekend/public holiday (a weekday
+    # holiday has an active DoctorSchedule so the hours check above passes it).
+    if public_holiday?(new_start.to_date)
+      result[:response] = PUBLIC_HOLIDAY_BLOCKED[lang] || PUBLIC_HOLIDAY_BLOCKED["en"]
+      Rails.logger.info("[WhatsApp] Reschedule rejected: public holiday (#{new_start.to_date})")
       return
     end
 
@@ -845,9 +1150,23 @@ class WhatsappService
   # --- Cancellation Flow ---
 
   def handle_cancellation(result, patient, conversation)
-    appointments = patient.appointments.upcoming
+    appointments = patient.appointments.upcoming.to_a
 
     return if appointments.empty?
+
+    lang = conversation&.language || "en"
+
+    # Disambiguate when more than one upcoming appointment exists — never
+    # cancel the wrong booking. List them and ask which one; cancel nothing yet.
+    if appointments.count > 1
+      template = WHICH_APPOINTMENT_CANCEL[lang] || WHICH_APPOINTMENT_CANCEL["en"]
+      result[:response] = template % { list: upcoming_appointments_list(appointments, lang) }
+      Rails.logger.info(
+        "[WhatsApp] Cancellation disambiguation: patient ##{patient.id} has " \
+        "#{appointments.count} upcoming appointments — asking which one."
+      )
+      return
+    end
 
     appointment = appointments.first
     reason_category = extract_cancellation_reason(result)

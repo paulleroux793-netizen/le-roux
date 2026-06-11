@@ -94,7 +94,9 @@ API_URL           = os.environ.get("SCRIBE_API_URL", "http://localhost:3000").rs
 API_TOKEN         = os.environ.get("SCRIBE_API_TOKEN", "")
 DEVICE_NAME       = os.environ.get("SCRIBE_DEVICE_NAME", "Surgery 1")
 AUDIO_INPUT_INDEX = os.environ.get("SCRIBE_AUDIO_INPUT_INDEX", "") or None
-WHISPER_MODEL     = os.environ.get("SCRIBE_WHISPER_MODEL", "small.en")
+WHISPER_MODEL     = os.environ.get("SCRIBE_WHISPER_MODEL", "large-v3-turbo")  # multilingual EN+AF (Perplexity-backed for Afrikaans); lighter fallbacks: "medium", "small"
+LANGUAGE          = (os.environ.get("SCRIBE_LANGUAGE", "").strip() or None)   # "en"/"af"; blank = auto-detect (best for EN/AF code-switching)
+CPU_THREADS       = int(os.environ.get("SCRIBE_CPU_THREADS", "0")) or max(1, (os.cpu_count() or 4))
 CHUNK_SECONDS     = int(os.environ.get("SCRIBE_CHUNK_SECONDS", "15"))
 HEARTBEAT_SECONDS = int(os.environ.get("SCRIBE_HEARTBEAT_SECONDS", "60"))
 SAMPLE_RATE       = 16000  # Whisper wants 16kHz mono
@@ -111,8 +113,8 @@ log.info(f"starting scribe daemon — device='{DEVICE_NAME}' chunk={CHUNK_SECOND
 # ── Whisper (faster-whisper) ──────────────────────────────────────────
 try:
     from faster_whisper import WhisperModel  # type: ignore
-    log.info(f"loading Whisper model '{WHISPER_MODEL}' — first run downloads ~75-450MB…")
-    whisper = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
+    log.info(f"loading Whisper model '{WHISPER_MODEL}' on {CPU_THREADS} cpu threads — first run downloads the model…")
+    whisper = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", cpu_threads=CPU_THREADS)
     log.info("Whisper ready")
 except ImportError:
     log.error("faster-whisper not installed — chunks will be sent without transcription")
@@ -138,11 +140,39 @@ def write_wav(samples: np.ndarray) -> str:
         wav.writeframes(pcm.tobytes())
     return path
 
+# Prime Whisper with dental vocabulary so clinical terms transcribe correctly (scale and polish,
+# bitewing, tooth 11-48, etc.) instead of mishears like "scalp polish" / "vitamin X-ray".
+DENTAL_PROMPT = (
+    "Dental consultation notes for a dentist. Common terms: scale and polish, bitewing, "
+    "periapical, panoramic, composite filling, amalgam, crown, bridge, veneer, root canal, "
+    "extraction, caries, sensitivity, gingivitis, periodontitis, local anaesthetic, fluoride, "
+    "occlusal, mesial, distal, buccal, lingual, palatal, impression, denture, implant, whitening, "
+    "tooth 11 to 48, upper right, upper left, lower left, lower right quadrant. "
+    "Afrikaanse tandheelkundige terme: tand, tandvleis, vulsel, kroon, brug, "
+    "wortelkanaalbehandeling, tandsteen, skaal en poleer, verdowing, ekstraksie, "
+    "sensitiwiteit, kies, abses, bytvlak, bo en onder, links en regs."
+)
+
+_prev_tail = ""  # last words of the previous transcript — stabilises language choice + code-switching (Perplexity-backed)
+
 def transcribe(wav_path: str) -> str:
+    global _prev_tail
     if whisper is None:
         return ""
-    segments, _info = whisper.transcribe(wav_path, language="en", beam_size=1)
-    return " ".join(seg.text.strip() for seg in segments).strip()
+    prompt = f"{_prev_tail} {DENTAL_PROMPT}".strip() if _prev_tail else DENTAL_PROMPT
+    segments, _info = whisper.transcribe(
+        wav_path,
+        language=LANGUAGE,                # None = auto-detect English / Afrikaans per chunk
+        beam_size=5,                      # wider beam = better accuracy (was greedy beam_size=1)
+        best_of=5,                        # sample candidates, keep the best
+        initial_prompt=prompt,            # dental vocab (EN+AF) + tail of previous chunk for continuity
+        vad_filter=True,                  # skip silence — faster + avoids "Okay." hallucinations
+        condition_on_previous_text=False, # reduce repetition / drift across chunks
+    )
+    text = " ".join(seg.text.strip() for seg in segments).strip()
+    if text:
+        _prev_tail = " ".join(text.split()[-30:])  # carry last ~30 words into the next chunk's prompt
+    return text
 
 # ── HTTP — post a transcript chunk to Rails ───────────────────────────
 def post_transcript(text: str, started_at: float, ended_at: float) -> None:

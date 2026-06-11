@@ -1,8 +1,13 @@
 class PatientsController < ApplicationController
   # Client-side DataTable handles search, sort, filter and pagination,
-  # so we ship the full patient list (capped for safety). For a single
-  # dental practice this is well under a megabyte of JSON.
-  LIST_ROW_LIMIT = 500
+  # so we ship the FULL patient list (capped for safety). The cap MUST exceed
+  # the real patient count or search silently misses everyone past it — at 500
+  # a search for "le Roux" (row ~1092, code L00xx) returned No matches because
+  # those rows were never shipped. Raised to 5000 to cover the whole practice
+  # (~2.5k patients) with headroom, mirroring BillingAccounts. ~2-3MB JSON on a
+  # LAN/Tailscale single-practice app — acceptable; revisit with server-side
+  # search if the roster ever approaches the cap.
+  LIST_ROW_LIMIT = 5000
 
   # A patient is "Active" if they've had any appointment in the last
   # 6 months OR have an upcoming one. Otherwise "Inactive".
@@ -49,8 +54,13 @@ class PatientsController < ApplicationController
 
   def index
     page_data = dev_page_cache("patients", "index") do
+      # Organise by ACCOUNT NUMBER (A0001, A0002, …) — Paul's requirement. The
+      # alphabetical account code lives on the linked billing account; NULLS LAST
+      # so any account-less patients fall to the end.
       patients = Patient
+        .left_joins(:billing_accounts)
         .includes(:appointments, :medical_history, :billing_accounts)
+        .order(Arel.sql("billing_accounts.account_code ASC NULLS LAST"))
         .order(:last_name, :first_name)
         .limit(LIST_ROW_LIMIT)
         .to_a
@@ -119,6 +129,8 @@ class PatientsController < ApplicationController
 
       {
         patient: patient_detail_props(patient),
+        tooth_chart: tooth_chart_for(patient),
+        tooth_chart_detail: tooth_chart_detail_for(patient),
         medical_history: medical_history_props(patient),
         appointments: appointments.map { |a| appointment_props(a) },
         conversations: conversations.map { |c| conversation_props(c) },
@@ -142,7 +154,9 @@ class PatientsController < ApplicationController
         outstanding_balance: outstanding_balance_cents / 100.0,
         next_appointment: patient.appointments.upcoming.first&.then { |a|
           { id: a.id, start_time: a.start_time.iso8601, reason: a.reason }
-        }
+        },
+        google_review_url: PracticeSettings.instance.google_review_url,
+        likely_match: likely_match_props(patient)
       }
     end
 
@@ -160,10 +174,10 @@ class PatientsController < ApplicationController
     patient = result.patient
 
     if result.success?
-      # Additive: link a billing account + scheme membership if the form supplied them.
-      # Best-effort — never blocks the patient create; errors are logged + flashed.
+      # Additive: every new patient gets a billing account (surname-initial code); link a
+      # scheme membership if the form supplied one. Best-effort — never blocks the create.
       begin
-        attach_account!(patient, params[:account]) if params[:account].present?
+        attach_account!(patient, params[:account])   # always — assigns the next surname-initial code
         attach_scheme!(patient,  params[:scheme])  if params[:scheme].present?
       rescue StandardError => e
         Rails.logger.warn("[PatientsController#create] account/scheme link failed: #{e.message}")
@@ -203,6 +217,15 @@ class PatientsController < ApplicationController
     patient = Patient.find(params[:id])
 
     if patient.update(patient_params)
+      # Additive (mirrors create): link/refresh a billing account + scheme if the edit form
+      # supplied them — so reception CAN add a billing account to an existing patient (previously
+      # only possible at create time, leaving account-less patients with no statements). Best-effort.
+      begin
+        attach_account!(patient, params[:account]) if params[:account].present?
+        attach_scheme!(patient,  params[:scheme])  if params[:scheme].present?
+      rescue StandardError => e
+        Rails.logger.warn("[PatientsController#update] account/scheme link failed: #{e.message}")
+      end
       expire_patient_caches!
       AuditService.log(
         action: "patient.updated",
@@ -250,21 +273,73 @@ class PatientsController < ApplicationController
       alert: "Could not delete patient: #{e.message}", status: :see_other
   end
 
+  # POST /patients/:id/merge_into  { target_id }
+  # Reception's audited merge of a self-registered placeholder INTO an existing patient.
+  def merge_into
+    placeholder = Patient.find(params[:id])
+    target      = Patient.find(params[:target_id])
+    PatientMerge.call(placeholder: placeholder, target: target)
+    AuditService.log(
+      action: "patient.merged",
+      summary: "Merged self-registration '#{placeholder.full_name}' into #{target.full_name}",
+      resource: target, details: { merged_from: placeholder.id },
+      performed_by: audit_performer, ip_address: request.remote_ip
+    )
+    expire_patient_caches!
+    redirect_to patient_path(target), notice: "Merged into #{target.full_name}.", status: :see_other
+  rescue StandardError => e
+    redirect_back fallback_location: patient_path(params[:id]),
+      alert: "Merge failed: #{e.message}", status: :see_other
+  end
+
+  # POST /patients/:id/confirm_new
+  # Reception confirms a self-registration is genuinely NEW: clear the review flag, give them an
+  # account (surname-initial) and record consent (the intake form is signed).
+  def confirm_new
+    patient = Patient.find(params[:id])
+    patient.update!(notes: patient.notes.to_s.sub(Patient::SELF_REG_MARKER, "").strip.presence)
+    PatientMerge.ensure_account!(patient)
+    if patient.consent_to_ai_processing_at.blank?
+      patient.update!(consent_to_ai_processing_at: Time.current, consent_to_ai_processing_by: "Online intake form (signed)")
+    end
+    expire_patient_caches!
+    redirect_to patient_path(patient),
+      notice: "Confirmed as a new patient (account #{patient.account_code}).", status: :see_other
+  rescue StandardError => e
+    redirect_back fallback_location: patient_path(params[:id]),
+      alert: "Could not confirm: #{e.message}", status: :see_other
+  end
+
   private
 
-  # Idempotently link the patient to a BillingAccount based on form params.
-  # Creates account on the fly if billing_name supplied; never duplicates.
+  # Reception-only: the existing patient this self-registration most likely already is (by
+  # id_number, then phone, then name). Powers the "Merge into…" banner. nil unless under review.
+  def likely_match_props(patient)
+    return nil unless patient.needs_review?
+    m   = (Patient.where.not(id: patient.id).find_by(id_number: patient.id_number) if patient.id_number.present?)
+    m ||= (Patient.where.not(id: patient.id).where(phone: patient.phone).first if patient.phone.present?)
+    m ||= Patient.where.not(id: patient.id)
+                 .where("LOWER(first_name) = ? AND LOWER(last_name) = ?",
+                        patient.first_name.to_s.downcase, patient.last_name.to_s.downcase).first
+    m && { id: m.id, name: m.full_name, account_code: m.account_code }
+  rescue StandardError
+    nil
+  end
+
+  # Idempotently link the patient to a BillingAccount. Every patient gets an account: if the
+  # form supplies an existing account_code we link to it (family members share one account),
+  # otherwise we open a new account whose code follows the surname-initial scheme. Never duplicates.
   def attach_account!(patient, account_params)
-    p = account_params.permit(:account_code, :billing_name, :email, :phone).to_h
-    return if p["billing_name"].blank?
+    p = (account_params || ActionController::Parameters.new).permit(:account_code, :billing_name, :email, :phone).to_h
+    return if patient.account_patients.exists? && p["account_code"].blank? # already has an account
 
     account = nil
     if p["account_code"].present?
       account = BillingAccount.find_or_initialize_by(account_code: p["account_code"])
     else
-      account = BillingAccount.new(account_code: BillingAccount.next_account_code)
+      account = BillingAccount.new(account_code: BillingAccount.next_account_code(patient.last_name))
     end
-    account.billing_name = p["billing_name"]
+    account.billing_name = p["billing_name"].presence || patient.full_name
     account.email = p["email"].presence if account.respond_to?(:email=)
     account.phone = p["phone"].presence if account.respond_to?(:phone=)
     account.head_patient_id ||= patient.id
@@ -366,11 +441,11 @@ class PatientsController < ApplicationController
 
     {
       id: patient.id,
-      code: "P#{patient.id.to_s.rjust(3, '0')}",
+      code: patient.account_code.presence || "P#{patient.id.to_s.rjust(3, '0')}",
       first_name: patient.first_name,
       last_name: patient.last_name,
       full_name: patient.full_name,
-      phone: patient.phone,
+      phone: patient.display_phone,
       email: patient.email,
       date_of_birth: patient.date_of_birth&.iso8601,
       notes: patient.notes,
@@ -440,6 +515,34 @@ class PatientsController < ApplicationController
   # ── Per-patient hub prop builders ───────────────────────────────────────
   # These feed the tabs on PatientShow so a patient's treatment plans,
   # estimates, invoices and billing account all live under the one record.
+  # Dental chart overlay for the patient profile (Paul 2026-06-07): a per-tooth status map for
+  # the Odontogram — RED ("needs_work") = outstanding work (planned treatment items + teeth
+  # marked extraction_planned); BLACK ("done") = work done/existing (completed items + existing
+  # restorations). needs_work wins over done when a tooth has both. Read-only; FDI keys are strings.
+  def tooth_chart_for(patient)
+    done_conditions = %w[filling crown bridge implant root_canal]
+    latest = {}
+    ToothChartEntry.current_for(patient).each { |e| latest[e.tooth_number.to_s] ||= e.condition }
+    items = TreatmentItem.where(course_of_treatment_id: patient.courses_of_treatment.select(:id))
+                         .where.not(tooth_number: [ nil, "" ])
+    chart = {}
+    latest.each { |t, c| chart[t] = "done" if done_conditions.include?(c) }
+    items.where(status: "completed").pluck(:tooth_number).each { |t| chart[t.to_s] = "done" }
+    latest.each { |t, c| chart[t] = "needs_work" if c == "extraction_planned" }
+    items.where(status: "planned").pluck(:tooth_number).each { |t| chart[t.to_s] = "needs_work" }
+    chart
+  end
+
+  # Per-tooth list of PLANNED procedures (the outstanding/red work) so the chart can show a
+  # tooltip — e.g. "16" => "Crown - porcelain/ceramic; Root canal therapy". Read-only.
+  def tooth_chart_detail_for(patient)
+    TreatmentItem.where(course_of_treatment_id: patient.courses_of_treatment.select(:id), status: "planned")
+                 .where.not(tooth_number: [ nil, "" ]).includes(:procedure_code)
+                 .group_by { |i| i.tooth_number.to_s }
+                 .transform_values { |its| its.filter_map { |i| i.procedure_code&.description }.uniq.join("; ").presence }
+                 .compact
+  end
+
   def course_props(c)
     {
       id: c.id,
@@ -455,12 +558,28 @@ class PatientsController < ApplicationController
   def estimate_props(e)
     {
       id: e.id,
+      title: estimate_display_title(e),
       number: e.estimate_number,
       total: e.total,
       status: e.status,
       valid_until: e.valid_until&.iso8601,
       created_at: e.created_at.iso8601
     }
+  end
+
+  # An estimate should read as its TREATMENT, not its EST number (Paul, 2026-06-05).
+  # Prefer the procedure-line description; else the notes (Elixir treatment text,
+  # minus our [elixir] import tag); else a sensible fallback.
+  # Elixir process-status prefixes to drop so the title is just the treatment
+  # (Paul: don't show "Cost Acceptance" etc.).
+  ESTIMATE_PREFIXES = /\A(cost acceptance|treatment planning|treatment plan|cost estimate|quotation|quote|estimate|proforma|pro forma|open)\b[\s:.-]*/i
+
+  def estimate_display_title(e)
+    line = e.estimate_lines.first&.description.presence
+    raw  = line || e.notes.to_s.sub(/\A\[elixir\]\s*/i, "").strip
+    raw  = raw.sub(ESTIMATE_PREFIXES, "").strip while raw =~ ESTIMATE_PREFIXES
+    return "Estimate" if raw.blank?
+    raw == raw.upcase ? raw.titleize : raw
   end
 
   def invoice_props(i)
@@ -497,7 +616,8 @@ class PatientsController < ApplicationController
       notes: s.notes,
       sidexis_patient_name: s.sidexis_patient_name,
       source_folder: s.source_folder,
-      storage_key: s.storage_key
+      storage_key: s.storage_key,
+      has_image: s.storage_key.present?
     }
   end
 

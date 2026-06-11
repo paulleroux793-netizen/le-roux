@@ -10,6 +10,11 @@
 # raw form data is always preserved even for fields that have no dedicated column.
 class IntakeProcessor
   KEYS = %w[patient_details health_questionnaire consent_treatment].freeze
+  # Stamped into a self-registration's `notes` once its completion email is confirmed
+  # delivered. The hourly reconciliation re-sends any self-registration that LACKS this,
+  # so a silently-failed inline send can never lose a form. (Stable per-patient key — far
+  # more reliable than matching by name, which reception edits during review.)
+  EMAILED_MARKER = "[emailed]".freeze
 
   # Submissions that make up the current intake: the pending ones, falling back to
   # the most recent per template (so re-opening a completed link still renders).
@@ -20,17 +25,24 @@ class IntakeProcessor
     end
   end
 
-  def initialize(patient, answers)
+  def initialize(patient, answers, self_registration: false)
     @patient = patient
     @answers = answers || {}
+    # A public self-registration (the shared /intake/new link) only CAPTURES the form data;
+    # it must never write the patient's identity/medical columns, because the record is an
+    # unverified placeholder that reception still has to confirm + merge. The token (known
+    # patient) flow leaves this false and syncs as before.
+    @self_registration = self_registration
   end
 
   def save!
     completed_any = false
     ActiveRecord::Base.transaction do
       completed_any = complete_submissions!
-      sync_patient!
-      sync_medical_history!
+      unless @self_registration
+        sync_patient!
+        sync_medical_history!
+      end
     end
 
     # AFTER commit, only when something was actually completed this submit (so
@@ -63,9 +75,26 @@ class IntakeProcessor
   end
 
   def notify_practice!
-    IntakeMailer.completed(patient).deliver_later
+    # Send INLINE (deliver_now), not deliver_later: the completion email is the practice's
+    # real-time signal that a patient finished, and a background job can be delayed or lost
+    # (the queue worker runs in Puma, so a restart can drop a just-enqueued job). Bounded by
+    # the SMTP open/read timeouts in production.rb; still best-effort — a send failure is
+    # logged and never breaks the patient's submission, and the hourly reconciliation will
+    # re-send it (it stays unmarked below).
+    IntakeMailer.completed(patient).deliver_now
+    mark_emailed! if @self_registration
   rescue StandardError => e
-    Rails.logger.error("[IntakeProcessor] completion email enqueue failed: #{e.message}")
+    Rails.logger.error("[IntakeProcessor] completion email failed: #{e.message}")
+  end
+
+  # Stamp EMAILED_MARKER into notes once the email is confirmed sent (reached only if
+  # deliver_now didn't raise). update_column skips validations/callbacks. Best-effort: a
+  # failure here just means the reconciliation harmlessly re-sends once.
+  def mark_emailed!
+    return if patient.notes.to_s.include?(EMAILED_MARKER)
+    patient.update_column(:notes, [ patient.notes.presence, EMAILED_MARKER ].compact.join(" "))
+  rescue StandardError => e
+    Rails.logger.error("[IntakeProcessor] mark_emailed failed: #{e.message}")
   end
 
   def file_to_patient_folder!

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_07_170001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "btree_gist"
   enable_extension "pg_catalog.plpgsql"
@@ -66,6 +66,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
   end
 
   create_table "appointments", force: :cascade do |t|
+    t.boolean "asap", default: false, null: false
     t.datetime "created_at", null: false
     t.datetime "end_time", null: false
     t.string "google_event_id"
@@ -81,6 +82,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.jsonb "summary_patient_questions", default: [], null: false
     t.bigint "summary_scribe_session_id"
     t.datetime "updated_at", null: false
+    t.index ["asap"], name: "index_appointments_asap_true", where: "(asap = true)"
     t.index ["google_event_id"], name: "index_appointments_on_google_event_id", unique: true
     t.index ["patient_id"], name: "index_appointments_on_patient_id"
     t.index ["provider_id"], name: "index_appointments_on_provider_id"
@@ -114,6 +116,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.string "billing_name", null: false
     t.string "city"
     t.datetime "created_at", null: false
+    t.integer "credit_cents", default: 0, null: false
     t.string "email"
     t.bigint "head_patient_id"
     t.text "notes"
@@ -230,6 +233,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.date "end_date"
     t.text "notes"
     t.bigint "patient_id", null: false
+    t.string "provider_name"
     t.bigint "scheme_membership_id"
     t.string "setting", default: "in_chair", null: false
     t.date "start_date"
@@ -385,6 +389,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.bigint "procedure_code_id"
     t.integer "quantity", default: 1, null: false
     t.integer "self_cents", default: 0, null: false
+    t.string "source", default: "manual", null: false
     t.string "tooth_number"
     t.bigint "treatment_item_id"
     t.integer "unit_fee_cents", default: 0, null: false
@@ -397,12 +402,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
 
   create_table "estimates", force: :cascade do |t|
     t.datetime "accepted_at"
+    t.text "ai_note"
     t.bigint "billing_account_id"
     t.bigint "course_of_treatment_id"
     t.datetime "created_at", null: false
     t.string "estimate_number", null: false
     t.text "notes"
     t.bigint "patient_id", null: false
+    t.string "provider_name"
     t.datetime "sent_at"
     t.string "status", default: "draft", null: false
     t.integer "subtotal_cents", default: 0, null: false
@@ -528,6 +535,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.text "notes"
     t.integer "paid_cents", default: 0, null: false
     t.bigint "patient_id", null: false
+    t.string "provider_name"
     t.string "status", default: "open", null: false
     t.integer "subtotal_cents", default: 0, null: false
     t.integer "total_cents", default: 0, null: false
@@ -545,6 +553,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.datetime "created_at", null: false
     t.string "display_name"
     t.string "external_account_id"
+    t.string "folders", default: [], array: true
     t.datetime "last_synced_at"
     t.text "oauth_access_token_ciphertext"
     t.datetime "oauth_expires_at"
@@ -582,6 +591,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.string "cc_addresses", default: [], array: true
     t.datetime "created_at", null: false
     t.boolean "flagged_phi", default: false, null: false
+    t.string "folder", default: "INBOX", null: false
     t.string "from_address", null: false
     t.string "from_name"
     t.boolean "has_attachments", default: false, null: false
@@ -607,6 +617,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.boolean "archived", default: false, null: false
     t.string "clinical_intent"
     t.datetime "created_at", null: false
+    t.string "folder", default: "INBOX", null: false
     t.datetime "last_message_at"
     t.bigint "mail_account_id", null: false
     t.integer "message_count", default: 0, null: false
@@ -621,6 +632,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.datetime "updated_at", null: false
     t.index ["clinical_intent"], name: "index_mail_threads_on_clinical_intent"
     t.index ["last_message_at"], name: "index_mail_threads_on_last_message_at"
+    t.index ["mail_account_id", "folder"], name: "index_mail_threads_on_mail_account_id_and_folder"
     t.index ["mail_account_id", "provider_thread_id"], name: "idx_mail_threads_on_account_and_provider_id", unique: true
     t.index ["mail_account_id"], name: "index_mail_threads_on_mail_account_id"
     t.index ["patient_id"], name: "index_mail_threads_on_patient_id"
@@ -712,14 +724,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.datetime "created_at", null: false
     t.bigint "invoice_id"
     t.boolean "is_deposit", default: false, null: false
+    t.string "kind", default: "payment", null: false
     t.string "method", default: "card", null: false
     t.text "notes"
     t.bigint "patient_id"
+    t.string "reason"
     t.datetime "received_at", null: false
     t.string "reference"
+    t.datetime "reversed_at"
     t.datetime "updated_at", null: false
     t.index ["billing_account_id"], name: "index_payments_on_billing_account_id"
     t.index ["invoice_id"], name: "index_payments_on_invoice_id"
+    t.index ["kind"], name: "index_payments_on_kind"
     t.index ["received_at"], name: "index_payments_on_received_at"
   end
 
@@ -756,6 +772,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.datetime "created_at", null: false
     t.string "email"
     t.string "emergency_phone"
+    t.string "google_review_url"
     t.string "map_link"
     t.string "name", default: "Dr Chalita le Roux Inc", null: false
     t.string "phone"
@@ -788,12 +805,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
   end
 
   create_table "providers", force: :cascade do |t|
+    t.boolean "accepting_bookings", default: true, null: false
     t.boolean "active", default: true, null: false
     t.string "color", default: "#16a34a", null: false
     t.datetime "created_at", null: false
     t.string "name", null: false
     t.integer "position", default: 0, null: false
     t.string "short_name"
+    t.date "unavailable_until"
     t.datetime "updated_at", null: false
     t.index ["name"], name: "index_providers_on_name", unique: true
   end
@@ -1046,6 +1065,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.datetime "created_at", null: false
     t.integer "fee_cents"
     t.string "icd10_code"
+    t.date "lab_due_on"
+    t.string "lab_name"
+    t.date "lab_returned_on"
+    t.date "lab_sent_on"
     t.text "notes"
     t.date "planned_date"
     t.bigint "procedure_code_id", null: false
@@ -1057,6 +1080,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.string "vat_treatment", default: "zero_rated", null: false
     t.integer "visit", default: 1, null: false
     t.index ["course_of_treatment_id"], name: "index_treatment_items_on_course_of_treatment_id"
+    t.index ["lab_due_on"], name: "index_treatment_items_lab_outstanding", where: "((lab_due_on IS NOT NULL) AND (lab_returned_on IS NULL))"
     t.index ["procedure_code_id"], name: "index_treatment_items_on_procedure_code_id"
     t.index ["status"], name: "index_treatment_items_on_status"
   end
@@ -1083,6 +1107,25 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_04_000002) do
     t.text "notes"
     t.datetime "updated_at", null: false
     t.index ["access_code"], name: "index_treatment_macros_on_access_code", unique: true
+  end
+
+  create_table "users", force: :cascade do |t|
+    t.boolean "active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.string "email", null: false
+    t.datetime "last_login_at"
+    t.string "name", null: false
+    t.string "password_digest", null: false
+    t.string "role", default: "reception", null: false
+    t.datetime "updated_at", null: false
+    t.index "lower((email)::text)", name: "index_users_on_lower_email", unique: true
+  end
+
+  create_table "webhook_receipts", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "event_sid", null: false
+    t.string "event_type"
+    t.index ["event_sid"], name: "index_webhook_receipts_on_event_sid", unique: true
   end
 
   add_foreign_key "account_patients", "billing_accounts"

@@ -44,6 +44,23 @@ class DocumentPdf
 
   attr_reader :pdf, :doc, :practice
 
+  # The built-in PDF font is Windows-1252 (WinAnsi). Patient names / line text
+  # with characters outside it (ā, Greek, Cyrillic, emoji, …) would otherwise
+  # raise Prawn::Errors::IncompatibleStringEncoding and 500 the whole PDF.
+  # Keep Latin-1 accents (é, ë, ô — common SA names render unchanged); for the
+  # rest, transliterate to ASCII where possible (ā→a) and drop what can't map.
+  def winansi(str)
+    s = str.to_s
+    return s if s.ascii_only?
+
+    s.each_char.map do |ch|
+      ch.encode("Windows-1252")
+      ch
+    rescue Encoding::UndefinedConversionError
+      I18n.transliterate(ch, replacement: "")
+    end.join
+  end
+
   # ── Header: practice name + document number/date ────────────────────
   def draw_header
     pdf.bounding_box([ 0, pdf.cursor ], width: pdf.bounds.width) do
@@ -55,6 +72,13 @@ class DocumentPdf
       pdf.text practice.address.to_s if practice.address.present?
       pdf.text "#{practice.phone} · #{practice.email}", style: :italic if practice.phone.present? || practice.email.present?
       pdf.text "HPCSA: #{practice.hpcsa_number}  ·  Practice no: #{practice.bhf_practice_number.presence || '—'}  ·  VAT: #{practice.vat_number.presence || 'Not registered'}"
+      # Treating-provider HPCSA — medical aids need the specific dentist's number on
+      # the claim (Chalita vs Eliska), not just the practice number. Reuses the
+      # StatementPdf lookup so invoice/estimate and statement stay consistent.
+      if doc.respond_to?(:provider_name) && doc.provider_name.present?
+        prov_hpcsa = StatementPdf::PROVIDER_HPCSA[doc.provider_name] || practice.hpcsa_number
+        pdf.text "Treating provider: #{doc.provider_name.titleize}  ·  HPCSA: #{prov_hpcsa}", style: :bold
+      end
     end
 
     pdf.move_down 6
@@ -80,13 +104,16 @@ class DocumentPdf
   def draw_patient_block
     patient = doc.patient
     membership = patient.scheme_memberships.first
-    scheme_name = membership&.medical_scheme&.name || "— Private —"
+    scheme_name = winansi(membership&.medical_scheme&.name || "— Private —")
+    # Dependant code lives on the per-patient join (SchemeMembershipPatient).
+    dep = membership && SchemeMembershipPatient.find_by(scheme_membership_id: membership.id, patient_id: patient.id)&.dependant_code
 
     rows = [
-      [ "Patient",     patient.full_name ],
-      [ "Phone",       patient.phone.to_s ],
-      [ "Medical aid", scheme_name + (membership ? " · Member #{membership.member_number}" : "") ],
+      [ "Patient",     winansi(patient.full_name) ],
+      [ "Phone",       patient.display_phone.to_s ],
+      [ "Medical aid", scheme_name + (membership ? " · Member #{membership.member_number}#{dep.present? ? " · Dependant #{dep}" : ''}" : "") ],
     ]
+    rows << [ "Treating provider", winansi(doc.provider_name) ] if doc.try(:provider_name).present?
 
     pdf.table(rows, cell_style: { borders: [], padding: [ 2, 6, 2, 0 ], size: 10 }) do
       column(0).font_style = :bold
@@ -117,10 +144,10 @@ class DocumentPdf
   def draw_line_table(line_list)
     header = [ [ "Code", "Description", "Tooth", "Medical", "Self", "Amount" ] ]
     rows = line_list.map do |l|
-      desc = l.description.to_s
+      desc = winansi(l.description.to_s)
       desc += "\nICD-10: #{l.icd10_code}" if l.icd10_code.present?
       [
-        l.code.to_s,
+        winansi(l.code.to_s),
         desc,
         l.tooth_number.to_s.presence || "—",
         money(l.medical_cents),

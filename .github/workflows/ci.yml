@@ -75,6 +75,15 @@ jobs:
         with:
           bundler-cache: true
 
+      - name: Check schema.rb is in sync with migrations
+        env:
+          RAILS_ENV: test
+          TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/dr_leroux_receptionist_test
+          SECRET_KEY_BASE: test_secret_key_base_for_ci_only_not_used_in_production_1234567890
+        run: |
+          bin/rails db:drop db:create db:migrate
+          git diff --exit-code db/schema.rb || { echo "::error::db/schema.rb is stale — run 'bin/rails db:migrate' locally and commit db/schema.rb"; exit 1; }
+
       - name: Run tests
         env:
           RAILS_ENV: test
@@ -87,4 +96,6 @@ jobs:
           OPENAI_API_KEY: test_openai_key
           APP_BASE_URL: http://localhost:3000
           ADMIN_WHATSAPP_NUMBER: "+27714475022"
-        run: bin/rails db:test:prepare test
+        run: |
+          bin/rails db:test:prepare
+          bundle exec rspec

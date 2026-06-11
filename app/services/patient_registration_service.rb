@@ -82,9 +82,6 @@ class PatientRegistrationService
   end
 
   def normalize_phone(phone)
-    normalized = phone.to_s.gsub(/\s+/, "").presence
-    return nil if normalized.blank?
-
-    normalized.start_with?("+") ? normalized : "+#{normalized}"
+    Patient.canonical_phone(phone)
   end
 end

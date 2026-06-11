@@ -159,6 +159,16 @@ class WhatsappTemplateService
     send_text(patient.phone, body)
   end
 
+  # Twilio error 21656 fires when a Content template variable is empty/null or
+  # contains a newline, tab, or 4+ consecutive spaces. Sanitise every value so a
+  # blank name or a multi-line reason can't break the send.
+  def sanitize_variables(variables)
+    variables.transform_values do |v|
+      s = v.to_s.gsub(/[\r\n\t]+/, " ").gsub(/ {4,}/, "   ").strip
+      s.empty? ? "-" : s
+    end
+  end
+
   def send_template(template_key, to_phone, variables)
     content_sid = self.class.templates[template_key]
     raise Error, "Template '#{template_key}' not configured (missing Content SID)" if content_sid.blank?
@@ -169,7 +179,7 @@ class WhatsappTemplateService
       from: @from,
       to: "whatsapp:#{formatted_phone}",
       content_sid: content_sid,
-      content_variables: variables.to_json
+      content_variables: sanitize_variables(variables).to_json
     )
   rescue Twilio::REST::TwilioError => e
     Rails.logger.error("[WhatsApp Template] Failed to send #{template_key}: #{e.message}")

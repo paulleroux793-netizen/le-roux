@@ -18,6 +18,15 @@ class IntakeDispatch
     new(patient, from_number: from_number).call
   end
 
+  # Mint the tokenised intake link (and create the pending FormSubmissions for
+  # dashboard tracking) WITHOUT sending any WhatsApp — for channels that SHOW the
+  # link to the patient directly (the web chat widget). A first-contact free-form
+  # WhatsApp to a website visitor would be rejected by Twilio (no open 24h window),
+  # so the web channel displays the link in the widget instead.
+  def self.prepare(patient)
+    new(patient).prepare
+  end
+
   def initialize(patient, from_number: nil)
     @patient = patient
     @from_number = from_number
@@ -37,6 +46,22 @@ class IntakeDispatch
     link = intake_link
     deliver(link)
     link
+  end
+
+  # Link-only path (see .prepare): creates the tracking FormSubmissions and returns
+  # the signed link, but sends nothing. Same submission/link logic as #call.
+  def prepare
+    raise Error, "patient has no WhatsApp number" if @patient.phone.blank?
+
+    templates = FormTemplate.active.where(key: KEYS).index_by(&:key)
+    missing = KEYS - templates.keys
+    raise Error, "intake templates not seeded: #{missing.join(', ')}" if missing.any?
+
+    KEYS.each do |key|
+      @patient.form_submissions.create!(form_template: templates[key]).mark_sent!
+    end
+
+    intake_link
   end
 
   private

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { UserPlus, Users, Ban } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -64,6 +64,7 @@ function buildSchema(t, getNewPatientMode) {
       duration: z.union([z.string(), z.number()]).optional(),
       reason: z.string().optional(),
       notes: z.string().optional(),
+      asap: z.boolean().optional(),
       // MUST be in the schema or zodResolver strips it from the submitted data —
       // that was why the chosen dentist was lost (bookings defaulted to the active
       // dentist; Closed blocks got null → showed in BOTH columns).
@@ -115,6 +116,8 @@ export default function AppointmentFormModal({
   const [newFirstName,   setNewFirstName]   = useState('')
   const [newLastName,    setNewLastName]    = useState('')
   const [newPhone,       setNewPhone]       = useState('')
+  // "Save & book another" — keep the modal open after a successful create.
+  const bookAnotherRef = useRef(false)
 
   const {
     register,
@@ -132,6 +135,7 @@ export default function AppointmentFormModal({
       duration: 30,
       reason: '',
       notes: '',
+      asap: false,
       provider_id: '',
     },
   })
@@ -140,6 +144,25 @@ export default function AppointmentFormModal({
   const startTime = watch('start_time')
   const reason    = watch('reason')
   const duration  = watch('duration')
+
+  // Next-available finder — fill Start with the next open slot for the chosen dentist.
+  const [slotOptions, setSlotOptions] = useState([])
+  const [findingSlots, setFindingSlots] = useState(false)
+  const [slotsSearched, setSlotsSearched] = useState(false)
+  const applySlot = (iso) => setValue('start_time', dtLocal(new Date(iso)), { shouldValidate: true, shouldDirty: true })
+  const findNextAvailable = async () => {
+    const providerId = watch('provider_id')
+    if (!providerId) return
+    setFindingSlots(true)
+    try {
+      const res = await fetch(`/appointments/next_available?provider_id=${providerId}&duration=${watch('duration') || 30}`, { headers: { Accept: 'application/json' } })
+      const data = await res.json()
+      const slots = data.slots || []
+      setSlotOptions(slots)
+      setSlotsSearched(true)
+      if (slots[0]) applySlot(slots[0])
+    } catch { /* ignore */ } finally { setFindingSlots(false) }
+  }
 
   // Snap start_time to the nearest 15-minute interval whenever it changes.
   useEffect(() => {
@@ -192,7 +215,7 @@ export default function AppointmentFormModal({
       const start = prefillStart ? dtLocal(prefillStart) : ''
       reset({
         patient_id: '', start_time: start, end_time: '', duration: 30, reason: '', notes: '',
-        provider_id: prefillProvider?.id || providers[0]?.id || '',
+        provider_id: prefillProvider?.id || providers.find((p) => !p.on_leave)?.id || providers[0]?.id || '',
       })
     }
     setNewPatientMode(false)
@@ -236,6 +259,7 @@ export default function AppointmentFormModal({
         reason: data.reason || null,
         notes: data.notes || null,
         provider_id: data.provider_id || null,
+        asap: !!data.asap,
       },
       // Server creates the patient first, then the appointment. Both
       // succeed or both roll back.
@@ -254,7 +278,17 @@ export default function AppointmentFormModal({
       onSuccess: (page) => {
         const notice = page?.props?.flash?.notice
         toast.success(notice || (isEdit ? t('modal_success_update') : t('modal_success_create')))
-        onClose?.()
+        if (bookAnotherRef.current && !isEdit) {
+          // Keep the modal open for the next booking (e.g. another family member or a
+          // back-to-back slot): clear the patient, start where this appointment ended.
+          const nextStart = watch('end_time')
+          bookAnotherRef.current = false
+          setSelectedPatient(null); setNewPatientMode(false)
+          setNewFirstName(''); setNewLastName(''); setNewPhone('')
+          reset({ patient_id: '', start_time: nextStart || '', end_time: '', duration: 30, reason: '', notes: '', provider_id: watch('provider_id') || '' })
+        } else {
+          onClose?.()
+        }
       },
       onError: (errs) => {
         const msg = Object.values(errs || {})[0] || t('modal_error_generic')
@@ -284,9 +318,22 @@ export default function AppointmentFormModal({
           >
             {t('modal_cancel_btn')}
           </button>
+          {!isEdit && !closedMode && (
+            <button
+              type="submit"
+              form="appointment-form"
+              onClick={() => { bookAnotherRef.current = true }}
+              disabled={isSubmitting}
+              className="rounded-2xl border border-brand-border px-4 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-brand-surface disabled:opacity-50"
+              title="Save this appointment and keep booking (next slot, same dentist) — e.g. another family member"
+            >
+              Save &amp; book another
+            </button>
+          )}
           <button
             type="submit"
             form="appointment-form"
+            onClick={() => { bookAnotherRef.current = false }}
             disabled={isSubmitting}
             className="rounded-2xl bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-[0_18px_35px_-24px_rgba(49,100,222,0.9)] transition-colors hover:bg-brand-primary-dark disabled:opacity-50"
           >
@@ -367,7 +414,9 @@ export default function AppointmentFormModal({
               className="w-full rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
             >
               {providers.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
+                <option key={p.id} value={p.id} disabled={p.on_leave}>
+                  {p.name}{p.on_leave ? ' — on leave' : ''}
+                </option>
               ))}
             </select>
           </Field>
@@ -407,6 +456,23 @@ export default function AppointmentFormModal({
           </Field>
         </div>
 
+        {/* Next-available finder — fills Start with the next open slot for this dentist */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={findNextAvailable} disabled={findingSlots || !watch('provider_id')}
+            className="inline-flex items-center gap-1 rounded-lg border border-brand-primary bg-brand-primary/5 px-3 py-1.5 text-xs font-semibold text-brand-primary transition hover:bg-brand-primary/10 disabled:opacity-50">
+            {findingSlots ? 'Finding…' : '⚡ Find next available'}
+          </button>
+          {slotOptions.slice(1).map((s) => (
+            <button key={s} type="button" onClick={() => applySlot(s)}
+              className="rounded-lg border border-brand-border px-2.5 py-1.5 text-xs text-brand-ink transition hover:bg-brand-surface">
+              {new Date(s).toLocaleString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+            </button>
+          ))}
+          {slotsSearched && slotOptions.length === 0 && !findingSlots && (
+            <span className="text-xs text-brand-muted">No open slots in the next 30 days for this dentist.</span>
+          )}
+        </div>
+
         <Field label={t('modal_reason')}>
           <input
             type="text"
@@ -424,6 +490,13 @@ export default function AppointmentFormModal({
             className="w-full resize-none rounded-2xl border border-brand-accent/80 bg-white px-3 py-2.5 text-sm text-brand-ink focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45"
           />
         </Field>
+
+        {!closedMode && (
+          <label className="flex items-center gap-2 text-sm text-brand-ink">
+            <input type="checkbox" {...register('asap')} className="h-4 w-4 rounded border-brand-border text-brand-primary focus:ring-brand-primary" />
+            <span>Patient wants an <strong>earlier slot</strong> if one opens (adds to the ASAP list)</span>
+          </label>
+        )}
       </form>
     </Modal>
   )

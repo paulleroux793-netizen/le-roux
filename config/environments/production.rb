@@ -25,8 +25,29 @@ Rails.application.configure do
   config.assume_ssl = true
   config.force_ssl = true
 
-  # Skip http-to-https redirect for the default health check endpoint.
-  # config.ssl_options = { redirect: { exclude: ->(request) { request.path == "/up" } } }
+  # LAN access is plain HTTP (reception PCs on 10.0.0.x). Keep assume_ssl so the
+  # Cloudflare webhook tunnel still generates correct https URLs, but DISABLE
+  # HSTS: otherwise the 2-year Strict-Transport-Security header poisons LAN
+  # browsers into forcing HTTPS on http://10.0.0.125:3000 → ERR_SSL_PROTOCOL_ERROR
+  # (Chrome then can't reach the plain-HTTP rig at all). 2026-06-05.
+  # secure_cookies:false — assume_ssl marks the session + CSRF cookies `Secure`, but LAN/
+  # Tailscale access is plain HTTP, so browsers DROP them → per-user login can never hold a
+  # session (the shared HTTP-basic password didn't need cookies, so this only surfaced once
+  # USER_AUTH_ENABLED went on). Dashboard is internal-only (the public tunnel blocks it), and
+  # cookies stay httponly + samesite=lax, so dropping the Secure flag is safe. 2026-06-08.
+  config.ssl_options = { hsts: false, secure_cookies: false }
+
+  # ...and the secure flag also comes from request.ssl? (assume_ssl), which secure_cookies:false
+  # doesn't touch — so a middleware strips `Secure` from Set-Cookie for internal LAN/Tailscale
+  # http hosts (the dashboard), keeping it for the public tunnel. Lets per-user login hold a session.
+  require_relative "../../lib/internal_cookie_security"
+  config.middleware.insert_before 0, InternalCookieSecurity
+
+  # The CSRF *origin* check compares the Origin header to base_url, but assume_ssl
+  # forces base_url to https while LAN/Tailscale access is plain http → every write
+  # 422s ("Origin didn't match"). The authenticity TOKEN still fully protects
+  # against CSRF, so disable the proxy-brittle origin check. 2026-06-05.
+  config.action_controller.forgery_protection_origin_check = false
 
   # Log to STDOUT with the current request id as a default log tag.
   config.log_tags = [ :request_id ]
@@ -61,7 +82,11 @@ Rails.application.configure do
       user_name:            ENV.fetch("SMTP_USER_NAME", nil),
       password:             ENV.fetch("SMTP_PASSWORD", nil),
       authentication:       :plain,
-      enable_starttls_auto: true
+      enable_starttls_auto: true,
+      # Bounded so a slow/unreachable mail server can never hang a request that sends
+      # mail synchronously (the intake completion email sends inline on submit).
+      open_timeout:         10,
+      read_timeout:         15
     }
   else
     config.action_mailer.delivery_method = :logger

@@ -1,0 +1,51 @@
+================================================================
+  CHAIR-SIDE SCRIBE  -  How to use it   (Surgery 2)
+================================================================
+
+WHAT IT DOES
+  While you work, the scribe quietly listens and types your spoken
+  notes onto the patient's file in Ivory - so you don't have to type.
+  You can speak ENGLISH or AFRIKAANS; it understands both.
+
+  Your voice is processed ON THIS PC only. Only the typed text goes
+  to Ivory - the audio never leaves the room (POPIA-safe).
+
+----------------------------------------------------------------
+IT STARTS BY ITSELF
+----------------------------------------------------------------
+  * The scribe starts automatically every time you log in to the
+    Surgery 2 PC. You do NOT open or click anything to start it.
+  * Just make sure the Lark microphone is ON (the clip-on you wear)
+    and its little receiver is plugged into the PC.
+
+----------------------------------------------------------------
+FOR EACH PATIENT  -  the ONE step that matters
+----------------------------------------------------------------
+  1. When you seat a patient, open their appointment in the Ivory
+     diary and set the status to  "In consultation".
+
+  2. Speak normally. The scribe writes your notes onto THAT patient.
+
+  3. When you finish, change the appointment off "In consultation"
+     (e.g. to "Completed"). The scribe stops writing to that patient.
+
+  Why this step?  It tells the scribe which patient is in the chair,
+  so notes land on the right file - and it never records anyone who
+  hasn't been seated.
+
+----------------------------------------------------------------
+GOOD TO KNOW
+----------------------------------------------------------------
+  * Notes appear a few seconds after you speak (it works in short
+    pieces).
+  * Speak in full, natural sentences - that transcribes best.
+  * The notes are a FIRST DRAFT. Read them on the patient's file and
+    tidy / confirm before saving.
+
+----------------------------------------------------------------
+IF NO NOTES ARE APPEARING
+----------------------------------------------------------------
+  1. Is the appointment set to "In consultation"?
+  2. Is the Lark mic switched on and the receiver plugged in?
+  3. Still nothing? Tell Paul - he can check it in seconds.
+================================================================

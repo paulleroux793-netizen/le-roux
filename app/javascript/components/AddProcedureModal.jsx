@@ -52,6 +52,27 @@ export default function AddProcedureModal({
     })
   }
 
+  // Keyboard-first: ↑/↓ move the highlight, Enter picks the highlighted code then
+  // (once one is selected) adds it — so a procedure goes in without the mouse.
+  const onSearchKey = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (selectedId) submit()
+      else if (filtered.length > 0) setSel(filtered[0].id)
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      const idx = filtered.findIndex((p) => p.id === selectedId)
+      const next = filtered[Math.min(idx + 1, filtered.length - 1)] || filtered[0]
+      if (next) setSel(next.id)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      const idx = filtered.findIndex((p) => p.id === selectedId)
+      const prev = filtered[Math.max(idx - 1, 0)]
+      if (prev) setSel(prev.id)
+    }
+  }
+  const onToothKey = (e) => { if (e.key === 'Enter') { e.preventDefault(); submit() } }
+
   return (
     <Modal
       open={open}
@@ -74,11 +95,12 @@ export default function AddProcedureModal({
       <div className="space-y-3">
         <div className="flex items-center gap-2 rounded-xl border border-brand-border bg-white px-3 py-2">
           <Search size={15} className="text-brand-muted" />
-          <input value={q} onChange={(e) => setQ(e.target.value)}
+          <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={onSearchKey}
             placeholder="Search by code or description — e.g. 8101 or 'cleaning'"
             autoFocus
             className="w-full bg-transparent text-sm outline-none placeholder:text-brand-muted" />
         </div>
+        <p className="px-1 text-[11px] text-brand-muted">↑ ↓ to highlight · Enter to pick, then Enter again to add</p>
 
         <div className="max-h-72 overflow-y-auto rounded-xl border border-brand-border bg-white">
           {filtered.map((p) => (
@@ -106,7 +128,7 @@ export default function AddProcedureModal({
             <label className="block text-xs font-semibold uppercase tracking-wide text-brand-muted">
               Tooth number (optional — leave blank for whole-mouth procedures)
             </label>
-            <input value={tooth} onChange={(e) => setTooth(e.target.value)}
+            <input value={tooth} onChange={(e) => setTooth(e.target.value)} onKeyDown={onToothKey}
               placeholder="e.g. 36"
               className="mt-1.5 w-32 rounded-xl border border-brand-accent/80 bg-white px-3 py-1.5 text-sm focus:border-brand-primary focus:outline-none focus:ring-4 focus:ring-brand-accent/45" />
           </div>

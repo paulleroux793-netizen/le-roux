@@ -5,7 +5,7 @@ import {
   BellRing, Settings, ChevronDown, HelpCircle, Globe,
   User, LogOut, KeyRound, ClipboardList,
   Stethoscope, Layers, Wallet, ClipboardPlus, Receipt, FileText,
-  Scan, Mic, BarChart3, Inbox, CalendarDays,
+  Scan, Mic, BarChart3, Inbox, CalendarDays, Menu, X, FlaskConical,
 } from 'lucide-react'
 import { cn } from '../lib/utils'
 import GlobalSearch from '../components/GlobalSearch'
@@ -36,7 +36,9 @@ const PMS_NAV_ITEMS = [
   { label: 'Imaging (SIDEXIS)',    href: '/imaging',              icon: Scan },
   { label: 'Chair-side Scribe',    href: '/scribe-sessions',      icon: Mic },
   { label: 'Recalls',              href: '/recalls',              icon: BellRing },
+  { label: 'Lab cases',            href: '/lab',                  icon: FlaskConical },
   { label: 'Reporting',            href: '/reporting',            icon: BarChart3 },
+  { label: 'Transaction report',   href: '/reporting/transactions', icon: Receipt },
   { label: 'Procedure Codes',      href: '/procedure-codes',      icon: Stethoscope },
   { label: 'Treatment Macros',     href: '/treatment-macros',     icon: Layers },
 ]
@@ -45,6 +47,9 @@ export default function DashboardLayout({ children }) {
   const { url } = usePage()
   const { t, language, setLanguage } = useLanguage()
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [mobileNav, setMobileNav] = useState(false)
+  // Close the mobile nav drawer whenever we navigate to a new page.
+  useEffect(() => router.on('navigate', () => setMobileNav(false)), [])
   const dropdownRef = useRef(null)
 
   useEffect(() => {
@@ -68,7 +73,13 @@ export default function DashboardLayout({ children }) {
       <GlobalShortcuts />
 
       {/* ── Sidebar ─────────────────────────────────────────────────── */}
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-brand-border bg-white">
+      {mobileNav && <div className="fixed inset-0 z-20 bg-black/40 lg:hidden" onClick={() => setMobileNav(false)} aria-hidden="true" />}
+      <aside className={cn("fixed inset-y-0 left-0 z-30 flex w-64 flex-col border-r border-brand-border bg-white transition-transform lg:translate-x-0", mobileNav ? "translate-x-0" : "-translate-x-full")}>
+
+        {/* Close button — mobile drawer only */}
+        <button onClick={() => setMobileNav(false)} className="absolute right-2 top-2 rounded-lg p-2 text-brand-muted hover:bg-brand-surface lg:hidden" aria-label="Close menu">
+          <X size={18} />
+        </button>
 
         {/* Practice identity — h-16 matches the top navbar height exactly */}
         <div className="flex h-16 flex-shrink-0 items-center gap-3 border-b border-brand-border px-5">
@@ -172,7 +183,10 @@ export default function DashboardLayout({ children }) {
       </aside>
 
       {/* ── Top navbar ──────────────────────────────────────────────── */}
-      <header className="fixed inset-x-0 top-0 z-20 flex h-16 items-center gap-4 border-b border-brand-border bg-white pl-64 pr-6">
+      <header className="fixed inset-x-0 top-0 z-20 flex h-16 items-center gap-4 border-b border-brand-border bg-white pl-4 pr-6 lg:pl-64">
+        <button onClick={() => setMobileNav(true)} className="-ml-1 rounded-lg p-2 text-brand-muted hover:bg-brand-surface lg:hidden" aria-label="Open menu">
+          <Menu size={20} />
+        </button>
 
         {/* Left spacer — keeps the search visually centered */}
         <div className="flex-1" />
@@ -248,7 +262,7 @@ export default function DashboardLayout({ children }) {
                     danger
                     onClick={() => {
                       setDropdownOpen(false)
-                      router.delete('/users/sign_out', { onError: () => router.visit('/') })
+                      router.delete('/logout', { onError: () => router.visit('/') })
                     }}
                   />
                 </div>
@@ -259,7 +273,7 @@ export default function DashboardLayout({ children }) {
       </header>
 
       {/* ── Page content ─────────────────────────────────────────── */}
-      <main className="ml-64 min-h-screen pt-16">
+      <main className="min-h-screen pt-16 lg:ml-64">
         <div className="p-8">
           {children}
         </div>

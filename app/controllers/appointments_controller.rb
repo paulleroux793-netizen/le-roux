@@ -115,9 +115,10 @@ class AppointmentsController < ApplicationController
     providers = Provider.active.ordered.to_a
     prov_by_norm = Provider.all.index_by { |p| normalize_provider_name(p.name) }
 
+    # Keep cancelled appointments visible in the diary (greyed, not removed) —
+    # Paul's requirement: cancelling never deletes from the diary.
     appts = Appointment.includes(:provider, patient: :billing_accounts)
                        .where(start_time: day_start..day_end)
-                       .where.not(status: :cancelled)
                        .order(:start_time).to_a
 
     snapshots = ElixirDiarySnapshot.where(diary_date: date).order(:appointment_start_at).to_a
@@ -125,7 +126,10 @@ class AppointmentsController < ApplicationController
     render inertia: "Diary", props: {
       date: date.iso8601,
       providers: providers.map { |p|
-        { id: p.id, name: p.display_name, full_name: p.name, color: p.color, position: p.position }
+        { id: p.id, name: p.display_name, full_name: p.name, color: p.color, position: p.position,
+          accepting_bookings: p.accepting_bookings,
+          unavailable_until: p.unavailable_until&.iso8601,
+          on_leave: p.on_leave_on?(date) }
       },
       appointments: appts.map { |a| appointment_props(a) },
       elixir_blocks: snapshots.filter_map { |s|
@@ -136,6 +140,18 @@ class AppointmentsController < ApplicationController
       closed_blocks: CalendarNote.between(day_start, day_end).order(:starts_at).map { |n| diary_closed_props(n) },
       patients: []
     }
+  end
+
+  # GET /appointments/next_available?provider_id=&duration= — JSON list of the next
+  # open slots for the booking modal's "Find next available" helper.
+  def next_available
+    provider = Provider.find_by(id: params[:provider_id])
+    slots = NextAvailableSlotFinder.call(
+      provider: provider,
+      duration_min: (params[:duration].presence || 30),
+      limit: 3
+    )
+    render json: { slots: slots }
   end
 
   def show
@@ -204,7 +220,11 @@ class AppointmentsController < ApplicationController
       reason: create_params[:reason],
       notes: create_params[:notes],
       status: :scheduled,
-      provider_id: create_params[:provider_id].presence
+      provider_id: create_params[:provider_id].presence,
+      # || false: Boolean.cast(nil) is nil (not false), and asap is NOT NULL — so a booking that
+      # omits the asap param (calendar quick-book, API, any non-form path) would 500 with a
+      # NotNullViolation. Fall back to the DB default explicitly. 2026-06-08.
+      asap: ActiveModel::Type::Boolean.new.cast(create_params[:asap]) || false
     )
 
     if appointment.is_a?(Appointment)
@@ -250,11 +270,12 @@ class AppointmentsController < ApplicationController
       inertia: { errors: { base: e.message } },
       status: :see_other
   rescue ActiveRecord::StatementInvalid => e
-    # The no_overlapping_active_appointments DB exclusion constraint rejected
-    # the booking — another appointment was created for that slot in the race
-    # window after the form's availability check. Show a friendly conflict
-    # message rather than a 500.
-    raise unless e.message.include?("no_overlapping_active_appointments")
+    # The per-provider GiST exclusion constraint (no_overlapping_appointments_per_provider)
+    # rejected the booking — another appointment was created for that slot in the
+    # race window after the form's availability check. Show a friendly conflict
+    # message rather than a 500. Match the PG exclusion cause as well so a future
+    # constraint rename can't silently turn this back into a 500.
+    raise unless overlap_violation?(e)
     redirect_back fallback_location: appointments_location(anchor_date_for(start_at)),
       alert: "That time slot was just taken by another booking. Please pick a different time.",
       inertia: { errors: { start_time: "slot no longer available" } },
@@ -323,14 +344,24 @@ class AppointmentsController < ApplicationController
       status: :see_other
   rescue ActiveRecord::StatementInvalid => e
     # Reschedule moved the appointment onto an occupied slot — blocked by the
-    # no_overlapping_active_appointments DB constraint. (The model's overlap
-    # validation only runs on :create, so the constraint is the guard here.)
-    raise unless e.message.include?("no_overlapping_active_appointments")
+    # per-provider GiST exclusion constraint (the model validation also runs on
+    # :update, but the DB constraint is the race-proof guard).
+    raise unless overlap_violation?(e)
     redirect_back fallback_location: appointments_location(anchor_date_for(new_start || appointment.start_time)),
       alert: "That time slot is already booked. Please choose a different time.",
       inertia: { errors: { start_time: "slot already booked" } },
       status: :see_other
   end
+
+  # True when a StatementInvalid was caused by the appointments per-provider
+  # overlap exclusion constraint (race-window double-booking), so callers can
+  # show a friendly "slot taken" message instead of a 500. Matches both the
+  # constraint name and the underlying PG exclusion class for resilience.
+  def overlap_violation?(e)
+    e.message.include?("no_overlapping_appointments") ||
+      (defined?(PG::ExclusionViolation) && e.cause.is_a?(PG::ExclusionViolation))
+  end
+  private :overlap_violation?
 
   # PATCH /appointments/:id/cancel
   #
@@ -410,7 +441,7 @@ class AppointmentsController < ApplicationController
   # confirmed → arrived → in_consultation → completed (and back to scheduled
   # if a click was a mistake). Each maps to a colour on the calendar so
   # reception can read the room at a glance.
-  STATUS_TRANSITIONS = %w[scheduled confirmed arrived in_consultation completed no_show].freeze
+  STATUS_TRANSITIONS = %w[scheduled confirmed arrived in_consultation completed no_show cancelled].freeze
 
   def set_status
     appointment = Appointment.find(params[:id])
@@ -452,14 +483,56 @@ class AppointmentsController < ApplicationController
       alert: e.record.errors.full_messages.to_sentence, status: :see_other
   end
 
+  # POST /appointments/:id/whatsapp_pack — send the 4 standard WhatsApp messages to the patient
+  # (Location, Directions, Intake form, Confirmation). Reception-triggered; sends real messages.
+  def whatsapp_pack
+    appt = Appointment.find(params[:id])
+    send_standard_whatsapp(appt, WhatsappStandardMessages.pack(appt), "4-message pack")
+  end
+
+  # POST /appointments/:id/whatsapp_confirm — send ONLY the booking confirmation (this date/time).
+  def whatsapp_confirm
+    appt = Appointment.find(params[:id])
+    send_standard_whatsapp(appt, [ WhatsappStandardMessages.confirmation(appt) ], "booking confirmation")
+  end
+
   private
 
+  # Dispatch one or more standard messages to the appointment's patient via the existing free-form
+  # WhatsApp sender. Each send is isolated so one failure (e.g. the patient is outside Twilio's
+  # 24-hour reply window) doesn't abort the rest; reception sees how many went through.
+  def send_standard_whatsapp(appt, messages, label)
+    phone = appt.patient&.phone
+    return redirect_back(fallback_location: appointments_location, alert: "No phone number on file for this patient.", status: :see_other) if phone.blank?
+
+    svc = WhatsappTemplateService.new
+    sent = 0
+    failed = 0
+    messages.each do |body|
+      svc.send_text(phone, body)
+      sent += 1
+    rescue StandardError => e
+      failed += 1
+      Rails.logger.warn("[whatsapp_standard] appt #{appt.id} send failed: #{e.message}")
+    end
+
+    if defined?(AuditService)
+      AuditService.log(action: "appointment.whatsapp_standard",
+        summary: "Sent #{sent}/#{messages.size} standard WhatsApp message(s) (#{label}) to #{appt.patient&.full_name}",
+        resource: appt, performed_by: audit_performer, ip_address: request.remote_ip)
+    end
+
+    msg = "WhatsApp #{label}: #{sent} sent"
+    msg += " · #{failed} failed (patient may be outside the 24-hour reply window — needs an approved template)" if failed.positive?
+    redirect_back fallback_location: appointments_location, notice: msg, status: :see_other
+  end
+
   def create_params
-    params.require(:appointment).permit(:patient_id, :start_time, :end_time, :reason, :notes, :provider_id)
+    params.require(:appointment).permit(:patient_id, :start_time, :end_time, :reason, :notes, :provider_id, :asap)
   end
 
   def update_params
-    params.require(:appointment).permit(:start_time, :end_time, :reason, :notes, :provider_id)
+    params.require(:appointment).permit(:start_time, :end_time, :reason, :notes, :provider_id, :asap)
   end
 
   def cancel_params
@@ -548,9 +621,10 @@ class AppointmentsController < ApplicationController
     day_start = date.in_time_zone.beginning_of_day
     day_end   = date.in_time_zone.end_of_day
 
+    # Keep cancelled appointments visible in the diary (greyed, not removed) —
+    # Paul's requirement: cancelling never deletes from the diary.
     appts = Appointment.includes(:provider, patient: :billing_accounts)
                        .where(start_time: day_start..day_end)
-                       .where.not(status: :cancelled)
                        .order(:start_time).to_a
 
     snapshots = ElixirDiarySnapshot.where(diary_date: date).order(:appointment_start_at).to_a

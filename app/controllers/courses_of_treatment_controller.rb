@@ -1,6 +1,8 @@
 # Courses of treatment (the clinical episode). Read-first index + show with odontogram.
 # Additive — new route. (Ivory, Phase 2.)
 class CoursesOfTreatmentController < ApplicationController
+  include VisitSuggestions
+
   def index
     cots = CourseOfTreatment.includes(:patient, :treatment_items).order(created_at: :desc).limit(200).to_a
     render inertia: "CoursesOfTreatment", props: {
@@ -12,9 +14,39 @@ class CoursesOfTreatmentController < ApplicationController
     }
   end
 
+  # POST /patients/:patient_id/courses_of_treatment — start a treatment plan for a
+  # patient (reuse an open one if it exists, else create), then open it to add items.
+  def create
+    patient = Patient.find(params[:patient_id])
+    cot = CourseOfTreatment.where(patient_id: patient.id).open.order(created_at: :desc).first
+    cot ||= CourseOfTreatment.create!(
+      patient: patient,
+      billing_account: patient.billing_accounts.first,
+      setting: "in_chair",
+      status: "planned"
+    )
+    AuditService.log(
+      action: "course_of_treatment.created",
+      summary: "Started a treatment plan for #{patient.full_name}",
+      resource: cot,
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    redirect_to "/courses-of-treatment/#{cot.id}",
+      notice: "Treatment plan ready — add the planned procedures.", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: patient_path(params[:patient_id]),
+      alert: "Could not start treatment plan: #{e.record.errors.full_messages.to_sentence}", status: :see_other
+  end
+
   def show
     cot = CourseOfTreatment.includes(:patient, treatment_items: :procedure_code, clinical_notes: {}).find(params[:id])
     patient = cot.patient
+
+    # PREDICTIVE: suggest the visit-bundle(s) for this patient's booked appointment reason.
+    visit = next_visit_for(patient)
+    visit_reason = visit&.reason.to_s.strip
+    suggested = visit_reason.present? ? suggested_macros_for(visit_reason) : []
 
     render inertia: "CourseOfTreatmentShow", props: {
       course: {
@@ -25,13 +57,16 @@ class CoursesOfTreatmentController < ApplicationController
         authorisation_number: cot.authorisation_number,
         patient: { id: patient.id, name: patient.full_name },
         estimated_total: cot.estimated_total,
-        completed_total: cot.completed_total
+        completed_total: cot.completed_total,
+        provider_name: cot.provider_name
       },
+      providers: Provider.active.order(:id).map { |p| p.name.upcase },
       items: cot.treatment_items.map { |i|
         {
           id: i.id, code: i.procedure_code&.code, description: i.procedure_code&.description,
           tooth_number: i.tooth_number, surface: i.surface, status: i.status,
-          fee: i.fee, completed_date: i.completed_date&.iso8601
+          fee: i.fee, completed_date: i.completed_date&.iso8601,
+          lab_name: i.lab_name, lab_due_on: i.lab_due_on&.iso8601, lab_returned_on: i.lab_returned_on&.iso8601
         }
       },
       notes: cot.clinical_notes.order(created_at: :desc).map { |n|
@@ -51,7 +86,10 @@ class CoursesOfTreatmentController < ApplicationController
       # C4 — visit-type templates available to apply with one click
       treatment_macros: TreatmentMacro.active.order(:access_code)
         .limit(50).pluck(:id, :access_code, :name)
-        .map { |id, code, name| { id:, access_code: code, name: name } }
+        .map { |id, code, name| { id:, access_code: code, name: name } },
+      # PREDICTIVE: the booked visit reason + the bundle(s) it suggests (review-flagged in UI).
+      visit_reason: visit_reason.presence,
+      suggested_macros: suggested.map { |m| { id: m.id, access_code: m.access_code, name: m.name } }
     }
   end
 
@@ -82,7 +120,7 @@ class CoursesOfTreatmentController < ApplicationController
       ip_address: request.remote_ip
     )
 
-    redirect_back fallback_location: course_of_treatment_path(cot),
+    redirect_back fallback_location: "/courses-of-treatment/#{cot.id}",
       notice: "Tooth #{params[:tooth_number]} charted#{item ? ' + procedure planned' : ''}",
       status: :see_other
   rescue ActiveRecord::RecordInvalid, ArgumentError => e
@@ -113,10 +151,10 @@ class CoursesOfTreatmentController < ApplicationController
       ip_address: request.remote_ip
     )
     expire_dev_page_cache("courses-of-treatment")
-    redirect_back fallback_location: course_of_treatment_path(cot),
+    redirect_back fallback_location: "/courses-of-treatment/#{cot.id}",
       notice: "Added #{pc.code}", status: :see_other
   rescue ActiveRecord::RecordInvalid => e
-    redirect_back fallback_location: course_of_treatment_path(params[:id]),
+    redirect_back fallback_location: "/courses-of-treatment/#{params[:id]}",
       alert: e.record.errors.full_messages.to_sentence, status: :see_other
   end
 
@@ -144,10 +182,21 @@ class CoursesOfTreatmentController < ApplicationController
                      summary: "Applied macro #{macro.access_code} (#{macro.name}) to COT ##{cot.id} (#{added} items)",
                      resource: cot, performed_by: audit_performer, ip_address: request.remote_ip)
     expire_dev_page_cache("courses-of-treatment")
-    redirect_back fallback_location: course_of_treatment_path(cot),
+    redirect_back fallback_location: "/courses-of-treatment/#{cot.id}",
       notice: "Added #{added} item#{added == 1 ? '' : 's'} from \"#{macro.name}\"", status: :see_other
   rescue ActiveRecord::RecordInvalid => e
-    redirect_back fallback_location: course_of_treatment_path(params[:id]),
+    redirect_back fallback_location: "/courses-of-treatment/#{params[:id]}",
+      alert: e.record.errors.full_messages.to_sentence, status: :see_other
+  end
+
+  # Set the treating dentist on this COT so generated invoices/estimates carry it
+  # (uppercased to match the invoice/statement + HPCSA lookup convention).
+  def set_provider
+    cot = CourseOfTreatment.find(params[:id])
+    cot.update!(provider_name: params[:provider_name].to_s.upcase.presence)
+    redirect_to "/courses-of-treatment/#{cot.id}", notice: "Treating dentist updated", status: :see_other
+  rescue ActiveRecord::RecordInvalid => e
+    redirect_back fallback_location: "/courses-of-treatment/#{params[:id]}",
       alert: e.record.errors.full_messages.to_sentence, status: :see_other
   end
 
@@ -171,7 +220,7 @@ class CoursesOfTreatmentController < ApplicationController
     expire_dev_page_cache("estimates")
     redirect_to estimate_path(est), notice: "Estimate #{est.estimate_number} ready", status: :see_other
   rescue ActiveRecord::RecordInvalid => e
-    redirect_back fallback_location: course_of_treatment_path(params[:id]),
+    redirect_back fallback_location: "/courses-of-treatment/#{params[:id]}",
       alert: e.record.errors.full_messages.to_sentence, status: :see_other
   end
 
@@ -183,11 +232,15 @@ class CoursesOfTreatmentController < ApplicationController
   def generate_invoice
     cot = CourseOfTreatment.find(params[:id])
     if cot.treatment_items.where(status: "completed").none?
-      return redirect_back fallback_location: course_of_treatment_path(cot),
+      return redirect_back fallback_location: "/courses-of-treatment/#{cot.id}",
         alert: "Mark at least one treatment item Done before invoicing", status: :see_other
     end
 
     inv = Invoice.from_course(cot)
+    if inv.invoice_lines.empty?
+      return redirect_back fallback_location: "/courses-of-treatment/#{cot.id}",
+        alert: "All completed items have already been invoiced", status: :see_other
+    end
     inv.save!
     AuditService.log(
       action: "invoice.generated",
@@ -199,7 +252,7 @@ class CoursesOfTreatmentController < ApplicationController
     expire_dev_page_cache("invoices")
     redirect_to invoice_path(inv), notice: "Invoice #{inv.invoice_number} ready", status: :see_other
   rescue ActiveRecord::RecordInvalid => e
-    redirect_back fallback_location: course_of_treatment_path(params[:id]),
+    redirect_back fallback_location: "/courses-of-treatment/#{params[:id]}",
       alert: e.record.errors.full_messages.to_sentence, status: :see_other
   end
 

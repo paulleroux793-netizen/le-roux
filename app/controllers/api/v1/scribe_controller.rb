@@ -85,16 +85,29 @@ class Api::V1::ScribeController < ActionController::API
     end
   end
 
-  # The "current" appointment for a device:
-  # most recent in_consultation appointment whose patient has AI consent
-  # AND whose start_time is within the last 4 hours (so a forgotten
+  # The "current" appointment for a device: the most recent in_consultation appointment whose
+  # patient has AI consent AND whose start_time is within the last 4 hours (so a forgotten
   # in_consultation appointment from yesterday doesn't catch today's audio).
-  def current_appointment_for(_device)
-    Appointment.joins(:patient)
-               .where(status: :in_consultation)
-               .where("appointments.start_time >= ?", 4.hours.ago)
-               .where.not(patients: { consent_to_ai_processing_at: nil })
-               .order(start_time: :desc)
-               .first
+  #
+  # CRITICAL with multiple surgeries: bind a surgery's mic to THAT surgery's dentist so two
+  # rooms can record at once without cross-contaminating each other's charts (Surgery 1 = Dr
+  # Chalita, Surgery 2 = Dr Eliska). Reception/other devices stay global (no provider filter).
+  def current_appointment_for(device)
+    scope = Appointment.joins(:patient)
+                       .where(status: :in_consultation)
+                       .where("appointments.start_time >= ?", 4.hours.ago)
+                       .where.not(patients: { consent_to_ai_processing_at: nil })
+    provider = provider_for_location(device.location)
+    scope = scope.where(provider_id: provider.id) if provider
+    scope.order(start_time: :desc).first
+  end
+
+  SURGERY_PROVIDER = { "surgery_1" => "Chalita", "surgery_2" => "Eliska" }.freeze
+
+  # Map a surgery device's location to its dentist (matched by name, so it's robust to provider
+  # IDs differing between environments). nil for non-surgery devices → no provider filter.
+  def provider_for_location(location)
+    key = SURGERY_PROVIDER[location.to_s]
+    key && Provider.where("name ILIKE ?", "%#{key}%").first
   end
 end

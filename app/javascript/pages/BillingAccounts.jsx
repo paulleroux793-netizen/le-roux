@@ -2,8 +2,59 @@ import React from 'react'
 import { Link } from '@inertiajs/react'
 import { Wallet, ChevronRight } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
+import DataTable from '../components/DataTable'
 
 export default function BillingAccounts({ accounts = [], stats = {} }) {
+  const columns = [
+    {
+      accessorKey: 'account_code',
+      header: 'Account',
+      cell: ({ getValue }) => (
+        <span className="font-mono font-medium text-brand-ink">{getValue() || '—'}</span>
+      ),
+    },
+    {
+      accessorKey: 'billing_name',
+      header: 'Billing name',
+      cell: ({ row }) => (
+        <Link href={`/accounts/${row.original.id}`} className="text-sm font-medium text-brand-ink hover:text-brand-primary hover:underline">
+          {row.original.billing_name}
+        </Link>
+      ),
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
+      cell: ({ getValue }) => <span className="text-sm text-brand-muted">{getValue() || '—'}</span>,
+    },
+    {
+      accessorKey: 'member_count',
+      header: 'Members',
+      cell: ({ getValue }) => <span className="text-sm text-brand-ink">{getValue()}</span>,
+    },
+    {
+      accessorKey: 'outstanding',
+      header: 'Outstanding',
+      cell: ({ getValue }) => {
+        const v = getValue()
+        return v > 0
+          ? <span className="text-sm font-medium text-brand-danger">R{Number(v).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}</span>
+          : <span className="text-sm text-brand-muted">—</span>
+      },
+    },
+    {
+      id: 'view',
+      header: '',
+      enableSorting: false,
+      enableGlobalFilter: false,
+      cell: ({ row }) => (
+        <Link href={`/accounts/${row.original.id}`} className="inline-flex items-center text-brand-primary hover:underline">
+          View <ChevronRight size={14} />
+        </Link>
+      ),
+    },
+  ]
+
   return (
     <DashboardLayout>
       <div className="mb-6 flex items-center gap-3">
@@ -18,40 +69,15 @@ export default function BillingAccounts({ accounts = [], stats = {} }) {
 
       {accounts.length === 0 ? (
         <div className="rounded-xl border border-dashed border-brand-border bg-white px-6 py-12 text-center">
-          <p className="text-sm text-brand-muted">
-            No accounts yet. They populate once the patient import is run (pending the patient-identity
-            decision — see the build uncertainties).
-          </p>
+          <p className="text-sm text-brand-muted">No accounts yet.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-brand-border bg-white">
-          <table className="w-full text-sm">
-            <thead className="border-b border-brand-border bg-brand-surface text-left text-xs uppercase tracking-wide text-brand-muted">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Account</th>
-                <th className="px-4 py-3 font-semibold">Billing name</th>
-                <th className="px-4 py-3 font-semibold">Phone</th>
-                <th className="px-4 py-3 text-center font-semibold">Members</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {accounts.map((a) => (
-                <tr key={a.id} className="border-b border-brand-border/60 last:border-0 hover:bg-brand-surface/50">
-                  <td className="px-4 py-2.5 font-mono font-medium text-brand-ink">{a.account_code || '—'}</td>
-                  <td className="px-4 py-2.5 text-brand-ink">{a.billing_name}</td>
-                  <td className="px-4 py-2.5 text-brand-muted">{a.phone || '—'}</td>
-                  <td className="px-4 py-2.5 text-center text-brand-ink">{a.member_count}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link href={`/accounts/${a.id}`} className="inline-flex items-center text-brand-primary hover:underline">
-                      View <ChevronRight size={14} />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={accounts}
+          pageSize={5000}
+          globalFilterPlaceholder="Search accounts by code, name, or phone…"
+        />
       )}
     </DashboardLayout>
   )

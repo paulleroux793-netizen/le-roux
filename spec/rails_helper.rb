@@ -10,6 +10,13 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 require 'rspec/rails'
 # Add additional requires below this line. Rails is not loaded until this point!
 
+# NOTE: webmock is in the Gemfile and ~18 service specs use stub_request, but requiring
+# 'webmock/rspec' globally here regresses the appointments / morning-confirmation / performance
+# specs (it wraps the HTTP stack and changes their behaviour even with allow_net_connect!).
+# So the correct fix is per-spec: require 'webmock/rspec' + stub each external call inside the
+# files that need it (eleven_labs / google_calendar / intake), leaving the rest untouched.
+# Backlogged rather than shipped globally — a global require trades 18 known failures for 6 new.
+
 # Requires supporting ruby files with custom matchers and macros, etc, in
 # spec/support/ and its subdirectories. Files matching `spec/**/*_spec.rb` are
 # run as spec files by default. This means that files in spec/support that end

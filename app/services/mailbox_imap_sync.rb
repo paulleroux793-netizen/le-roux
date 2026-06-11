@@ -45,31 +45,34 @@ class MailboxImapSync
     imap = Net::IMAP.new(host, port: port, ssl: true)
     imap.login(user, pass)
 
-    # Folder list for the tree (skip \Noselect containers).
-    folders = imap.list("", "*").to_a.reject { |f| f.attr.include?(:Noselect) }.map(&:name)
-    folders = [ "INBOX" ] if folders.empty?
-    account.update!(folders: folders)
+    begin
+      # Folder list for the tree (skip \Noselect containers).
+      folders = imap.list("", "*").to_a.reject { |f| f.attr.include?(:Noselect) }.map(&:name)
+      folders = [ "INBOX" ] if folders.empty?
+      account.update!(folders: folders)
 
-    total = 0
-    folders.each do |folder|
-      imap.examine(folder) # READ-ONLY
-      uids = imap.uid_search([ "ALL" ]).last(per_folder)
-      uids.each do |uid|
-        data = imap.uid_fetch(uid, [ "FLAGS", "INTERNALDATE", "BODY.PEEK[]" ])&.first
-        next unless data
-        raw = data.attr["BODY[]"]
-        next if raw.blank?
-        upsert_message(account, folder, uid, raw, data.attr["FLAGS"] || [], data.attr["INTERNALDATE"])
-        total += 1
+      total = 0
+      folders.each do |folder|
+        imap.examine(folder) # READ-ONLY
+        uids = imap.uid_search([ "ALL" ]).last(per_folder)
+        uids.each do |uid|
+          data = imap.uid_fetch(uid, [ "FLAGS", "INTERNALDATE", "BODY.PEEK[]" ])&.first
+          next unless data
+          raw = data.attr["BODY[]"]
+          next if raw.blank?
+          upsert_message(account, folder, uid, raw, data.attr["FLAGS"] || [], data.attr["INTERNALDATE"])
+          total += 1
+        rescue => e
+          Rails.logger.warn("[MailboxImapSync] #{folder} uid=#{uid} #{e.class}: #{e.message}")
+        end
       rescue => e
-        Rails.logger.warn("[MailboxImapSync] #{folder} uid=#{uid} #{e.class}: #{e.message}")
+        Rails.logger.warn("[MailboxImapSync] folder #{folder} skipped: #{e.class}: #{e.message}")
       end
-    rescue => e
-      Rails.logger.warn("[MailboxImapSync] folder #{folder} skipped: #{e.class}: #{e.message}")
+    ensure
+      imap.logout rescue nil
+      imap.disconnect rescue nil
     end
 
-    imap.logout rescue nil
-    imap.disconnect rescue nil
     account.update!(status: "active", status_message: nil, last_synced_at: Time.current)
     { folders: folders.size, messages: total }
   end
@@ -89,6 +92,11 @@ class MailboxImapSync
     html      = safe_part(m, :html)
     snippet   = text.to_s.gsub(/\s+/, " ").strip[0, 200]
     seen      = flags.include?(:Seen)
+    # Tag outbound mail: folder is Sent/Drafts, or the sender is our own address.
+    # The reply logic picks the recipient from the last sent_by_us: false message,
+    # so mis-tagging our own messages as inbound would address replies to ourselves.
+    sent_by_us = folder.to_s.match?(/sent|draft/i) ||
+                 from_addr.to_s.casecmp?(account.address.to_s)
 
     thread = MailThread.find_or_create_by!(mail_account_id: account.id, provider_thread_id: pmid) do |t|
       t.subject = subject
@@ -97,14 +105,14 @@ class MailboxImapSync
       t.last_message_at = received
     end
 
-    MailMessage.create!(
+    msg = MailMessage.create!(
       mail_account: account, mail_thread: thread, provider_message_id: pmid, folder: folder,
       message_id_header: m.message_id.to_s.presence,
       from_address: from_addr.presence || "unknown", from_name: from_name,
       to_addresses: to_list, cc_addresses: cc_list, subject: subject,
       body_text: text, body_html: html, snippet: snippet,
       received_at: received, has_attachments: (m.has_attachments? rescue false),
-      read_at: (seen ? received : nil), sent_by_us: false
+      read_at: (seen ? received : nil), sent_by_us: sent_by_us
     )
     thread.update!(
       last_message_at: received,
@@ -112,6 +120,8 @@ class MailboxImapSync
       unread_count: thread.mail_messages.where(read_at: nil).count,
       subject: thread.subject.presence || subject
     )
+    # AI drafting only runs when the switch is ON (default OFF = no AI, no cost).
+    MailAiAssistant.new.draft_for(msg) if folder.to_s.match?(/inbox/i) && MailAiAssistant.drafting_enabled?
   end
 
   def safe_part(mail, kind)

@@ -62,7 +62,12 @@ export default function Invoices({ invoices = [], stats = {} }) {
               {invoices.map((i) => (
                 <tr key={i.id} className="border-b border-brand-border/60 last:border-0 hover:bg-brand-surface/50">
                   <td className="px-4 py-2.5 font-mono font-medium text-brand-ink">{i.number}</td>
-                  <td className="px-4 py-2.5 text-brand-muted">{fmtDate(i.date)}</td>
+                  {(() => {
+                    const days = i.date ? Math.floor((new Date(new Date().toDateString()) - new Date(i.date)) / 86400000) : 0
+                    const owes = (i.balance || 0) > 0 && !i.void && ['open', 'part_paid'].includes(i.status)
+                    const tone = owes && days > 60 ? 'text-brand-danger font-medium' : owes && days > 30 ? 'text-amber-600 font-medium' : 'text-brand-muted'
+                    return <td className={cn('px-4 py-2.5', tone)}>{fmtDate(i.date)}{owes && days > 30 ? ` · ${days}d overdue` : ''}</td>
+                  })()}
                   <td className="px-4 py-2.5 text-brand-ink">{i.patient_name}</td>
                   <td className="px-4 py-2.5"><span className={cn('inline-flex rounded-md border px-2 py-0.5 text-xs font-medium', STATUS_STYLE[i.status])}>{i.status}</span></td>
                   <td className="px-4 py-2.5 text-right text-brand-ink">{rand(i.total)}</td>

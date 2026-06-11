@@ -43,11 +43,17 @@ export default function GlobalSearch() {
     : []
 
   // "/" focuses the search from anywhere (unless already typing in a field).
+  // Ctrl/Cmd+K does the same — the modern command-palette chord — and works even
+  // mid-typing, since it's a deliberate two-key combo rather than a stray slash.
   useEffect(() => {
     const handler = (e) => {
-      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
-      const tag = document.activeElement?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return
+      const isSlash = e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey
+      const isCmdK = (e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')
+      if (!isSlash && !isCmdK) return
+      if (isSlash) {
+        const tag = document.activeElement?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return
+      }
       e.preventDefault()
       inputRef.current?.focus()
       setOpen(true)
@@ -147,7 +153,7 @@ export default function GlobalSearch() {
           role="combobox"
           aria-expanded={showDropdown}
           aria-controls="global-search-listbox"
-          placeholder="Search patients, invoices, estimates, codes…  ( / )"
+          placeholder="Search patients, invoices, estimates, codes…  ( / or Ctrl-K )"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
           onFocus={() => setOpen(true)}

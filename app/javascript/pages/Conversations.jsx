@@ -3,7 +3,7 @@ import { router } from '@inertiajs/react'
 import { toast } from 'sonner'
 import {
   MessageSquare, Search, Upload, Send, Phone, Tag,
-  Plus, X as XIcon, ExternalLink, MoreVertical,
+  Plus, X as XIcon, ExternalLink, MoreVertical, CheckCheck, Share2,
 } from 'lucide-react'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { useLanguage } from '../lib/LanguageContext'
@@ -134,7 +134,7 @@ export default function Conversations({
         {/* ── RIGHT: chat thread ──────────────────────────────────────── */}
         <main className="flex flex-1 flex-col bg-[#efeae2]">
           {selected_conversation ? (
-            <ChatPane conv={selected_conversation} />
+            <ChatPane conv={selected_conversation} conversations={conversations} />
           ) : (
             <EmptyChatState t={t} />
           )}
@@ -200,10 +200,16 @@ function SidebarRow({ conv, active, onClick, language, t }) {
 // ──────────────────────────────────────────────────────────────────────
 // Chat pane (right side) — header, scrolling bubble feed, composer
 // ──────────────────────────────────────────────────────────────────────
-function ChatPane({ conv }) {
+// WhatsApp-style quick emoji set for the composer picker (dental/reception-relevant ones included).
+const EMOJIS = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😋','😎','🤩','🥳','🤔','🤨','😐','😏','😒','🙄','😬','😮','😯','😴','😭','😤','😠','👍','👎','👌','🙏','👏','🙌','👋','🤝','💪','🦷','❤️','🧡','💛','💚','💙','💜','🤍','✅','❌','⭐','🔥','🎉','💯','📅','📞','💬','⏰']
+
+function ChatPane({ conv, conversations = [] }) {
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
+  const [showEmoji, setShowEmoji] = useState(false)
+  const [fwd, setFwd] = useState(null)
   const scrollRef = useRef(null)
+  const textareaRef = useRef(null)
 
   useEffect(() => {
     const el = scrollRef.current
@@ -230,6 +236,18 @@ function ChatPane({ conv }) {
       e.preventDefault()
       handleSend(e)
     }
+  }
+
+  // Insert an emoji at the textarea cursor (WhatsApp-style), keeping focus + caret position.
+  const insertEmoji = (emoji) => {
+    const el = textareaRef.current
+    const start = el ? el.selectionStart : body.length
+    const end = el ? el.selectionEnd : body.length
+    setBody(body.slice(0, start) + emoji + body.slice(end))
+    setShowEmoji(false)
+    requestAnimationFrame(() => {
+      if (el) { el.focus(); const pos = start + emoji.length; el.setSelectionRange(pos, pos) }
+    })
   }
 
   return (
@@ -268,7 +286,7 @@ function ChatPane({ conv }) {
         style={{ backgroundImage: "url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22><rect width=%22100%22 height=%22100%22 fill=%22%23efeae2%22/></svg>')" }}
       >
         {conv.messages?.length > 0 ? (
-          conv.messages.map((m, i) => <Bubble key={i} msg={m} />)
+          conv.messages.map((m, i) => <Bubble key={i} msg={m} onForward={setFwd} />)
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-brand-muted">
             No messages yet
@@ -280,9 +298,43 @@ function ChatPane({ conv }) {
       {canReply ? (
         <form
           onSubmit={handleSend}
-          className="flex items-end gap-2 border-t border-brand-accent/30 bg-[#f0f2f5] px-3 py-2"
+          className="relative flex items-end gap-2 border-t border-brand-accent/30 bg-[#f0f2f5] px-3 py-2"
         >
+          <button
+            type="button"
+            onClick={() => toast.info('Attachments are coming soon')}
+            title="Attach a file"
+            aria-label="Attach"
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-brand-muted transition-colors hover:bg-black/5 hover:text-brand-ink"
+          >
+            <Plus size={20} />
+          </button>
+          <div className="relative flex-shrink-0">
+            {showEmoji && (
+              <div className="absolute bottom-12 left-0 z-20 grid max-h-56 w-72 grid-cols-8 gap-1 overflow-y-auto rounded-lg border border-brand-accent/30 bg-white p-2 shadow-lg">
+                {EMOJIS.map((em, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => insertEmoji(em)}
+                    className="rounded p-1 text-xl leading-none hover:bg-brand-primary/10"
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowEmoji((s) => !s)}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-2xl transition-colors hover:bg-black/5"
+              aria-label="Emoji"
+            >
+              😀
+            </button>
+          </div>
           <textarea
+            ref={textareaRef}
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -309,6 +361,10 @@ function ChatPane({ conv }) {
           Replies are only supported on WhatsApp conversations.
         </div>
       )}
+
+      {fwd != null && (
+        <ForwardModal message={fwd} fromId={conv.id} conversations={conversations} onClose={() => setFwd(null)} />
+      )}
     </>
   )
 }
@@ -316,10 +372,124 @@ function ChatPane({ conv }) {
 // ──────────────────────────────────────────────────────────────────────
 // Bubble — message in chat feed
 // ──────────────────────────────────────────────────────────────────────
-function Bubble({ msg }) {
-  const isClinic = msg.role === 'assistant'
+// Render WhatsApp-style markdown (*bold* _italic_ ~strike~ `mono`) as React nodes.
+// Safe by construction — text is kept in {expressions} so React escapes it; no HTML injection.
+function renderWhatsappText(text) {
+  if (text == null || text === '') return text
+  const re = /(\*[^*\n]+\*|_[^_\n]+_|~[^~\n]+~|`[^`\n]+`)/g
+  return String(text).split(re).map((part, i) => {
+    if (/^\*[^*\n]+\*$/.test(part)) return <strong key={i} className="font-semibold">{part.slice(1, -1)}</strong>
+    if (/^_[^_\n]+_$/.test(part)) return <em key={i}>{part.slice(1, -1)}</em>
+    if (/^~[^~\n]+~$/.test(part)) return <span key={i} className="line-through">{part.slice(1, -1)}</span>
+    if (/^`[^`\n]+`$/.test(part)) return <code key={i} className="rounded bg-black/5 px-1 font-mono text-[12px]">{part.slice(1, -1)}</code>
+    return part
+  })
+}
+
+// First http(s) URL in a message (trailing punctuation trimmed).
+const URL_RE = /(https?:\/\/[^\s]+)/i
+function firstUrl(text) {
+  const m = String(text || '').match(URL_RE)
+  return m ? m[1].replace(/[)\].,!?]+$/, '') : null
+}
+
+// Session cache so each URL's preview is fetched at most once.
+const linkPreviewCache = new Map()
+
+// WhatsApp-style link preview card (Open-Graph), fetched via the SSRF-guarded /link_preview endpoint.
+function LinkPreviewCard({ url }) {
+  const [data, setData] = useState(() => linkPreviewCache.get(url) || null)
+  useEffect(() => {
+    if (!url || linkPreviewCache.has(url)) return
+    let alive = true
+    fetch(`/link_preview?url=${encodeURIComponent(url)}`, { headers: { Accept: 'application/json' } })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((j) => { linkPreviewCache.set(url, j); if (alive) setData(j) })
+      .catch(() => { linkPreviewCache.set(url, {}); if (alive) setData({}) })
+    return () => { alive = false }
+  }, [url])
+  if (!data || (!data.title && !data.image)) return null
   return (
-    <div className={`flex ${isClinic ? 'justify-end' : 'justify-start'}`}>
+    <a href={url} target="_blank" rel="noopener noreferrer"
+       className="mt-1.5 block overflow-hidden rounded-lg border border-black/10 bg-white/80 transition-colors hover:bg-white">
+      {data.image && (
+        <img src={data.image} alt="" loading="lazy" className="h-28 w-full object-cover"
+             onError={(e) => { e.currentTarget.style.display = 'none' }} />
+      )}
+      <div className="px-2.5 py-1.5">
+        {data.title && <p className="line-clamp-2 text-xs font-semibold text-brand-ink">{data.title}</p>}
+        {data.description && <p className="mt-0.5 line-clamp-2 text-[11px] text-brand-muted">{data.description}</p>}
+        {data.host && <p className="mt-0.5 text-[10px] text-brand-muted">{data.host}</p>}
+      </div>
+    </a>
+  )
+}
+
+// Forward a message to another WhatsApp conversation (pick a target chat → POST /forward).
+function ForwardModal({ message, fromId, conversations, onClose }) {
+  const [q, setQ] = useState('')
+  const targets = (conversations || []).filter((c) => c.id !== fromId && c.channel === 'whatsapp' && c.patient_phone)
+  const filtered = q.trim()
+    ? targets.filter((c) => `${c.patient_name || ''} ${c.patient_phone || ''}`.toLowerCase().includes(q.toLowerCase()))
+    : targets
+  const forwardTo = (target) => {
+    router.post(`/conversations/${fromId}/forward`, { message, to_conversation_id: target.id }, {
+      preserveScroll: true,
+      onSuccess: () => { toast.success(`Forwarded to ${target.patient_name || target.patient_phone}`); onClose?.() },
+      onError:   () => toast.error('Could not forward'),
+    })
+  }
+  return (
+    <Modal open onClose={onClose} title="Forward message">
+      <p className="mb-3 line-clamp-3 whitespace-pre-wrap rounded-lg bg-brand-surface/50 px-3 py-2 text-xs text-brand-muted">{message}</p>
+      <input
+        autoFocus
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search a chat to forward to…"
+        className="mb-2 w-full rounded-lg border border-brand-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary/30"
+      />
+      <div className="max-h-72 overflow-y-auto">
+        {filtered.length === 0 ? (
+          <p className="px-2 py-4 text-center text-sm text-brand-muted">No other WhatsApp chats to forward to.</p>
+        ) : (
+          filtered.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => forwardTo(c)}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors hover:bg-brand-surface/60"
+            >
+              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-brand-primary/15 text-xs font-semibold text-brand-primary">
+                {initials(c.patient_name)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium text-brand-ink">{c.patient_name || c.patient_phone}</span>
+                <span className="block truncate text-[11px] text-brand-muted">{c.patient_phone}</span>
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+    </Modal>
+  )
+}
+
+function Bubble({ msg, onForward }) {
+  const isClinic = msg.role === 'assistant'
+  const previewUrl = firstUrl(msg.content)
+  const fwdBtn = onForward && msg.content ? (
+    <button
+      type="button"
+      onClick={() => onForward(msg.content)}
+      title="Forward to another chat"
+      className="flex-shrink-0 text-brand-muted opacity-0 transition-opacity hover:text-brand-primary group-hover:opacity-100"
+    >
+      <Share2 size={14} />
+    </button>
+  ) : null
+  return (
+    <div className={`group flex items-center gap-1.5 ${isClinic ? 'justify-end' : 'justify-start'}`}>
+      {isClinic && fwdBtn}
       <div
         className={`max-w-[70%] rounded-lg px-3 py-2 shadow-sm ${
           isClinic
@@ -327,13 +497,16 @@ function Bubble({ msg }) {
             : 'bg-white text-brand-ink rounded-tl-sm'
         }`}
       >
-        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{renderWhatsappText(msg.content)}</p>
+        {previewUrl && <LinkPreviewCard url={previewUrl} />}
         {msg.timestamp && (
-          <p className="text-[10px] mt-0.5 text-brand-muted text-right">
+          <p className="text-[10px] mt-0.5 text-brand-muted text-right flex items-center justify-end gap-1">
             {formatTime(msg.timestamp)}
+            {isClinic && <CheckCheck size={13} className="text-sky-500" aria-label="Sent" />}
           </p>
         )}
       </div>
+      {!isClinic && fwdBtn}
     </div>
   )
 }

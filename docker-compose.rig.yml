@@ -34,7 +34,7 @@ services:
     # Self-heal CRLF on bin/* (the source tree comes from a Windows host, whose
     # \r line endings break the ruby shebangs). Then prepare DB, build Vite
     # assets to disk, and serve from one port.
-    command: bash -lc "sed -i 's/\r$//' bin/* 2>/dev/null || true; chmod +x bin/* 2>/dev/null || true; bundle exec rails db:prepare && bundle exec bin/vite build && bundle exec rails server -b 0.0.0.0 -p 3000"
+    command: bash -lc "sed -i 's/\r$//' bin/* 2>/dev/null || true; chmod +x bin/* 2>/dev/null || true; bundle exec rails db:prepare && (bundle exec rails practice:sync_schedules || true) && bundle exec bin/vite build && bundle exec rails server -b 0.0.0.0 -p 3000"
     env_file: .env.rig
     environment:
       ELIXIR_DATA_ROOT: "/elixir_data"
@@ -48,6 +48,12 @@ services:
       # READ-ONLY snapshot of the Elixir export folder. The :ro flag is enforced by
       # the Docker kernel layer — the importer can never write back to Elixir.
       - "/opt/ivory/elixir_data:/elixir_data:ro"
+      # READ-ONLY SIDEXIS image archive (the rig-local copy of PDATASEC). Ivory streams
+      # scan thumbnails/images from here on demand — binaries never enter Postgres.
+      - "/var/lib/docker/_sidexis_archive:/sidexis_archive:ro"
+    # Reach the host's DICOM render service (script/dicom_render_service.py on :8810).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       db:
         condition: service_healthy

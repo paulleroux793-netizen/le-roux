@@ -17,21 +17,25 @@ const CONDITION_STYLE = {
   missing:            'bg-gray-200 text-gray-400 border-gray-300 line-through',
   extraction_planned: 'bg-orange-100 text-orange-800 border-orange-300',
   fracture:           'bg-pink-100 text-pink-800 border-pink-300',
+  // Patient dental-chart overlay (Paul): red = work outstanding, black = done / existing.
+  needs_work:         'bg-red-500 text-white border-red-700',
+  done:               'bg-gray-800 text-white border-gray-900',
 }
 
 const LABELS = {
   healthy: 'Healthy', caries: 'Caries', filling: 'Filling', crown: 'Crown', bridge: 'Bridge',
   root_canal: 'Root canal', implant: 'Implant', missing: 'Missing',
   extraction_planned: 'Extraction planned', fracture: 'Fracture',
+  needs_work: 'Needs work', done: 'Done / existing',
 }
 
-function Tooth({ number, condition, onClick }) {
+function Tooth({ number, condition, onClick, detail }) {
   const style = CONDITION_STYLE[condition] || CONDITION_STYLE.healthy
   return (
     <button
       type="button"
       onClick={onClick ? () => onClick(number) : undefined}
-      title={`Tooth ${number}${condition ? ` — ${LABELS[condition] || condition}` : ''}`}
+      title={`Tooth ${number}${condition ? ` — ${LABELS[condition] || condition}` : ''}${detail ? ` · ${detail}` : ''}`}
       className={cn(
         'flex h-10 w-9 flex-col items-center justify-center rounded-md border text-[11px] font-semibold transition-transform',
         style,
@@ -43,17 +47,17 @@ function Tooth({ number, condition, onClick }) {
   )
 }
 
-export default function Odontogram({ chart = {}, onToothClick = null }) {
+export default function Odontogram({ chart = {}, onToothClick = null, details = {} }) {
   const present = Object.entries(chart)
   return (
     <div className="rounded-xl border border-brand-border bg-white p-4">
       <div className="flex flex-col items-center gap-1.5">
         <div className="flex gap-1">
-          {UPPER.map((n) => <Tooth key={n} number={n} condition={chart[String(n)]} onClick={onToothClick} />)}
+          {UPPER.map((n) => <Tooth key={n} number={n} condition={chart[String(n)]} detail={details[String(n)]} onClick={onToothClick} />)}
         </div>
         <div className="my-1 h-px w-full bg-brand-border" />
         <div className="flex gap-1">
-          {LOWER.map((n) => <Tooth key={n} number={n} condition={chart[String(n)]} onClick={onToothClick} />)}
+          {LOWER.map((n) => <Tooth key={n} number={n} condition={chart[String(n)]} detail={details[String(n)]} onClick={onToothClick} />)}
         </div>
       </div>
 

@@ -38,6 +38,17 @@ namespace :phi do
     forms = reencrypt.call(FormSubmission.where.not(data: nil), %i[data signature_data])
     puts "form_submissions re-encrypted: #{forms}"
 
+    # Mail PHI (added 2026-06-04): patient emails carry health info.
+    mail_msgs = reencrypt.call(MailMessage.all, %i[body_text body_html subject snippet])
+    puts "mail_messages re-encrypted: #{mail_msgs}"
+
+    mail_threads = reencrypt.call(MailThread.all, %i[subject])
+    puts "mail_threads re-encrypted: #{mail_threads}"
+
+    # Scribe transcripts/notes (most-sensitive; usually 0 rows early on).
+    scribe = reencrypt.call(ScribeSession.all, %i[transcript notes])
+    puts "scribe_sessions re-encrypted: #{scribe}"
+
     puts "Done. Verify with `bin/rails phi:verify`, then set AR_ENCRYPTION_SUPPORT_UNENCRYPTED=false."
   end
 
@@ -53,6 +64,13 @@ namespace :phi do
       "SELECT COUNT(*) FROM form_submissions WHERE data IS NOT NULL AND left(data, 1) IN ('{', '[')"
     )
     puts "form_submissions with plaintext-looking JSON data: #{plain_data}"
-    puts "(both should be 0 after phi:encrypt)"
+
+    # Encrypted columns hold a JSON envelope like {"p":"...","h":{...}}. A row whose
+    # body_text doesn't start with '{' (and isn't blank) is still plaintext.
+    plain_mail = ActiveRecord::Base.connection.select_value(
+      "SELECT COUNT(*) FROM mail_messages WHERE body_text IS NOT NULL AND body_text <> '' AND left(body_text, 1) <> '{'"
+    )
+    puts "mail_messages with plaintext-looking body_text: #{plain_mail}"
+    puts "(all should be 0 after phi:encrypt)"
   end
 end

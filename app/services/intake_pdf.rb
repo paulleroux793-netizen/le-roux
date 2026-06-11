@@ -184,17 +184,19 @@ class IntakePdf
     (1..pdf.page_count).each do |page|
       pdf.go_to_page(page)
       pdf.canvas do
-        pdf.bounding_box([ 40, 80 ], width: pdf.bounds.width - 80) do
-          pdf.stroke_color LINE
-          pdf.stroke_horizontal_rule
-          pdf.move_down 5
-          pdf.fill_color GREY
-          pdf.font_size 7
-          pdf.text address_line, align: :center
-          pdf.text contact_line, align: :center
-          pdf.text banking_line, align: :center
-          pdf.fill_color "000000"
-        end
+        pdf.stroke_color LINE
+        pdf.line_width 0.5
+        pdf.stroke_horizontal_line(40, pdf.bounds.width - 40, at: 74)
+        pdf.fill_color GREY
+        # A FIXED-height text_box (not a flowing bounding_box): it can never overflow onto
+        # a new page. The old bounding_box version was appending trailing BLANK pages
+        # (one per page it footered), so reception printed empty sheets.
+        pdf.text_box(
+          [ address_line, contact_line, banking_line ].join("\n"),
+          at: [ 40, 68 ], width: pdf.bounds.width - 80, height: 46,
+          align: :center, size: 7, overflow: :shrink_to_fit, leading: 1
+        )
+        pdf.fill_color "000000"
       end
     end
   end

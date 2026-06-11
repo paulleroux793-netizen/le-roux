@@ -2,6 +2,10 @@
 class MailThread < ApplicationRecord
   CLINICAL_INTENTS = %w[appointment_request insurance_inquiry treatment_question billing_issue marketing other].freeze
 
+  # PHI at rest: the thread subject can name the patient / clinical reason.
+  # Encrypt it (display-only, never queried in SQL).
+  encrypts :subject
+
   belongs_to :mail_account
   belongs_to :patient, optional: true
   has_many :mail_messages, -> { order(received_at: :asc) }, dependent: :destroy

@@ -1,6 +1,6 @@
 import React from 'react'
 import { router } from '@inertiajs/react'
-import { Phone, Mail, Calendar, Edit3, X as XIcon, FileText, UserPlus, UserCheck, Cake, Globe, User, ClipboardPlus, Mic } from 'lucide-react'
+import { Phone, Mail, Calendar, Edit3, X as XIcon, FileText, UserPlus, UserCheck, Cake, Globe, User, ClipboardPlus, Mic, MessageCircle, Send } from 'lucide-react'
 import { Link } from '@inertiajs/react'
 import { toast } from 'sonner'
 import Modal from './Modal'
@@ -62,6 +62,18 @@ export default function AppointmentDetailModal({ appointment, open, onClose, onE
       preserveScroll: true,
       onSuccess: () => { toast.success(`Marked as ${STATUS_LABEL[status] || status}`); onClose?.() },
       onError:   () => toast.error('Could not update status'),
+    })
+  }
+
+  // Send the practice's standard WhatsApp messages to this patient (reception-triggered).
+  // kind = 'pack' (4 messages) or 'confirm' (booking confirmation only).
+  const sendWhatsapp = (kind) => {
+    const what = kind === 'pack' ? 'all 4 standard WhatsApp messages' : 'the booking confirmation'
+    if (!window.confirm(`Send ${what} to ${appointment.patient_name || 'this patient'} on WhatsApp?`)) return
+    router.post(`/appointments/${appointment.id}/whatsapp_${kind}`, {}, {
+      preserveScroll: true,
+      onSuccess: () => toast.success('WhatsApp message(s) sent'),
+      onError:   () => toast.error('Could not send WhatsApp message(s)'),
     })
   }
 
@@ -150,6 +162,30 @@ export default function AppointmentDetailModal({ appointment, open, onClose, onE
         </p>
       </div>
 
+      {/* WhatsApp standard messages — reception sends the practice's standard pack or just the confirmation */}
+      {appointment.patient_phone && (
+        <div className="mb-4">
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-muted">WhatsApp the patient</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => sendWhatsapp('pack')}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-2.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+            >
+              <MessageCircle size={13} /> Send 4 standard messages
+            </button>
+            <button
+              onClick={() => sendWhatsapp('confirm')}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-2 py-2.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
+            >
+              <Send size={13} /> Send booking confirmation
+            </button>
+          </div>
+          <p className="mt-1.5 text-[11px] text-brand-muted">
+            Pack = location, directions, intake form + the booking confirmation. Or send just the confirmation.
+          </p>
+        </div>
+      )}
+
       {/* Booking info */}
       <div>
         <h4 className="mb-2 text-sm font-semibold text-brand-ink">Booking information</h4>
@@ -169,10 +205,20 @@ export default function AppointmentDetailModal({ appointment, open, onClose, onE
         </div>
       </div>
 
+      {/* Context-aware primary action: one click from the booking straight into a
+          new estimate — which then pre-suggests the codes for this visit reason. */}
+      <button
+        type="button"
+        onClick={() => { router.post(`/patients/${appointment.patient_id}/estimates`); onClose?.() }}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-primary px-3 py-2.5 text-sm font-semibold text-white hover:bg-brand-primary-dark"
+      >
+        <FileText size={15} /> Start estimate for this visit
+      </button>
+
       {/* R3 — quick links so reception/dentist can jump from a calendar
           pop-over to the patient's profile or active treatment plan
           without backtracking through the patients list. */}
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <Link
           href={`/patients/${appointment.patient_id}`}
           onClick={onClose}
