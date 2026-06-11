@@ -110,7 +110,7 @@ services:
     excludes_3d_scans: true
     use_case: "Patient wants the doctor to look at something specific or advise on a particular concern."
     quote_template: |
-      A consultation with Dr Chalita is approximately R850 and includes X-rays. Please note that 2D or 3D scans (panoramic / CBCT) are not included and would be quoted separately — these may be needed if you have implants, root canals, or where the doctor needs more detail to advise you properly. If cost is a concern for you, you're always welcome to ask about the cost of any additional scans before they're taken — we want you to feel completely comfortable with what's included.
+      A consultation with the dentist is approximately R850 and includes X-rays. Please note that 2D or 3D scans (panoramic / CBCT) are not included and would be quoted separately — these may be needed if you have implants, root canals, or where the doctor needs more detail to advise you properly. If cost is a concern for you, you're always welcome to ask about the cost of any additional scans before they're taken — we want you to feel completely comfortable with what's included.
 
   - key: check_up
     name: "General check-up"
@@ -121,7 +121,7 @@ services:
     excludes_3d_scans: true
     use_case: "Routine examination."
     quote_template: |
-      A general check-up with Dr Chalita is approximately R1,900 and includes X-rays. If you have implants, root canals, or the doctor decides a 3D scan would help her advise you properly, the cost can go up to around R2,600. If cost is a concern, you're always welcome to ask about the cost of any additional scans before they're taken.
+      A general check-up with the dentist is approximately R1,900 and includes X-rays. If you have implants, root canals, or the doctor decides a 3D scan would help her advise you properly, the cost can go up to around R2,600. If cost is a concern, you're always welcome to ask about the cost of any additional scans before they're taken.
 
   - key: cleaning
     name: "Dental cleaning (oral hygiene)"
@@ -154,7 +154,7 @@ services:
     approx_price: "from R1,500"
     requires_consultation_first: true
     quote_template: |
-      Extractions normally start from approximately R1,500, but the price varies depending on whether it's a child or adult, the specific tooth, and whether it's a simple or surgical extraction. The best step is to come for a consultation with Dr Chalita first — she can assess the tooth, distinguish what type of extraction is needed, and walk you through the cost and treatment plan before anything is done.
+      Extractions normally start from approximately R1,500, but the price varies depending on whether it's a child or adult, the specific tooth, and whether it's a simple or surgical extraction. The best step is to come for a consultation with the dentist first — they can assess the tooth, distinguish what type of extraction is needed, and walk you through the cost and treatment plan before anything is done.
 
   - key: aligner_consultation
     name: "Aligner consultation + assessment (NOT braces)"
@@ -162,7 +162,7 @@ services:
     approx_price: "R5,000"
     use_case: "Patient asking about braces or aligners. The practice does not offer traditional braces."
     quote_template: |
-      We don't offer traditional braces, but we do aligners — which work like invisible braces. The whole consultation and assessment package for aligners is approximately R5,000, and Dr Chalita can walk you through the treatment plan and costs based on your specific needs.
+      We don't offer traditional braces, but we do aligners — which work like invisible braces. The whole consultation and assessment package for aligners is approximately R5,000, and the dentist can walk you through the treatment plan and costs based on your specific needs.
 
   - key: whitening
     name: "Teeth whitening (Biolase laser)"

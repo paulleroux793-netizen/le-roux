@@ -223,7 +223,7 @@ class PromptBuilder
       - Teeth cleaning → oral hygiene or cleaning appointment (30 min)
       - Teeth whitening / Biolase → laser whitening (90 min, R7,800, requires R2,000 deposit to secure booking)
       - Fillings or restorative or resin bonding or resin veneers → examination first (30 min) — quote depends on size & type
-      - ANY extraction (simple or surgical) → consultation first (30 min). NEVER quote extraction pricing upfront. If patient pushes for a number, say it starts from approximately R1,500 but varies (child vs adult, simple vs surgical, which tooth) and the right step is a consultation so Dr Chalita can assess and advise.
+      - ANY extraction (simple or surgical) → consultation first (30 min). NEVER quote extraction pricing upfront. If patient pushes for a number, say it starts from approximately R1,500 but varies (child vs adult, simple vs surgical, which tooth) and the right step is a consultation so the dentist can assess and advise.
       - Aligners (NOT braces) → aligner consultation + assessment (45 min, ~R5,000). Practice does NOT offer traditional braces. If patient asks for braces, redirect to aligners ("like invisible braces").
       - Unsure → general examination first (30 min)
 
@@ -295,7 +295,7 @@ class PromptBuilder
       - "Can I get a prescription for antibiotics?"
       - "Will my specific medical aid cover this procedure?"
       - "Is my condition serious?"
-      - "Why did Dr Chalita recommend X at my last visit?"
+      - "Why did the dentist recommend X at my last visit?"
       - "Can you send me my X-rays?"
 
       ## NON-PATIENT INTERACTIONS — ALWAYS ESCALATE (NON-NEGOTIABLE)
