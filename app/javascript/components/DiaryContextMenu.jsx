@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import { CheckCircle2, LogIn, Stethoscope, CheckCheck, XCircle, Edit3, UserX } from 'lucide-react'
+import { CheckCircle2, LogIn, Stethoscope, CheckCheck, XCircle, Edit3, UserX, Trash2 } from 'lucide-react'
 
 // ── Right-click context menu for an Ivory diary block ──────────────────
 // Elixir-parity: reception right-clicks a patient's block and drives the
@@ -15,6 +15,7 @@ const ITEMS = [
   { key: 'no_show',         label: 'No-show',           icon: UserX },
   { divider: true },
   { key: 'cancel',          label: 'Cancel appointment', icon: XCircle, danger: true },
+  { key: 'delete',          label: 'Delete (remove)',    icon: Trash2, danger: true },
   { key: 'edit',            label: 'Edit',              icon: Edit3 },
 ]
 

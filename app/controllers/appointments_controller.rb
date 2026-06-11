@@ -414,6 +414,33 @@ class AppointmentsController < ApplicationController
       alert: e.record.errors.full_messages.to_sentence, status: :see_other
   end
 
+  # DELETE /appointments/:id
+  #
+  # PERMANENTLY removes the appointment from the diary — a hard delete, distinct
+  # from #cancel (which greys it and keeps it). cancellation_reason and
+  # confirmation_logs cascade via dependent: :destroy. Audited; irreversible.
+  def destroy
+    appointment  = Appointment.find(params[:id])
+    patient_name = appointment.patient&.full_name
+    when_str     = appointment.start_time.strftime("%-d %b %Y at %H:%M")
+    details = { patient_id: appointment.patient_id, start_time: appointment.start_time.iso8601, status: appointment.status }
+
+    appointment.destroy!
+
+    AuditService.log(
+      action: "appointment.deleted",
+      summary: "Permanently deleted appointment for #{patient_name} on #{when_str}",
+      details: details,
+      performed_by: audit_performer,
+      ip_address: request.remote_ip
+    )
+    expire_appointment_caches!
+
+    redirect_back fallback_location: diary_path, notice: "Appointment deleted", status: :see_other
+  rescue ActiveRecord::RecordNotFound
+    redirect_back fallback_location: diary_path, alert: "Appointment not found", status: :see_other
+  end
+
   # PATCH /appointments/:id/confirm
   #
   # One-click confirm — flips status to :confirmed. Intentionally

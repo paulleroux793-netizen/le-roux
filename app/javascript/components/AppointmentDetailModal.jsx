@@ -1,6 +1,6 @@
 import React from 'react'
 import { router } from '@inertiajs/react'
-import { Phone, Mail, Calendar, Edit3, X as XIcon, FileText, UserPlus, UserCheck, Cake, Globe, User, ClipboardPlus, Mic, MessageCircle, Send } from 'lucide-react'
+import { Phone, Mail, Calendar, Edit3, X as XIcon, FileText, UserPlus, UserCheck, Cake, Globe, User, ClipboardPlus, Mic, MessageCircle, Send, Trash2 } from 'lucide-react'
 import { Link } from '@inertiajs/react'
 import { toast } from 'sonner'
 import Modal from './Modal'
@@ -54,7 +54,7 @@ const fmtDob = (iso) => {
   return `${d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })} (age ${age})`
 }
 
-export default function AppointmentDetailModal({ appointment, open, onClose, onEdit, onCancel }) {
+export default function AppointmentDetailModal({ appointment, open, onClose, onEdit, onCancel, onDelete }) {
   if (!appointment) return null
 
   const setStatus = (status) => {
@@ -88,12 +88,23 @@ export default function AppointmentDetailModal({ appointment, open, onClose, onE
       size="xl"
       footer={
         <div className="flex w-full items-center justify-between gap-2">
-          <button
-            onClick={onCancel}
-            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-brand-danger transition-colors hover:bg-brand-danger/10"
-          >
-            <XIcon size={15} /> Cancel
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onCancel}
+              className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-brand-danger transition-colors hover:bg-brand-danger/10"
+            >
+              <XIcon size={15} /> Cancel
+            </button>
+            {onDelete && (
+              <button
+                onClick={onDelete}
+                title="Permanently remove this appointment from the diary"
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-brand-danger transition-colors hover:bg-brand-danger/10"
+              >
+                <Trash2 size={15} /> Delete
+              </button>
+            )}
+          </div>
           <button
             onClick={onEdit}
             className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-brand-surface/45"

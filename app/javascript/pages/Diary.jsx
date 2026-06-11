@@ -79,6 +79,19 @@ export default function Diary({
   const openEdit = (apt) => { if (apt) setSelected(apt); setModalMode('edit') }
   const openCancel = (apt) => { if (apt) setSelected(apt); setModalMode('cancel') }
 
+  // Delete = PERMANENTLY remove from the diary (hard delete, not the soft grey-out cancel).
+  // Confirmed because it's irreversible. Wired to the modal "Delete" button, the right-click
+  // "Delete" item, and the keyboard Delete/Backspace key on the selected block.
+  const deleteAppointment = (apt) => {
+    if (!apt) return
+    if (!window.confirm(`Permanently delete ${apt.patient_name || 'this'} appointment? It will be removed from the diary and cannot be undone.`)) return
+    router.delete(`/appointments/${apt.id}`, {
+      preserveScroll: true,
+      onSuccess: () => { toast('Appointment deleted'); closeModal() },
+      onError: () => toast.error('Could not delete'),
+    })
+  }
+
   const goTo = (d) => router.get('/diary', { date: d }, { preserveScroll: true })
 
   // Live refresh every 30s so the diary stays current across machines — but NEVER
@@ -175,6 +188,7 @@ export default function Diary({
       })
       return
     }
+    if (key === 'delete') { deleteAppointment(appt); return }
     if (key === 'edit') { openEdit(appt); return }
     // A patient-journey status change — recolours server-side.
     router.patch(`/appointments/${appt.id}/set_status`, { status: key }, {
@@ -199,6 +213,12 @@ export default function Diary({
       const tag = (e.target?.tagName || '').toLowerCase()
       if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return
       const mod = e.ctrlKey || e.metaKey
+      // Delete / Backspace (no modifier) = permanently REMOVE the last-clicked block from the diary.
+      if (!mod && (e.key === 'Delete' || e.key === 'Backspace')) {
+        const a = lastApptRef.current
+        if (a) { e.preventDefault(); deleteAppointment(a) }
+        return
+      }
       // Ctrl+C = copy (duplicate on paste) · Ctrl+X = cut (move on paste).
       if (mod && (e.key === 'c' || e.key === 'C' || e.key === 'x' || e.key === 'X')) {
         const a = lastApptRef.current
@@ -444,7 +464,7 @@ export default function Diary({
       )}
 
       {/* Modals */}
-      <AppointmentDetailModal appointment={selected} open={modalMode === 'detail'} onClose={closeModal} onEdit={() => openEdit(selected)} onCancel={() => openCancel(selected)} />
+      <AppointmentDetailModal appointment={selected} open={modalMode === 'detail'} onClose={closeModal} onEdit={() => openEdit(selected)} onCancel={() => openCancel(selected)} onDelete={() => deleteAppointment(selected)} />
       <AppointmentFormModal mode="create" open={modalMode === 'create'} onClose={closeModal} patients={patients} prefillStart={prefillStart} providers={providers} prefillProvider={prefillProvider} />
       <AppointmentFormModal mode="edit" appointment={selected} open={modalMode === 'edit'} onClose={closeModal} providers={providers} />
       <CancelAppointmentModal appointment={selected} open={modalMode === 'cancel'} onClose={closeModal} />
