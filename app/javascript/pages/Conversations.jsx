@@ -94,6 +94,7 @@ export default function Conversations({
               options={[
                 { value: '', label: t('conv_all_channels') },
                 { value: 'whatsapp', label: 'WhatsApp' },
+                { value: 'web_chat', label: 'Web chat' },
                 { value: 'voice', label: 'Voice' },
               ]}
             />

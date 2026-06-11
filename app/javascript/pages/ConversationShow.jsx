@@ -68,7 +68,7 @@ export default function ConversationShow({ conversation }) {
           </div>
           <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
             <Chip
-              label={conv.channel}
+              label={conv.channel === 'web_chat' ? 'Web chat' : conv.channel}
               tone={conv.channel === 'whatsapp' ? 'primary' : 'default'}
             />
             <Chip

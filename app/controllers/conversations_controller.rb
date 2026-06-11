@@ -4,25 +4,38 @@ class ConversationsController < ApplicationController
     # right. The optional ?selected_id= param hydrates the full thread alongside
     # the list so the SPA doesn't need a second round-trip when you click a row.
     selected_id = params[:selected_id].presence
-    page_data = dev_page_cache("conversations", "index", params[:channel], params[:status], params[:source], params[:tag], selected_id) do
-      conversations = Conversation.includes(:patient).order(updated_at: :desc)
-      conversations = conversations.by_channel(params[:channel]) if params[:channel].present?
-      conversations = conversations.where(status: params[:status]) if params[:status].present?
-      conversations = conversations.where(source: params[:source]) if params[:source].present?
-      conversations = conversations.tagged(params[:tag]) if params[:tag].present?
+    channel     = params[:channel].presence
+    page_data = dev_page_cache("conversations", "index", channel, params[:status], params[:source], params[:tag], selected_id) do
+      rows = []
 
-      # Collect all unique tags across conversations for autocomplete
-      all_tags = Conversation.where.not(tags: []).pluck(:tags).flatten.uniq.sort
-
-      selected = if selected_id
-        Conversation.includes(:patient).find_by(id: selected_id)
+      # WhatsApp / voice conversations (skipped when the filter is set to web chat).
+      unless channel == "web_chat"
+        convos = Conversation.includes(:patient).order(updated_at: :desc)
+        convos = convos.by_channel(channel) if channel.present?
+        convos = convos.where(status: params[:status]) if params[:status].present?
+        convos = convos.where(source: params[:source]) if params[:source].present?
+        convos = convos.tagged(params[:tag]) if params[:tag].present?
+        rows.concat(convos.limit(100).map { |c| conversation_props(c) })
       end
 
+      # Website chat-widget sessions, shown as the "web_chat" channel in the SAME list. They carry
+      # no tags and are always live, so they're excluded when those filters are active.
+      show_web = (channel.nil? || channel == "web_chat") && params[:tag].blank? &&
+                 (params[:source].blank? || params[:source] == "live")
+      if show_web
+        webs = WebChatSession.includes(:patient).order(Arel.sql("COALESCE(last_seen_at, updated_at) DESC"))
+        webs = webs.where(status: params[:status]) if params[:status].present?
+        rows.concat(webs.limit(100).map { |s| web_session_props(s) })
+      end
+
+      conversations = rows.sort_by { |h| h[:updated_at].to_s }.reverse.first(100)
+      all_tags = Conversation.where.not(tags: []).pluck(:tags).flatten.uniq.sort
+
       {
-        conversations: conversations.limit(100).map { |c| conversation_props(c) },
-        selected_conversation: selected ? detailed_conversation_props(selected) : nil,
+        conversations: conversations,
+        selected_conversation: load_selected(selected_id),
         all_tags: all_tags,
-        filters: { channel: params[:channel], status: params[:status], source: params[:source], tag: params[:tag] }
+        filters: { channel: channel, status: params[:status], source: params[:source], tag: params[:tag] }
       }
     end
 
@@ -211,17 +224,30 @@ class ConversationsController < ApplicationController
 
   def show
     page_data = dev_page_cache("conversations", "show", params[:id]) do
-      conversation = Conversation.includes(:patient).find(params[:id])
+      detail = load_selected(params[:id])
+      raise ActiveRecord::RecordNotFound unless detail
 
-      {
-        conversation: detailed_conversation_props(conversation)
-      }
+      { conversation: detail }
     end
 
     render inertia: "ConversationShow", props: page_data
   end
 
   private
+
+  # Hydrate the selected thread for the right-hand pane / show page. A "w-"-prefixed id is a
+  # web-chat session; everything else is a WhatsApp/voice Conversation. Returns detailed props or nil.
+  def load_selected(selected_id)
+    return nil if selected_id.blank?
+
+    if selected_id.to_s.start_with?("w-")
+      s = WebChatSession.includes(:patient).find_by(id: selected_id.to_s.delete_prefix("w-"))
+      s && detailed_web_session_props(s)
+    else
+      c = Conversation.includes(:patient).find_by(id: selected_id)
+      c && detailed_conversation_props(c)
+    end
+  end
 
   def conversation_props(conversation)
     patient = conversation.patient
@@ -268,6 +294,52 @@ class ConversationsController < ApplicationController
       messages: conversation.messages || [],
       started_at: conversation.started_at&.iso8601,
       ended_at: conversation.ended_at&.iso8601
+    }
+  end
+
+  # ── Web-chat sessions rendered in the SAME Conversations UI ────────────────
+  # Same prop shape as a Conversation so the existing list + thread view render them unchanged.
+  # The id is prefixed "w-" so clicks route to the WebChatSession. Reply/forward stay WhatsApp-only
+  # (the frontend already gates on channel === "whatsapp"), so web chats show read-only.
+  def web_session_name(s)
+    s.patient&.display_name.presence || s.visitor_name.presence || "Web visitor"
+  end
+
+  def web_session_props(s)
+    {
+      id: "w-#{s.id}",
+      patient_name: web_session_name(s),
+      patient_phone: s.visitor_phone,
+      channel: "web_chat",
+      status: s.status,
+      source: "live",
+      topic: nil,
+      language: s.language,
+      tags: [],
+      message_count: s.messages&.length || 0,
+      last_message: s.messages&.last&.dig("content")&.to_s&.truncate(80),
+      started_at: s.created_at&.iso8601,
+      updated_at: (s.last_seen_at || s.updated_at).iso8601,
+      imported_at: nil,
+      whatsapp_url: (s.visitor_phone.present? ? whatsapp_url_for(s.visitor_phone) : nil)
+    }
+  end
+
+  def detailed_web_session_props(s)
+    {
+      id: "w-#{s.id}",
+      patient_name: web_session_name(s),
+      patient_phone: s.visitor_phone,
+      patient_id: s.patient_id,
+      channel: "web_chat",
+      status: s.status,
+      source: "live",
+      topic: nil,
+      language: s.language,
+      tags: [],
+      messages: s.messages || [],
+      started_at: s.created_at&.iso8601,
+      ended_at: nil
     }
   end
 
