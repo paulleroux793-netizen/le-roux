@@ -77,7 +77,7 @@
   var wrap = document.createElement('div');
   wrap.innerHTML =
     '<style>' + css + '</style>' +
-    '<div class="teaser" id="teaser">👋 Looking for a dentist in Roodepoort or the West Rand? I can check live availability and book you in under a minute — even after hours.</div>' +
+    '<div class="teaser" id="teaser">👋 Looking for a dentist in Roodepoort or the West Rand? I can check live availability and book you in under a minute.</div>' +
     '<div class="bubble" id="bubble" title="Chat & book"><svg viewBox="0 0 24 24"><path d="M12 3C6.5 3 2 6.8 2 11.5c0 2.3 1.1 4.4 2.9 5.9L4 21l4-1.6c1.2.4 2.6.6 4 .6 5.5 0 10-3.8 10-8.5S17.5 3 12 3z"/></svg></div>' +
     '<div class="panel" id="panel">' +
       '<div class="hd"><div class="av">CL</div><div class="t"><div class="n">' + PRACTICE + '</div><div class="s"><span class="dot"></span>Book-Now Assistant · replies instantly</div></div><div class="x" id="close">×</div></div>' +
@@ -90,7 +90,7 @@
         '<button type="submit">Confirm my booking</button>' +
       '</form>' +
       '<div class="bar"><input id="inp" placeholder="Type your message…" autocomplete="off"/><button id="send" title="Send"><svg viewBox="0 0 24 24"><path d="M3 20l18-8L3 4v6l12 2-12 2z"/></svg></button></div>' +
-      '<div class="foot">Powered by Dr Chalita le Roux · 24/7</div>' +
+      '<div class="foot">Powered by Dr Chalita le Roux</div>' +
     '</div>';
   root.appendChild(wrap);
 
@@ -128,7 +128,7 @@
     panel.classList.add('open'); $('teaser').style.display = 'none';
     if (!openedOnce) {
       openedOnce = true;
-      addMsg("Hi! I'm the Book-Now Assistant for " + PRACTICE + " — your friendly dental practice in Roodepoort, also caring for patients across Honeydew, Wilgeheuwel and the wider West Rand. I can check live availability and book your visit in under a minute — even after hours — and send the details to your WhatsApp. How can I help today?", 'bot');
+      addMsg("Hi! I'm the Book-Now Assistant for " + PRACTICE + " — your friendly dental practice in Roodepoort, also caring for patients across Honeydew, Wilgeheuwel and the wider West Rand. I can check live availability and book your visit in under a minute, and send the details to your WhatsApp. How can I help today?", 'bot');
       setChips(OPENERS);
     }
     setTimeout(function () { inp.focus(); }, 100);
