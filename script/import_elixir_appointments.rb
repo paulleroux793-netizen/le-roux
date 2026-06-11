@@ -46,7 +46,14 @@ if appt_ids.any?
   Appointment.where(id: appt_ids).delete_all
 end
 CalendarNote.where("note LIKE ?", "%#{MARK}%").destroy_all
-Patient.where("patients.notes LIKE ?", "%#{MARK}%").where.missing(:appointments).destroy_all
+# Remove orphaned [elixir-test] placeholder patients (no appointments left), but SKIP any
+# that are referenced elsewhere (billing_accounts, form_submissions, …) — destroy per-record
+# so an FK on one patient never aborts the whole import.
+Patient.where("patients.notes LIKE ?", "%#{MARK}%").where.missing(:appointments).find_each do |orphan|
+  orphan.destroy
+rescue ActiveRecord::InvalidForeignKey
+  next
+end
 
 data.each do |r|
   prov = prov_by_norm[norm(r["dentist"])]
@@ -76,6 +83,9 @@ data.each do |r|
     patients_by_name[norm(r["patient_name"])] = patient
   end
 
+  # allow_overlap: true — the diary is a faithful MIRROR of Elixir, which permits
+  # same-dentist same-slot bookings. Skips the overlap guard (which still protects
+  # native WhatsApp/web bookings, where allow_overlap stays false).
   Appointment.create!(
     patient:    patient,
     provider_id: prov&.id,
@@ -83,6 +93,7 @@ data.each do |r|
     end_time:   end_at,
     reason:     r["reason"],
     status:     :scheduled,
+    allow_overlap: true,
     notes:      MARK
   )
   stats[:appointments] += 1

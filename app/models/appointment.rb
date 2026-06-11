@@ -41,7 +41,7 @@ class Appointment < ApplicationRecord
   validates :end_time, presence: true
   validates :google_event_id, uniqueness: true, allow_nil: true
   validate :end_time_after_start_time
-  validate :no_overlapping_appointments, on: [ :create, :update ]
+  validate :no_overlapping_appointments, on: [ :create, :update ], unless: :allow_overlap
   before_validation :set_diary_defaults, on: :create
 
   scope :upcoming, -> { where("start_time > ?", Time.current).where.not(status: :cancelled).order(:start_time) }
