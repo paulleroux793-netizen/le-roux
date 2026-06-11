@@ -39,7 +39,7 @@ class NextAvailableSlotFinder
     guard = 0
     while slots.size < @limit && t < window_end && (guard += 1) < 8000
       day = @sched[t.wday]
-      if day.nil? || @provider.on_leave_on?(t.to_date)
+      if day.nil? || @provider.on_leave_on?(t.to_date) || holiday?(t.to_date)
         t = next_open_day(t); next
       end
       tmin   = t.hour * 60 + t.min
@@ -97,10 +97,19 @@ class NextAvailableSlotFinder
   def next_open_day(time)
     d = time.to_date + 1
     HORIZON.times do
-      return at_minute(Time.zone.local(d.year, d.month, d.day, 0, 0, 0), @sched[d.wday][:open_min]) if @sched[d.wday]
+      if @sched[d.wday] && !holiday?(d)
+        return at_minute(Time.zone.local(d.year, d.month, d.day, 0, 0, 0), @sched[d.wday][:open_min])
+      end
 
       d += 1
     end
     time + HORIZON.days # nothing open in range → push past the window to end the scan
+  end
+
+  # Never offer a slot on a SA public holiday — same source BookingEngine rejects on.
+  def holiday?(date)
+    PracticeConfig.public_holiday_dates.include?(date)
+  rescue StandardError
+    false
   end
 end

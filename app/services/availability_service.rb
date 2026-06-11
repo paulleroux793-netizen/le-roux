@@ -10,7 +10,9 @@ class AvailabilityService
     date = from_date
 
     while slots.length < limit && date <= from_date + LOOKAHEAD_DAYS.days
-      slots.concat(available_slots_for_day(date, limit - slots.length)) if date.wday.between?(1, 5)
+      if date.wday.between?(1, 5) && !public_holiday?(date)
+        slots.concat(available_slots_for_day(date, limit - slots.length))
+      end
       date = date.next_day
     end
 
@@ -18,6 +20,14 @@ class AvailabilityService
   end
 
   private
+
+  # Never advertise a slot on a SA public holiday — same source BookingEngine rejects on, so the
+  # slots we offer and what we can actually book never disagree.
+  def public_holiday?(date)
+    PracticeConfig.public_holiday_dates.include?(date)
+  rescue StandardError
+    false
+  end
 
   def available_slots_for_day(date, limit)
     schedule = DoctorSchedule.for_day(date.wday)

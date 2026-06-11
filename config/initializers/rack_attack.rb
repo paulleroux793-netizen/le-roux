@@ -54,6 +54,15 @@ class Rack::Attack
     req.ip if req.path == "/login" && req.request_method == "POST"
   end
 
+  # Public website chat-booking endpoint (/api/v1/web_chat). Each visitor reaches the
+  # origin as their own client IP (Cloudflare forwards it), so a per-IP cap throttles
+  # abusers without affecting real visitors. 60 turns / 5 min is far more than a genuine
+  # booking conversation needs, but stops a bot hammering the endpoint to run up AI cost
+  # or mass-create bookings. The endpoint is also flag-gated (WEB_CHAT_ENABLED) + CORS-locked.
+  throttle("web_chat/ip", limit: 60, period: 5 * 60) do |req|
+    req.ip if req.path == "/api/v1/web_chat" && req.request_method == "POST"
+  end
+
   # Friendly 429 instead of a stack trace.
   self.throttled_responder = lambda do |_req|
     [ 429, { "Content-Type" => "text/plain" },
