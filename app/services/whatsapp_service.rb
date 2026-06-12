@@ -192,11 +192,78 @@ class WhatsappService
     return unless looks_like_booking_claim?(result[:response])
     return if patient_has_recent_appointment?(patient)
     lang_code = (conversation && conversation.language.presence) || "en"
+
+    # RESCUE-AND-BOOK: the AI promised a booking but none persisted — usually a partial
+    # cross-turn slot (the day in one message, the time in another) that the on-prem
+    # classifier didn't merge, often with a mis-resolved relative date. Rather than
+    # dead-end with "not available", parse the day + time the AI itself promised, resolve
+    # the date DETERMINISTICALLY (the day NAME beats the model's miscalculated date), and
+    # actually book it. attempt_booking persists + sends the correctly-dated confirmation.
+    slot = parse_promised_slot(result[:response])
+    if slot
+      booking_result = attempt_booking(patient, slot[:date], slot[:time], nil, language: lang_code)
+      case booking_result
+      when Appointment
+        Rails.logger.info("[WhatsApp] Rescue booked patient ##{patient.id} for #{slot[:date]} #{slot[:time]} (appt ##{booking_result.id})")
+        result[:response] = nil # attempt_booking already sent the confirmation
+        return
+      when :already_booked
+        appt = @already_booked_appt
+        whenstr = appt ? "#{localized_day_name(appt.start_time, lang_code)}, #{localized_date(appt.start_time, lang_code)} at #{appt.start_time.strftime('%H:%M')}" : nil
+        tmpl = ALREADY_BOOKED[lang_code] || ALREADY_BOOKED["en"]
+        result[:response] = whenstr ? (tmpl % { when: whenstr }) : (ALREADY_BOOKED_GENERIC[lang_code] || ALREADY_BOOKED_GENERIC["en"])
+        return
+      when :too_soon, :slot_taken, :outside_working_hours, :after_hours_today, :public_holiday
+        result[:response] = booking_alternatives_response(booking_result, slot[:date], lang_code)
+        return
+      end
+    end
+
     Rails.logger.warn(
-      "[WhatsApp] Booking claim in response but no recent Appointment for patient " \
-      "##{patient.id}; overriding. lang=#{lang_code.inspect}"
+      "[WhatsApp] Booking claim but no Appointment for patient ##{patient.id}; rescue " \
+      "#{slot ? 'failed' : 'found no parseable slot'}; overriding. lang=#{lang_code.inspect}"
     )
     result[:response] = BOOKING_FAILED_FALLBACK[lang_code] || BOOKING_FAILED_FALLBACK["en"]
+  end
+
+  # Deterministic weekday -> calendar date. The on-prem model mis-resolves relative day
+  # names ("Monday" -> a Saturday date); trust the DAY NAME and compute the occurrence
+  # ourselves (today if today matches, else the upcoming one).
+  WDAY_INDEX = { "sun" => 0, "mon" => 1, "tue" => 2, "wed" => 3, "thu" => 4, "fri" => 5, "sat" => 6 }.freeze
+  DAY_NAMES_FULL = %w[monday tuesday wednesday thursday friday saturday sunday].freeze
+
+  def next_date_for_day(day_name)
+    wday = WDAY_INDEX[day_name.to_s.strip.downcase[0, 3]]
+    return nil unless wday
+    d = Time.zone.today
+    d += 1 while d.wday != wday
+    d
+  end
+
+  # Pull the day + explicit time the AI promised out of its (unpersisted) booking-claim
+  # text, so the rescue can book it. The day NAME wins over any AI-stated calendar date.
+  def parse_promised_slot(text)
+    t = text.to_s.downcase
+    date =
+      if (day = DAY_NAMES_FULL.find { |d| t.include?(d) }) then next_date_for_day(day)
+      elsif t.include?("tomorrow") then Time.zone.today + 1
+      elsif t.include?("today")    then Time.zone.today
+      end
+    return nil unless date
+    time =
+      if (m = t.match(/\b(\d{1,2}):(\d{2})\s*([ap]\.?m\.?)?/))
+        hh = m[1].to_i
+        hh += 12 if m[3].to_s.start_with?("p") && hh < 12
+        hh = 0 if m[3].to_s.start_with?("a") && hh == 12
+        format("%02d:%02d", hh, m[2].to_i)
+      elsif (m = t.match(/\b(\d{1,2})\s*([ap]\.?m\.?)/))
+        hh = m[1].to_i
+        hh += 12 if m[2].to_s.start_with?("p") && hh < 12
+        hh = 0 if m[2].to_s.start_with?("a") && hh == 12
+        format("%02d:00", hh)
+      end
+    return nil unless time
+    { date: date.to_s, time: time }
   end
 
   # Broader match than BOOKING_CLAIM_PHRASES — covers confirmation-flavored
@@ -214,7 +281,11 @@ class WhatsappService
     /\byou'?re (booked|confirmed|locked in)\b/i,
     /\bi'?ve (booked|scheduled) you\b/i,
     /\brequested slot:\b/i,
-    /✅\s*\*?appointment\s+confirmed\*?/i
+    /✅\s*\*?appointment\s+confirmed\*?/i,
+    # Broader: "secured ... appointment" / "booked|scheduled|reserved ... for/on <day>" —
+    # catches phrasings with words in between (e.g. "secured your URGENT appointment").
+    /\bsecur(ing|ed)\b[^.!?]{0,30}\bappointment\b/i,
+    /\b(secured|booked|scheduled|reserved)\b[^.!?]{0,45}\b(for|on)\b[^.!?]{0,20}\b(mon|tue|wed|thu|fri|sat|sun|tomorrow|today)/i
   ].freeze
 
   def looks_like_booking_claim?(response)
@@ -618,16 +689,16 @@ class WhatsappService
     # disagrees with the actual calendar weekday of the ISO date, the model
     # likely mis-resolved a relative phrase ("next Tuesday") to the wrong day.
     # Do NOT book — ask the patient to confirm the real day + date instead.
-    if date.present? && date_day_of_week_mismatch?(date, entities[:day_of_week])
-      actual = Date.parse(date)
-      day_date = "#{localized_day_name(actual, lang)}, #{localized_date(actual, lang)}"
-      Rails.logger.warn(
-        "[WhatsApp] day_of_week mismatch — model said #{entities[:day_of_week].inspect} " \
-        "but #{date} is a #{actual.strftime('%A')}; holding for clarification instead of booking."
-      )
-      template = DATE_DAY_MISMATCH_CLARIFY[lang] || DATE_DAY_MISMATCH_CLARIFY["en"]
-      result[:response] = template % { day_date: day_date }
-      return
+    # The on-prem model often mis-resolves a relative day name to the wrong calendar date
+    # ("Monday" -> a Saturday, "Monday the 13th" when Monday is the 15th). Trust the DAY
+    # NAME: recompute the date deterministically and book it, instead of dead-ending the
+    # patient with a clarification round-trip (which lost real bookings, e.g. Fortune).
+    if entities[:day_of_week].present? && (corrected = next_date_for_day(entities[:day_of_week]))
+      parsed = date.present? ? (Date.parse(date) rescue nil) : nil
+      if parsed != corrected
+        Rails.logger.warn("[WhatsApp] Date corrected from day_of_week=#{entities[:day_of_week].inspect}: #{date.inspect} -> #{corrected}")
+        date = corrected.to_s
+      end
     end
 
     booking_result = nil
