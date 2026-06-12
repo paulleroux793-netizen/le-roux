@@ -43,8 +43,16 @@ class WhatsappStandardMessages
       "Dr Chalita & team 🌸🌿"
   end
 
-  # The 4-message pack, in send order.
+  # Location + directions combined into ONE message (Paul's preference 2026-06-12) — the
+  # maps card and the road directions belong together. The intake form and the booking
+  # confirmation stay as their own messages so each is a clear, separate signal to the patient.
+  def self.location_and_directions
+    "#{location}\n\n#{directions}"
+  end
+
+  # The standard pack, in send order — now three messages: (1) where we are + how to get
+  # here, (2) the secure intake form to complete, (3) the booking confirmation.
   def self.pack(appointment)
-    [ location, directions, intake, confirmation(appointment) ]
+    [ location_and_directions, intake, confirmation(appointment) ]
   end
 end
