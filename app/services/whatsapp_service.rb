@@ -847,6 +847,18 @@ class WhatsappService
     Rails.logger.warn("[WhatsApp] Intake form not sent for patient ##{patient&.id}: #{e.class}: #{e.message}")
   end
 
+  # Send the location + directions (one combined message) right after a booking, so every
+  # patient automatically gets where-we-are + how-to-get-here — no manual reception step.
+  # Free-form is fine here: the patient just messaged us, so the 24h WhatsApp window is open.
+  # Never raises into the booking path.
+  def send_location_and_directions(patient)
+    return if patient.blank? || patient.phone.blank?
+    WhatsappTemplateService.new.send_text(patient.phone, WhatsappStandardMessages.location_and_directions)
+    Rails.logger.info("[WhatsApp] Sent location + directions to patient ##{patient.id} after booking")
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] Location/directions not sent for patient ##{patient&.id}: #{e.class}: #{e.message}")
+  end
+
   def attempt_booking(patient, date, time, treatment, language: "en")
     start_time = Time.zone.parse("#{date} #{time}")
     duration = duration_for_treatment(treatment)
@@ -952,6 +964,7 @@ class WhatsappService
 
     # sync_to_google_calendar(appointment, patient, reason) # Disabled 2026-04-24: local DB is source of truth, Google mirror no longer used
     send_confirmation_template(patient, appointment, after_hours: message_arrived_after_hours, language: language)
+    send_location_and_directions(patient)
     send_confirmation_email(appointment)
     send_confirmation_sms(appointment)
 
