@@ -203,6 +203,7 @@ class StatementPdf
     @pdf.font_size(8) do
       @pdf.text "Payment reference: #{ref}  ·  please pay by EFT using the bank details below.", align: :right, style: :bold
       @pdf.text "You may submit this statement to your medical aid to claim back where your benefits allow.", align: :right, style: :italic
+      @pdf.text "The account holder remains responsible for this account; the practice does not claim from medical aid on your behalf.", align: :right, style: :italic
     end
     @pdf.move_down 8
   end

@@ -341,6 +341,7 @@ class EstimatesController < ApplicationController
     {
       id: l.id,
       code: l.code, description: l.description, tooth_number: l.tooth_number, quantity: l.quantity,
+      procedure_code_id: l.procedure_code_id,
       unit_fee: (l.unit_fee_cents.to_i / 100.0),
       icd10_code: l.icd10_code,
       medical: l.medical, self_portion: l.self_portion, line_total: l.line_total

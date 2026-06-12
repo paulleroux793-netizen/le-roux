@@ -37,13 +37,14 @@ class EstimateLinesController < ApplicationController
   private
 
   def apply(line)
-    p  = params.require(:estimate_line).permit(:procedure_code_id, :code, :description, :tooth_number, :quantity, :fee)
+    p  = params.require(:estimate_line).permit(:procedure_code_id, :code, :description, :tooth_number, :quantity, :fee, :icd10_code)
     pc = (ProcedureCode.find_by(id: p[:procedure_code_id]) if p[:procedure_code_id].present?)
     line.procedure_code_id = p[:procedure_code_id].presence
     line.code         = p[:code].presence || pc&.code
     line.description  = p[:description].presence || pc&.description
     line.tooth_number = p[:tooth_number].presence
     line.quantity     = [ p[:quantity].to_i, 1 ].max
+    line.icd10_code   = p[:icd10_code].presence if p.key?(:icd10_code)  # dentist override; blank re-defaults via callback
     line.vat_treatment = pc&.vat_treatment.presence || line.vat_treatment.presence || "standard"
     line.unit_fee_cents =
       if    p[:fee].present?            then (p[:fee].to_f * 100).round

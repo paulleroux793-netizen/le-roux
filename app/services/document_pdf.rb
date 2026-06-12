@@ -215,6 +215,8 @@ class DocumentPdf
       "Branch: #{practice.bank_branch_code}"
     ].compact.reject(&:blank?).join(" · ")
 
+    pdf.move_down 6
+    pdf.text "Place of service: 11 (consulting rooms)  ·  Values are VAT-inclusive @ 15%  ·  Currency: ZAR", size: 8
     pdf.move_down 8
 
     if @kind == :estimate
@@ -222,8 +224,8 @@ class DocumentPdf
       pdf.text "ESTIMATE VALID FOR 14 DAYS", style: :bold
       pdf.fill_color "707070"
       pdf.text "This is an estimate of planned treatment, not a final account. Actual fees may vary " \
-               "depending on what is clinically required on the day. You may submit the final invoice to " \
-               "your medical aid to claim back."
+               "depending on what is clinically required on the day. The amount shown is payable to the practice; " \
+               "you may submit this document, with its procedure and ICD-10 codes, to your own medical scheme to claim back."
     else
       pdf.fill_color "9A7521"
       pdf.text "PAYMENT TERMS: ON RECEIPT", style: :bold

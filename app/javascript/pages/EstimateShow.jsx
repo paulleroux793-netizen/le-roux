@@ -305,6 +305,19 @@ export default function EstimateShow({ estimate = {}, practice = {}, patient = {
                     <td className="py-1.5 font-mono text-brand-ink">{l.code}</td>
                     <td className="py-1.5 text-brand-ink">{l.description}</td>
                     <td className="py-1.5 text-center text-brand-muted">{l.tooth_number ? `#${l.tooth_number}` : '—'}</td>
+                    <td className="py-1.5 text-center">
+                      <input
+                        defaultValue={l.icd10_code || ''}
+                        onBlur={(e) => {
+                          const v = e.target.value.trim().toUpperCase()
+                          if (v === (l.icd10_code || '')) return
+                          router.patch(`/estimate_lines/${l.id}`, { estimate_line: { procedure_code_id: l.procedure_code_id || '', code: l.code, description: l.description, tooth_number: l.tooth_number || '', quantity: l.quantity, fee: l.unit_fee, icd10_code: v } }, { preserveScroll: true, onSuccess: () => toast.success('ICD-10 updated'), onError: () => toast.error('Could not update ICD-10') })
+                        }}
+                        placeholder="ICD-10"
+                        title="ICD-10 diagnosis code for this line (for the patient's medical-aid claim)"
+                        className="w-20 rounded border border-brand-border px-1.5 py-0.5 text-center text-xs uppercase"
+                      />
+                    </td>
                     <td className="py-1.5 text-right text-brand-ink">{rand(l.line_total)}</td>
                     <td className="py-1.5 pl-2 text-right">
                       <button onClick={() => removeLine(l.id)} title="Remove line" className="rounded p-1 text-brand-muted hover:bg-brand-surface hover:text-brand-danger"><XIcon size={14} /></button>

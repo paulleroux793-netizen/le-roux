@@ -9,6 +9,17 @@ module BillableLine
 
   included do
     before_validation :compute_totals
+    before_validation :default_icd10
+  end
+
+  # Claim-ready: every billed line needs an ICD-10 (SADA). Auto-fill a sensible default
+  # from the procedure when blank; the dentist can override per line.
+  def default_icd10
+    return unless respond_to?(:icd10_code)
+    return if icd10_code.present?
+    pc = (respond_to?(:procedure_code) && procedure_code) ||
+         (respond_to?(:code) && code.present? ? ProcedureCode.find_by(code: code) : nil)
+    self.icd10_code = Icd10Defaults.for(pc) if pc
   end
 
   def compute_totals
