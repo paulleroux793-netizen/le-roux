@@ -97,6 +97,7 @@ class WhatsappTemplateService
       to:   "whatsapp:#{formatted_phone}",
       body: body
     )
+    log_outbound_to_conversation(to_phone, body)
   rescue Twilio::REST::TwilioError => e
     Rails.logger.error("[WhatsApp] Failed to send free-form text to #{to_phone}: #{e.message}")
     raise Error, "Failed to send WhatsApp message: #{e.message}"
@@ -181,9 +182,24 @@ class WhatsappTemplateService
       content_sid: content_sid,
       content_variables: sanitize_variables(variables).to_json
     )
+    vals = sanitize_variables(variables).values.reject { |v| v == "-" }.join(" · ")
+    log_outbound_to_conversation(to_phone, "📋 #{template_key.to_s.tr('_', ' ')} sent#{vals.present? ? " — #{vals}" : ''}")
   rescue Twilio::REST::TwilioError => e
     Rails.logger.error("[WhatsApp Template] Failed to send #{template_key}: #{e.message}")
     raise Error, "Failed to send #{template_key} template: #{e.message}"
+  end
+
+  # Record an outbound message in the patient's conversation so reception sees the FULL thread
+  # (intake link, directions, confirmation) — not only the AI's chat replies. Maps the recipient
+  # phone -> patient -> their latest WhatsApp conversation. Best-effort; never raises into a send.
+  def log_outbound_to_conversation(to_phone, body)
+    digits = to_phone.to_s.gsub(/\D/, "")
+    return if digits.length < 9 || body.to_s.strip.empty?
+    patient = Patient.where("phone LIKE ?", "%#{digits[-9..]}").order(:id).first
+    convo = patient && patient.conversations.where(channel: "whatsapp").order(updated_at: :desc).first
+    convo&.add_message(role: "assistant", content: body.to_s)
+  rescue StandardError => e
+    Rails.logger.warn("[WhatsApp] could not log outbound to conversation: #{e.message}")
   end
 
   def format_phone(phone)
