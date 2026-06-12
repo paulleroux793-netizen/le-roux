@@ -73,6 +73,17 @@ class NotificationService
       )
     end
 
+    def intake_completed(patient)
+      emit(
+        category: "intake_completed",
+        level: "success",
+        title: "Patient form completed",
+        body: "#{patient.full_name} completed their online intake form",
+        url: "/patients/#{patient.id}",
+        patient: patient
+      )
+    end
+
     def conversation_started(conversation)
       emit(
         category: "conversation_started",

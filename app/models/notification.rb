@@ -15,6 +15,7 @@ class Notification < ApplicationRecord
     appointment_rescheduled
     patient_created
     conversation_started
+    intake_completed
     system
   ].freeze
 

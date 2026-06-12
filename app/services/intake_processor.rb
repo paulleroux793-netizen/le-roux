@@ -51,6 +51,7 @@ class IntakeProcessor
     # a failure in either must never break the patient's submission.
     if completed_any
       notify_practice!
+      notify_in_app!
       file_to_patient_folder!
     end
   end
@@ -85,6 +86,14 @@ class IntakeProcessor
     mark_emailed! if @self_registration
   rescue StandardError => e
     Rails.logger.error("[IntakeProcessor] completion email failed: #{e.message}")
+  end
+
+  # In-app notification (the bell) so reception sees a completed form immediately and never
+  # misses it — the email can be buried, and a form submission is not a WhatsApp message.
+  def notify_in_app!
+    NotificationService.intake_completed(patient)
+  rescue StandardError => e
+    Rails.logger.error("[IntakeProcessor] in-app notification failed: #{e.message}")
   end
 
   # Stamp EMAILED_MARKER into notes once the email is confirmed sent (reached only if
