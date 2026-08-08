@@ -155,6 +155,42 @@ RSpec.describe PromptBuilder do
             expect(prompt).to include("Roodepoort")
             expect(prompt).to include("NEVER say \"Pretoria\"")
           end
+
+          it "includes the surgical-extraction CONSULTATION-FIRST rule (not refer-out)" do
+            expect(prompt).to include("SURGICAL EXTRACTIONS — CONSULTATION FIRST")
+            expect(prompt).to include("DOES perform surgical extractions")
+            expect(prompt).to include("CBCT scan")
+            expect(prompt).to include("oral surgeons are much more expensive")
+          end
+
+          it "explicitly forbids the wrong 'we don't do surgical' language" do
+            expect(prompt).to include("NEVER tell the patient")
+            expect(prompt).to include("we don't do surgical extractions")
+          end
+
+          it "tells the AI to ask for X-rays if the patient has them" do
+            expect(prompt).to include("If you have any X-rays")
+          end
+
+          it "books a consultation, NOT the surgery, until Dr Chalita has assessed" do
+            expect(prompt).to include("Book the consultation, NOT the surgery")
+          end
+
+          it "includes the orthodontics-beyond-aligners refer-out rule (still correct)" do
+            expect(prompt).to include("ORTHODONTICS BEYOND ALIGNERS")
+            expect(prompt).to include("orthodontist")
+          end
+
+          it "lists trigger phrases the AI must catch for surgical extractions" do
+            expect(prompt).to include("surgical extraction")
+            expect(prompt).to include("impacted tooth")
+            expect(prompt).to include("wisdom tooth surgery")
+          end
+
+          it "still allows standard extractions to book normally" do
+            expect(prompt).to include("Standard extractions")
+            expect(prompt).to include("done normally")
+          end
         end
       end
     end
