@@ -475,4 +475,102 @@ RSpec.describe WhatsappService do
       expect(new_convo.language).to eq("af").or eq("en")
     end
   end
+
+  # POPIA consent disclosure prepend logic.
+  # Required by POPIA: explicit notice that we're storing patient messages.
+  # Self-detecting via consent_already_sent? — never prepended twice.
+  describe "POPIA consent line on first inbound message" do
+    let(:fresh_phone) { "+27611111201" }
+
+    context "when this is the patient's first ever message" do
+      before do
+        allow(ai_service).to receive(:process_message).and_return({
+          response: "I'd love to help you book an appointment.",
+          intent:   "book",
+          entities: {}
+        })
+      end
+
+      it "prepends the POPIA consent line to the AI response" do
+        result = service.handle_incoming(
+          from: fresh_phone,
+          message: "I want to book an appointment"
+        )
+        expect(result[:response]).to start_with(WhatsappService::POPIA_CONSENT_LINE)
+        expect(result[:response]).to include("By replying you consent")
+        expect(result[:response]).to include("Reply STOP")
+        expect(result[:response]).to include("I'd love to help you book")
+      end
+
+      it "stores the consented response in the conversation messages JSONB" do
+        service.handle_incoming(from: fresh_phone, message: "Hi")
+        patient = Patient.find_by(phone: fresh_phone)
+        last_assistant = patient.conversations.first.messages.reverse.find { |m| (m["role"] || m[:role]) == "assistant" }
+        expect(last_assistant["content"]).to include("By replying you consent")
+      end
+    end
+
+    context "when the patient has already received the consent line earlier" do
+      let!(:patient) { create(:patient, phone: "+27611111202") }
+      let!(:conversation) do
+        create(
+          :conversation,
+          patient: patient,
+          channel: "whatsapp",
+          status: "active",
+          messages: [
+            { "role" => "user",      "content" => "Hi" },
+            { "role" => "assistant", "content" => "#{WhatsappService::POPIA_CONSENT_LINE}Hello! How can I help?" }
+          ]
+        )
+      end
+
+      before do
+        allow(ai_service).to receive(:process_message).and_return({
+          response: "Sure, what date works for you?",
+          intent:   "book",
+          entities: {}
+        })
+      end
+
+      it "does NOT prepend the consent line a second time" do
+        result = service.handle_incoming(
+          from: patient.phone,
+          message: "I want to book"
+        )
+        expect(result[:response]).not_to start_with(WhatsappService::POPIA_CONSENT_LINE)
+        expect(result[:response].scan("By replying you consent").size).to eq(0)
+        expect(result[:response]).to include("Sure, what date works")
+      end
+    end
+
+    context "AI fallback path" do
+      before do
+        allow(ai_service).to receive(:process_message).and_raise(AiService::Error, "boom")
+      end
+
+      it "still prepends consent on the fallback response when it's the first message" do
+        result = service.handle_incoming(
+          from: "+27611111203",
+          message: "Hi"
+        )
+        expect(result[:response]).to start_with(WhatsappService::POPIA_CONSENT_LINE)
+      end
+    end
+
+    describe "POPIA_CONSENT_LINE constant" do
+      it "is a frozen string" do
+        expect(WhatsappService::POPIA_CONSENT_LINE).to be_frozen
+      end
+
+      it "contains the POPIA-required disclosure phrases" do
+        line = WhatsappService::POPIA_CONSENT_LINE
+        expect(line).to include("By replying you consent")
+        expect(line).to include("Dr Chalita le Roux")
+        expect(line).to include("storing your messages")
+        expect(line).to include("Reply STOP")
+        expect(line).to include("delete your data")
+      end
+    end
+  end
 end
