@@ -16,6 +16,10 @@
   --accent:#0D6E64;
   --accent-soft:#DCEBE8;
   --on-accent:#FFFFFF;
+  --eng1:#0D6E64;
+  --eng2:#5AA79C;
+  --eng3:#A87833;
+  --engneg:#A33A32;
   --brass:#A87833;
   --brass-soft:#F0E5D2;
   --good:#1D7A4F;
@@ -39,6 +43,10 @@
     --accent:#4BAFA1;
     --accent-soft:#12302D;
     --on-accent:#0B1113;
+    --eng1:#4BAFA1;
+    --eng2:#8ACFC4;
+    --eng3:#CFA25C;
+    --engneg:#E1786D;
     --brass:#CFA25C;
     --brass-soft:#2E2618;
     --good:#54B884;
@@ -62,6 +70,10 @@
   --accent:#4BAFA1;
   --accent-soft:#12302D;
     --on-accent:#0B1113;
+    --eng1:#4BAFA1;
+    --eng2:#8ACFC4;
+    --eng3:#CFA25C;
+    --engneg:#E1786D;
   --brass:#CFA25C;
   --brass-soft:#2E2618;
   --good:#54B884;
@@ -387,6 +399,46 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 @media (prefers-reduced-motion:reduce){
   *{transition:none!important;animation:none!important}
 }
+
+/* ---------- three engines ---------- */
+.bar.eng1{background:var(--eng1)} .bar.eng2{background:var(--eng2)}
+.bar.eng3{background:var(--eng3)} .bar.engneg{background:var(--engneg)}
+.engkey{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.engkey span{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.engkey i{width:10px;height:10px;border-radius:2px;flex:none;display:block}
+
+/* ---------- structure choice ---------- */
+.structures{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:22px}
+.struct{
+  text-align:left;font:inherit;cursor:pointer;
+  background:var(--surface);color:var(--ink);
+  border:1px solid var(--line-2);border-radius:3px;
+  padding:16px 18px;transition:border-color .14s ease,background .14s ease;
+}
+.struct:hover{border-color:var(--accent)}
+.struct[aria-pressed="true"]{border-color:var(--accent);border-width:2px;padding:15px 17px;background:var(--accent-soft)}
+.struct:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.struct .sname{font-weight:700;font-size:14px;margin-bottom:3px}
+.struct .scap{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;color:var(--accent);font-weight:600;margin-bottom:7px;
+}
+.struct .sdesc{font-size:12px;color:var(--muted);line-height:1.45}
+
+/* ---------- toggle ---------- */
+.toggle{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:12px 0;border-bottom:1px solid var(--line);
+}
+.toggle label{font-size:13px;font-weight:500;color:var(--ink-2)}
+.tgbtn{
+  font:inherit;font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  padding:5px 11px;cursor:pointer;border-radius:2px;
+  border:1px solid var(--line-2);background:var(--surface);color:var(--muted);
+}
+.tgbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tgbtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 </style>
 
 <div class="wrap">
@@ -395,7 +447,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
   <div>
     <p class="eyebrow">Dr Chalita le Roux Group &middot; Capital allocation</p>
     <h1>Loan Book Hurdle Model</h1>
-    <p class="dek">Four South African lending models, costed against the one benchmark that matters: what the same rand would have done sitting in the S&amp;P 500. Adjust the assumptions &mdash; the ranking recalculates.</p>
+    <p class="dek">A South African lending business with three profit engines &mdash; the loan book, credit life on those loans, and a funeral book &mdash; costed against what the same rand would have done sitting in the S&amp;P 500.</p>
   </div>
   <div class="stamp">
     SARB repo <b id="stampRepo">7.00%</b><br>
@@ -407,31 +459,80 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 
 <div class="headline">
   <div class="hfig">
-    <div class="k">Hurdle rate</div>
-    <div class="v brass" id="hHurdle">24.9%</div>
-    <div class="sub">S&amp;P 500 in rand terms, plus a premium for illiquidity and concentration</div>
+    <div class="k">Group return on capital</div>
+    <div class="v good" id="hGroup">—</div>
+    <div class="sub" id="hGroupSub">Against a hurdle of 24.9%</div>
   </div>
   <div class="hfig">
-    <div class="k">Models clearing it</div>
-    <div class="v" id="hCount">1 of 4</div>
-    <div class="sub" id="hCountSub">Only one book earns its keep at this size</div>
+    <div class="k">Total capital employed</div>
+    <div class="v" id="hCapital">—</div>
+    <div class="sub" id="hCapitalSub">Loan book plus insurance capital</div>
   </div>
   <div class="hfig">
-    <div class="k">Best net return on capital</div>
-    <div class="v good" id="hBest">30.8%</div>
-    <div class="sub" id="hBestSub">Payroll-deduction consumer</div>
+    <div class="k">Profit from insurance</div>
+    <div class="v brass" id="hInsShare">—</div>
+    <div class="sub" id="hInsShareSub">Share of group profit needing no lending capital</div>
   </div>
   <div class="hfig">
     <div class="k">Minimum viable book</div>
-    <div class="v" id="hMin">R1.83m</div>
-    <div class="sub">Below this, fixed compliance cost sinks every model</div>
+    <div class="v" id="hMin">—</div>
+    <div class="sub">Smallest loan book that still clears the hurdle</div>
   </div>
 </div>
 
 <section>
+  <p class="eyebrow">Structure</p>
+  <h2>Who carries the insurance risk</h2>
+  <p class="note">The single largest structural decision, and it is a capital decision before it is a risk one. Your own microinsurance licence is gated behind a R4m capital floor &mdash; which at a R1m&ndash;R5m budget would consume the entire loan book. A cell captive gets you the underwriting profit for R250 000.</p>
+  <div class="structures" id="structures"></div>
+</section>
+
+<section>
+  <p class="eyebrow">Where the money comes from</p>
+  <h2>Three engines, one balance sheet</h2>
+  <p class="note">Annual profit by source at the current assumptions. Lending consumes capital; the insurance engines largely do not, which is what lets them absorb fixed compliance cost that a loan book alone cannot carry.</p>
+  <div class="chart">
+    <div class="plot"><div class="bars" id="engines"></div></div>
+    <div class="axis" id="engaxis"></div>
+    <div class="engkey">
+      <span><i style="background:var(--eng1)"></i>Lending margin</span>
+      <span><i style="background:var(--eng2)"></i>Credit life</span>
+      <span><i style="background:var(--eng3)"></i>Funeral book</span>
+      <span><i style="background:var(--engneg)"></i>Fixed compliance cost</span>
+    </div>
+  </div>
+  <div class="callout" id="engineVerdict"></div>
+</section>
+
+<section>
+  <p class="eyebrow">Insurance</p>
+  <h2>Credit life and the funeral book</h2>
+  <p class="note">Credit life is capped at R4.50 per R1 000 of the deferred amount and rides on loans you have already written. The funeral book is independent of the loan book entirely &mdash; and at scale it is the larger business.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Credit life on the loan book</h3>
+      <p class="phint">Premium accrues on the outstanding balance each month, so an amortising loan earns less than its face value suggests. Borrowers may substitute their own policy at any time, which is where the take-up assumption bites.</p>
+      <div class="toggle">
+        <label for="clToggle">Attach credit life to consumer loans</label>
+        <button class="tgbtn" id="clToggle" type="button" aria-pressed="true">On</button>
+      </div>
+      <div id="clControls"></div>
+      <dl class="kv" id="clKv"></dl>
+    </div>
+    <div class="panel">
+      <h3>Funeral book</h3>
+      <p class="phint">South Africa's largest insurance category by policy count, roughly 30 million policies in force. Nearly a quarter lapse within the first year &mdash; which is precisely why selling into a book that already has a working debit order beats selling cold.</p>
+      <div id="fnControls"></div>
+      <dl class="kv" id="fnKv"></dl>
+      <div class="callout" id="fnVerdict"></div>
+    </div>
+  </div>
+</section>
+
+<section>
   <p class="eyebrow">Comparison</p>
-  <h2>Net return on capital, after compliance overhead</h2>
-  <p class="note">Return is measured against <em>capital-months actually tied up</em> &mdash; not principal advanced &mdash; so short-dated books get proper credit for redeploying the same rand several times a year. Fixed annual costs are spread across the whole book.</p>
+  <h2>Lending models, net of compliance overhead</h2>
+  <p class="note">Return is measured against <em>capital-months actually tied up</em> &mdash; not principal advanced &mdash; so short-dated books get proper credit for redeploying the same rand several times a year. Credit life reduces losses here too: death, disability and retrenchment claims settle the loan.</p>
   <div class="chart">
     <div class="plot">
       <div class="hurdlelabel" id="hurdleLabel">Hurdle 24.9%</div>
@@ -469,7 +570,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 <section>
   <p class="eyebrow">Portfolio assumptions</p>
   <h2>Capital, overhead, and the benchmark</h2>
-  <p class="note">These apply across all four models. The hurdle is built up rather than assumed: a rand-denominated S&amp;P 500 return, plus the premium a private loan book must pay you for being illiquid, concentrated, and operationally demanding.</p>
+  <p class="note">The hurdle is built up rather than assumed: a rand-denominated S&amp;P 500 return, plus the premium a private book must pay you for being illiquid, concentrated, and operationally demanding.</p>
   <div class="split">
     <div class="panel">
       <h3>Capital &amp; overhead</h3>
@@ -494,12 +595,12 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 
 <section>
   <p class="eyebrow">Regulatory reference</p>
-  <h2>What the National Credit Act permits</h2>
-  <p class="note">Rate ceilings are repo-linked, so they move with SARB. The figures below recalculate from the repo rate set above. Every credit provider must register with the NCR regardless of book size &mdash; the old R500,000 threshold was removed in 2016.</p>
+  <h2>What the rules permit</h2>
+  <p class="note">Credit ceilings are repo-linked and recalculate from the repo rate set above. Insurance limits are fixed by regulation.</p>
   <div class="scroller">
     <table class="ref">
       <thead>
-        <tr><th>Sub-sector</th><th>Ceiling formula</th><th>At current repo</th><th>Applies to</th></tr>
+        <tr><th>Item</th><th>Rule</th><th>Limit</th><th>Applies to</th></tr>
       </thead>
       <tbody id="refBody"></tbody>
     </table>
@@ -507,15 +608,16 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 
   <div class="caveat">
     <h4>Assumptions you must verify before committing capital</h4>
-    <p><b>The rate-cap formula is contested in public sources.</b> Practitioner commentary splits between <b>(repo &times; 2.2) + 20%</b> and <b>repo + 21%</b> for unsecured credit &mdash; a gap of roughly seven percentage points of gross yield. This model uses the multiplier form and exposes it as an input. Confirm the current schedule against the Government Gazette before pricing a single loan.</p>
-    <p><b>The juristic-person exemption is the single largest structural lever here.</b> Under section 4(1) of the Act, a credit agreement falls outside the NCA entirely where the borrower is a juristic person whose asset value or annual turnover meets or exceeds R1 million. That removes rate caps, fee caps, and the prescribed affordability assessment from SME lending to established businesses &mdash; which is why the SME model is priced contractually rather than at a ceiling.</p>
-    <p><b>Not modelled, and each one is real:</b> the <em>in duplum</em> rule capping accrued interest and fees at the outstanding principal on default; reckless-lending exposure under sections 80&ndash;83, which can void an agreement entirely; FICA obligations as an accountable institution; POPIA; mandatory credit bureau reporting; and Debt Collectors Act registration if you collect in-house.</p>
-    <p>This is a commercial model, not legal advice. The licensing path needs sign-off from a credit-regulatory attorney before a rand goes out the door.</p>
+    <p><b>The credit rate-cap formula is contested in public sources.</b> Practitioner commentary splits between <b>(repo &times; 2.2) + 20%</b> and <b>repo + 21%</b> for unsecured credit &mdash; a gap of roughly seven percentage points of gross yield. This model uses the multiplier form and exposes it as an input. Confirm against the Government Gazette before pricing a single loan.</p>
+    <p><b>Credit life is a conduct-risk product, and the regulator is watching it.</b> Claims ratios ran under 10% across the market &mdash; roughly R15bn of annual premium against R1.5bn of claims &mdash; which is exactly what provoked the 2017 cap. Assume the R4.50 ceiling is revisited downward, not upward, and do not build a plan that only works at today's margin. Borrowers also hold a statutory right to substitute their own policy at any time, so a high take-up assumption is a commercial assumption, not a given.</p>
+    <p><b>Funeral economics live or die on lapse.</b> Roughly a quarter of funeral policies do not survive the first year, and a comparable share lapse before the first premium is ever collected. Acquisition cost is therefore incurred repeatedly on the same customer. The model charges replacement acquisition every year against the lapsed share &mdash; if your real lapse rate exceeds the input, the funeral engine degrades faster than any other line here.</p>
+    <p><b>Not modelled, and each one is real:</b> the <em>in duplum</em> rule; reckless-lending exposure under sections 80&ndash;83, which can void an agreement entirely; FICA obligations; POPIA; mandatory credit bureau reporting; Debt Collectors Act registration for in-house collections; FAIS licensing, key-individual competency and representative supervision for selling any insurance product; and Treating Customers Fairly conduct standards, which apply with particular force to exactly these two products.</p>
+    <p><b>Distribution is not modelled, and it is the real constraint on the funeral book.</b> The model charges acquisition cost per policy and admin per policy, but carries no sales force, branch network, call centre or agent commission structure. A book of several thousand policies is a distribution business before it is an underwriting one, and the cost of building that channel is absent from every figure here. Treat large policy counts as showing the shape of the opportunity, not a plan you can fund at these margins.</p>
+    <p>This is a commercial model, not legal or actuarial advice. The licensing path needs sign-off from a credit-regulatory attorney, and the insurance pricing from a qualified actuary, before a rand goes out.</p>
   </div>
 </section>
 
 </div>
-
 <script>
 (function(){
   "use strict";
@@ -525,7 +627,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
      ============================================================ */
   var G = {
     repo:        7.00,      // SARB repo rate, %
-    capital:     3000000,   // rand deployed into the book
+    capital:     3000000,   // rand deployed into the loan book
     fixed:       273000,    // fixed annual cost of being a credit provider
     spNominal:   10.0,      // S&P 500 long-run nominal return, USD %
     zarDrift:    4.5,       // long-run ZAR depreciation vs USD, %
@@ -534,51 +636,108 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
   };
 
   /* ============================================================
+     Insurance assumptions
+
+     Credit life premium is capped at R4.50 per R1 000 of the deferred
+     amount and accrues monthly on the outstanding balance, so the
+     amortisation schedule already computed for the loan gives the
+     premium base directly.
+
+     Funeral is independent of the loan book: it consumes no lending
+     capital, which is what lets it carry fixed compliance cost that a
+     loan book of this size cannot.
+     ============================================================ */
+  var INS = {
+    structure:      "cell",   // broker | cell | licence
+    clOn:           true,
+    clRatePer1000:  4.50,     // regulated ceiling
+    clTakeup:       85,       // %, net of borrowers substituting their own policy
+    clLossRatio:    22,       // %, claims as a share of premium
+    clDefaultsCovered: 18,    // %, share of defaults settled by an insured event
+
+    fnPolicies:     1200,     // policies in force
+    fnPremium:      120,      // rand per policy per month
+    fnLossRatio:    45,       // %
+    fnLapse:        28,       // % per year
+    fnAcqCost:      350,      // rand per policy acquired
+    fnAdminMonthly: 12        // rand per policy per month
+  };
+
+  /* Structure economics.
+     capital  — what the structure locks up before writing any risk
+     cellFee  — share of premium paid to the cell captive provider
+     fixed    — annual compliance cost of the structure
+     clComm / fnComm — commission retained where you carry no risk    */
+  var STRUCTURES = [
+    {
+      id:"broker", name:"Intermediary only",
+      capital:0, cellFee:0, fixed:90000, carriesRisk:false,
+      clComm:7.5, fnComm:20,
+      capLabel:"No insurance capital",
+      desc:"Sell someone else's policies for commission. No underwriting risk, no capital, and no underwriting profit. Credit life commission is capped at 7.5%; funeral commission is not capped."
+    },
+    {
+      id:"cell", name:"Microinsurance cell captive",
+      capital:250000, cellFee:6, fixed:180000, carriesRisk:true,
+      capLabel:"R250 000 capital",
+      desc:"Ring-fenced cell inside a licensed microinsurer such as Guardrisk or Centriq. You take the underwriting profit and the risk; the provider supplies the licence, actuarial and compliance for a share of premium."
+    },
+    {
+      id:"licence", name:"Own microinsurance licence",
+      capital:4000000, cellFee:0, fixed:900000, carriesRisk:true,
+      capLabel:"R4m capital floor",
+      desc:"Full control and no cell fee, but the minimum capital requirement is 15% of net written premium subject to a R4m floor — before a single loan is funded."
+    }
+  ];
+
+  function structure(){
+    for(var i=0;i<STRUCTURES.length;i++){
+      if(STRUCTURES[i].id === INS.structure) return STRUCTURES[i];
+    }
+    return STRUCTURES[1];
+  }
+
+  /* ============================================================
      Lending models
-     rateBasis determines the statutory ceiling:
-       nca_unsecured -> (repo * mult) + 20
-       nca_other     -> (repo * mult) + 10
-       shortterm     -> 5% per month on a first loan in a calendar year
-       contract      -> outside the NCA, priced by agreement
      ============================================================ */
   var MODELS = [
     {
       id:"payroll",
       name:"Payroll-deduction consumer",
       short:"Payroll",
-      hint:"Repaid by deduction at source through an employer partnership. Default risk collapses because you sit ahead of the borrower's other creditors in the pay run.",
-      rateBasis:"nca_unsecured", nca:true,
+      hint:"Repaid by deduction at source through an employer partnership. Default risk collapses because you sit ahead of the borrower's other creditors in the pay run — and the same deduction carries the funeral premium.",
+      rateBasis:"nca_unsecured", nca:true, clEligible:true,
       L:15000, T:18, amortising:true, ratePct:null,
       pd:6.0, lgd:55, opex:700, collCost:1200, lag:1.0,
-      note:"Needs employer relationships before it needs capital. That is a sales problem, not a lending one."
+      note:"Needs employer relationships before it needs capital. One deduction instruction carries the loan, the credit life and the funeral policy."
     },
     {
       id:"sme",
       name:"SME invoice &amp; working capital",
       short:"SME finance",
-      hint:"Advances against ceded debtors and short working-capital facilities. Where the borrower is a juristic person turning over R1m or more, the NCA does not apply &mdash; no rate cap, no fee cap, no prescribed affordability test.",
-      rateBasis:"contract", nca:false,
+      hint:"Advances against ceded debtors and short working-capital facilities. Where the borrower is a juristic person turning over R1m or more, the NCA does not apply &mdash; no rate cap, no fee cap, no prescribed affordability test. Credit life does not attach to business lending.",
+      rateBasis:"contract", nca:false, clEligible:false,
       L:250000, T:3, amortising:false, ratePct:36.0,
       pd:5.0, lgd:35, opex:6000, collCost:25000, lag:0.5,
       origPct:1.5, adminMonthly:500,
-      note:"Plays directly to a chartered accountant's edge: you can read a set of financials better than any scorecard can."
+      note:"Plays to a chartered accountant's edge, but carries no insurance attachment — it is a pure lending play."
     },
     {
       id:"shortterm",
       name:"Short-term unsecured",
       short:"Short-term",
       hint:"The classic microloan: up to R8 000 over six months or less, capped at 5% per month on a borrower's first loan in a calendar year and 3% thereafter.",
-      rateBasis:"shortterm", nca:true,
+      rateBasis:"shortterm", nca:true, clEligible:true,
       L:4000, T:1, amortising:false, ratePct:null,
       pd:12.0, lgd:75, opex:250, collCost:800, lag:0.5,
-      note:"Enormous capital velocity, knife-edge margins. Viable only if origination is fully automated and defaults are held down by debit-order collection."
+      note:"Enormous capital velocity, knife-edge margins. Its real value may be as a funnel into the funeral book rather than as a lending business."
     },
     {
       id:"asset",
       name:"Asset-backed lending",
       short:"Asset-backed",
       hint:"Vehicle and equipment finance secured over the asset. Loss given default is low because you can recover the security, but capital is locked up for years.",
-      rateBasis:"nca_other", nca:true,
+      rateBasis:"nca_other", nca:true, clEligible:true,
       L:180000, T:30, amortising:true, ratePct:null,
       pd:10.0, lgd:35, opex:4500, collCost:18000, lag:1.5,
       note:"At a R1m&ndash;R5m book you could fund roughly twenty deals and then have no liquidity for two and a half years."
@@ -593,7 +752,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
   }
 
   /* ============================================================
-     Statutory ceilings
+     Statutory credit ceilings
      ============================================================ */
   function ceilingAnnual(basis){
     switch(basis){
@@ -601,17 +760,14 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       case "nca_other":     return G.repo * G.ncaMult + 10;
       case "nca_facility":  return G.repo * G.ncaMult + 10;
       case "nca_mortgage":  return G.repo * G.ncaMult + 5;
-      case "shortterm":     return 5 * 12;   // 5% per month expressed as nominal annual
+      case "shortterm":     return 5 * 12;   // 5% per month as a nominal annual rate
       default:              return null;     // contractual, no ceiling
     }
   }
-
   function rateOf(m){
     var c = ceilingAnnual(m.rateBasis);
     return (m.ratePct === null) ? c : m.ratePct;
   }
-
-  // NCA initiation fee: R165 + 10% of principal above R1 000, capped at R1 050
   function ncaInitiationFee(L){
     return Math.min(165 + 0.10 * Math.max(0, L - 1000), 1050);
   }
@@ -619,11 +775,10 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
   /* ============================================================
      Amortisation
 
-     Returns exact interest earned and capital-months tied up.
-     Capital-months is the correct denominator for return on capital:
-     an amortising loan returns principal progressively, so it ties up
-     far less than its face value over its life. Using face value
-     understates the return on every amortising book.
+     capMonths is the sum of outstanding balances month by month. It is
+     both the correct denominator for return on capital and, divided by
+     1000 and multiplied by the credit life rate, the credit life
+     premium base — the same schedule serves both.
      ============================================================ */
   function schedule(L, i, n, amortising){
     if(n <= 0) return {interest:0, capMonths:0};
@@ -633,7 +788,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     var pmt = L * i / (1 - Math.pow(1 + i, -n));
     var bal = L, capMonths = 0, interest = 0;
     for(var k = 0; k < n; k++){
-      capMonths += bal;              // capital committed through month k
+      capMonths += bal;
       var accrued = bal * i;
       interest += accrued;
       bal = bal + accrued - pmt;
@@ -643,20 +798,21 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
   }
 
   /* ============================================================
-     Hurdle: the S&P 500 compounded with rand drift, plus a premium
+     Hurdle
      ============================================================ */
   function zarIndexReturn(){
     return ((1 + G.spNominal/100) * (1 + G.zarDrift/100) - 1) * 100;
   }
-  function hurdle(){
-    return zarIndexReturn() + G.riskPremium;
+  function hurdle(){ return zarIndexReturn() + G.riskPremium; }
+
+  function creditLifeActive(m){
+    return INS.clOn && m.clEligible;
   }
 
   /* ============================================================
-     Core engine
+     Per-loan engine
      ============================================================ */
   function compute(m){
-    var cap = ceilingAnnual(m.rateBasis);
     var annualRate = rateOf(m);
     var i = annualRate / 100 / 12;
     var n = Math.max(1, Math.round(m.T));
@@ -666,23 +822,27 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     var initFee, serviceFee;
     if(m.nca){
       initFee    = ncaInitiationFee(m.L);
-      serviceFee = 60 * n;                       // R60 per month, excl VAT
+      serviceFee = 60 * n;
     } else {
       initFee    = (m.origPct/100) * m.L;
       serviceFee = (m.adminMonthly || 0) * n;
     }
-
     var gross = s.interest + initFee + serviceFee;
 
-    var pd  = m.pd / 100;
-    var lgd = m.lgd / 100;
-    var ecl        = m.L * pd * lgd;
+    // Credit life settles death, disability and retrenchment claims, so a
+    // share of what would have been a write-off is recovered from the policy.
+    var cl = creditLifeActive(m);
+    var lgdRelief = cl ? (INS.clDefaultsCovered/100) * (INS.clTakeup/100) : 0;
+    var effLgd = (m.lgd/100) * (1 - lgdRelief);
+
+    var pd = m.pd / 100;
+    var ecl        = m.L * pd * effLgd;
     var collection = pd * m.collCost;
     var opex       = m.opex;
 
     var net = gross - ecl - collection - opex;
 
-    var capMonths = s.capMonths + m.L * m.lag;   // schedule plus idle redeployment time
+    var capMonths = s.capMonths + m.L * m.lag;
 
     var rocPre    = capMonths > 0 ? (net * 12 / capMonths) * 100 : 0;
     var fixedDrag = G.capital > 0 ? (G.fixed / G.capital) * 100 : 0;
@@ -693,31 +853,105 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     var avgPerLoan     = capMonths / cycleMonths;
     var activeAccounts = avgPerLoan > 0 ? G.capital / avgPerLoan : 0;
 
-    // break-even default rates, holding everything else constant
-    var lossPerUnitPd = m.L * lgd + m.collCost;
+    // credit life premium per loan, off the outstanding-balance schedule
+    var clPremium = cl ? (s.capMonths / 1000) * INS.clRatePer1000 * (INS.clTakeup/100) : 0;
+
+    var lossPerUnitPd = m.L * effLgd + m.collCost;
     var pdZero   = lossPerUnitPd > 0 ? (gross - opex) / lossPerUnitPd * 100 : 0;
     var netAtHurdle = (hurdle() + fixedDrag) / 100 * capMonths / 12;
     var pdHurdle = lossPerUnitPd > 0 ? (gross - opex - netAtHurdle) / lossPerUnitPd * 100 : 0;
 
-    // smallest book that still clears the hurdle after fixed cost
     var minCapital = (rocPre > hurdle()) ? G.fixed / ((rocPre - hurdle())/100) : Infinity;
 
     return {
-      cap:cap, annualRate:annualRate,
+      annualRate:annualRate,
       interest:s.interest, initFee:initFee, serviceFee:serviceFee, gross:gross,
       ecl:ecl, collection:collection, opex:opex, net:net,
-      capMonths:capMonths, avgPerLoan:avgPerLoan,
+      effLgd:effLgd*100, lgdRelief:lgdRelief*100,
+      capMonths:capMonths, scheduleCapMonths:s.capMonths, avgPerLoan:avgPerLoan,
       rocPre:rocPre, fixedDrag:fixedDrag, rocPost:rocPost,
       loansPerYear:loansPerYear, activeAccounts:activeAccounts, cycleMonths:cycleMonths,
+      clPremium:clPremium,
       pdZero:pdZero, pdHurdle:pdHurdle, minCapital:minCapital,
-      annualProfit: rocPost/100 * G.capital
+      annualProfit: rocPost/100 * G.capital,
+      lendingMargin: rocPre/100 * G.capital       // before any fixed cost
     };
   }
 
-  function grade(rocPost){
+  /* ============================================================
+     Group engine — lending plus both insurance books
+     ============================================================ */
+  function group(){
+    var m = modelById(selected);
+    var r = compute(m);
+    var st = structure();
+
+    // ---- credit life, riding on the selected lending model ----
+    var clPremiumIncome = r.clPremium * r.loansPerYear;
+    var clMargin;
+    if(!st.carriesRisk){
+      clMargin = clPremiumIncome * (st.clComm/100);
+    } else {
+      clMargin = clPremiumIncome * (1 - INS.clLossRatio/100 - st.cellFee/100);
+    }
+
+    // ---- funeral book, independent of the loan book ----
+    var fnPremiumIncome = INS.fnPolicies * INS.fnPremium * 12;
+    var fnClaims = fnPremiumIncome * (INS.fnLossRatio/100);
+    var fnAdmin  = INS.fnPolicies * INS.fnAdminMonthly * 12;
+    var fnAcq    = INS.fnPolicies * (INS.fnLapse/100) * INS.fnAcqCost;  // replacing lapsed policies
+    var fnCellFee = fnPremiumIncome * (st.cellFee/100);
+    var fnMargin;
+    if(!st.carriesRisk){
+      fnMargin = fnPremiumIncome * (st.fnComm/100) - fnAcq;
+    } else {
+      fnMargin = fnPremiumIncome - fnClaims - fnAdmin - fnAcq - fnCellFee;
+    }
+
+    // ---- capital ----
+    // Risk-based: the microinsurer MCR is 15% of net written premium subject
+    // to a floor. A cell carrying real premium volume is subject to solvency
+    // capital too, so the same formula is applied against the lower cell
+    // floor rather than leaving cell capital pinned at its minimum.
+    var writtenPremium = clPremiumIncome + fnPremiumIncome;
+    var insCapital = st.carriesRisk
+      ? Math.max(st.capital, 0.15 * writtenPremium)
+      : 0;
+
+    var insFixed = st.fixed;
+    var totalCapital = G.capital + insCapital;
+    var totalProfit  = r.lendingMargin + clMargin + fnMargin - G.fixed - insFixed;
+    var groupROC = totalCapital > 0 ? totalProfit / totalCapital * 100 : 0;
+
+    var insProfit = clMargin + fnMargin;
+    var insShare  = totalProfit > 0 ? insProfit / (r.lendingMargin + insProfit) * 100 : 0;
+
+    // smallest loan book that still clears the hurdle, holding insurance fixed
+    // solve: (rocPre*C + insProfit - G.fixed - insFixed) / (C + insCapital) = hurdle
+    var h = hurdle()/100, k = r.rocPre/100;
+    var minCapital = Infinity;
+    if(k > h){
+      var numer = h * insCapital - insProfit + G.fixed + insFixed;
+      var c = numer / (k - h);
+      if(c > 0 && isFinite(c)) minCapital = c;
+      else if(c <= 0) minCapital = 0;   // insurance alone already clears it
+    }
+
+    return {
+      r:r, m:m, st:st,
+      clPremiumIncome:clPremiumIncome, clMargin:clMargin,
+      fnPremiumIncome:fnPremiumIncome, fnClaims:fnClaims, fnAdmin:fnAdmin,
+      fnAcq:fnAcq, fnCellFee:fnCellFee, fnMargin:fnMargin,
+      insCapital:insCapital, insFixed:insFixed, insProfit:insProfit, insShare:insShare,
+      totalCapital:totalCapital, totalProfit:totalProfit, groupROC:groupROC,
+      lendingMargin:r.lendingMargin, minCapital:minCapital
+    };
+  }
+
+  function grade(v){
     var h = hurdle();
-    if(rocPost >= h) return "good";
-    if(rocPost >= h * 0.6) return "warn";
+    if(v >= h) return "good";
+    if(v >= h * 0.6) return "warn";
     return "bad";
   }
   function gradeColour(g){
@@ -730,26 +964,27 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
   function pct(x, dp){ return x.toFixed(dp === undefined ? 1 : dp) + "%"; }
   function rand(x){
     var neg = x < 0;
-    var s = Math.round(Math.abs(x)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    var s = Math.round(Math.abs(x)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     return (neg ? "−R" : "R") + s;
   }
   function randShort(x){
     if(!isFinite(x)) return "—";
-    if(x >= 1e6) return "R" + (x/1e6).toFixed(2) + "m";
-    if(x >= 1e3) return "R" + Math.round(x/1e3) + "k";
-    return "R" + Math.round(x);
+    var neg = x < 0; x = Math.abs(x);
+    var s;
+    if(x >= 1e6) s = "R" + (x/1e6).toFixed(2) + "m";
+    else if(x >= 1e3) s = "R" + Math.round(x/1e3) + "k";
+    else s = "R" + Math.round(x);
+    return (neg ? "−" : "") + s;
   }
   function num(x){
-    return Math.round(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return Math.round(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   }
 
   /* ============================================================
-     Sliders
-
-     Each slider registers a sync() so a re-render refreshes values and
-     captions without tearing down the input the user may be dragging.
+     Sliders — registered so a re-render syncs values without
+     tearing down an input the user may be dragging
      ============================================================ */
-  var registry = { model: [], global: [] };
+  var registry = { model: [], global: [], ins: [] };
 
   function slider(host, bucket, cfg){
     var wrap = document.createElement("div");
@@ -760,12 +995,11 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 
     var id = "c_" + bucket + "_" + registry[bucket].length;
     var lab = document.createElement("label");
-    lab.innerHTML = cfg.label;          // labels carry entities, so innerHTML
+    lab.innerHTML = cfg.label;
     lab.setAttribute("for", id);
 
     var val = document.createElement("span");
     val.className = "val";
-
     top.appendChild(lab);
     top.appendChild(val);
 
@@ -786,10 +1020,9 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     }
 
     function sync(){
-      // Never fight the user for the handle they are currently dragging.
-      // Otherwise read the model, not the input: `step` snaps input.value to
-      // the nearest increment, which would report a rate above its own
-      // statutory ceiling.
+      // Never fight the user for the handle they are dragging. Otherwise read
+      // the model, not the input: `step` snaps input.value to the nearest
+      // increment, which would report a rate above its own statutory ceiling.
       var v;
       if(document.activeElement === input){
         v = parseFloat(input.value);
@@ -811,73 +1044,154 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     registry[bucket].push(sync);
   }
 
-  function syncBucket(bucket){
-    for(var i=0;i<registry[bucket].length;i++) registry[bucket][i]();
+  function syncBucket(b){
+    for(var i=0;i<registry[b].length;i++) registry[b][i]();
   }
 
   /* ============================================================
-     Tabs — built once, state synced
+     Structure selector
      ============================================================ */
-  var tabsEl = document.getElementById("tabs");
-  var tabDots = [];
-
-  function mountTabs(){
-    tabsEl.innerHTML = "";
-    tabDots = [];
-    MODELS.forEach(function(m){
+  var structBtns = [];
+  function mountStructures(){
+    var host = document.getElementById("structures");
+    host.innerHTML = "";
+    structBtns = [];
+    STRUCTURES.forEach(function(st){
       var b = document.createElement("button");
-      b.className = "tab";
       b.type = "button";
-      b.setAttribute("role", "tab");
-      var dot = document.createElement("span");
-      dot.className = "dot";
-      b.appendChild(dot);
-      b.appendChild(document.createTextNode(m.short));
+      b.className = "struct";
+      b.innerHTML = "<div class='sname'>" + st.name + "</div>" +
+                    "<div class='scap'>" + st.capLabel + "</div>" +
+                    "<div class='sdesc'>" + st.desc + "</div>";
       b.addEventListener("click", function(){
-        if(selected === m.id) return;
-        selected = m.id;
-        mountModelControls();
+        if(INS.structure === st.id) return;
+        INS.structure = st.id;
         render();
       });
-      tabsEl.appendChild(b);
-      tabDots.push({btn:b, dot:dot, id:m.id, m:m});
+      host.appendChild(b);
+      structBtns.push({btn:b, id:st.id});
     });
   }
-
-  function syncTabs(){
-    tabDots.forEach(function(t){
-      var r = compute(t.m);
-      t.dot.className = "dot " + grade(r.rocPost);
-      t.btn.setAttribute("aria-selected", t.id === selected ? "true" : "false");
+  function syncStructures(){
+    structBtns.forEach(function(s){
+      s.btn.setAttribute("aria-pressed", s.id === INS.structure ? "true" : "false");
     });
   }
 
   /* ============================================================
-     Comparison chart
+     Charts
      ============================================================ */
-  var barsEl = document.getElementById("bars");
-  var axisEl = document.getElementById("axis");
-  var LABEL_COL = 166;   // 150px label column + 16px gap
+  var LABEL_COL = 166;
 
-  function scaleBounds(results){
-    var lo = 0, hi = hurdle();
-    results.forEach(function(r){
-      lo = Math.min(lo, r.rocPost);
-      hi = Math.max(hi, r.rocPost);
+  function drawBars(hostId, axisId, rows, fmt, opts){
+    opts = opts || {};
+    var host = document.getElementById(hostId);
+    var lo = 0, hi = 0;
+    rows.forEach(function(r){ lo = Math.min(lo, r.value); hi = Math.max(hi, r.value); });
+    if(opts.reference !== undefined) hi = Math.max(hi, opts.reference);
+    var pad = (hi - lo) * 0.12 || 1;
+    lo = lo < 0 ? lo - pad : 0;
+    hi = hi + pad;
+    var span = hi - lo || 1;
+    function x(v){ return (v - lo) / span * 100; }
+
+    host.innerHTML = "";
+    rows.forEach(function(r){
+      var row = document.createElement("div");
+      row.className = "row";
+
+      var lab = document.createElement("div");
+      lab.className = "rowlabel";
+      lab.innerHTML = r.label + (r.sub ? "<span>" + r.sub + "</span>" : "");
+
+      var track = document.createElement("div");
+      track.className = "track";
+
+      var zero = document.createElement("div");
+      zero.className = "zero";
+      zero.style.left = x(0) + "%";
+      track.appendChild(zero);
+
+      var bar = document.createElement("div");
+      bar.className = "bar " + r.tone;
+      var from = Math.min(0, r.value), to = Math.max(0, r.value);
+      bar.style.left = x(from) + "%";
+      bar.style.width = Math.max(0.4, x(to) - x(from)) + "%";
+      track.appendChild(bar);
+
+      var v = document.createElement("div");
+      v.className = "barval";
+      v.textContent = fmt(r.value);
+      var endPct = x(to);
+      if(endPct > 78){
+        v.style.left = (endPct - 1.2) + "%";
+        v.style.transform = "translate(-100%,-50%)";
+        v.style.color = "var(--on-accent)";
+      } else {
+        v.style.left = (endPct + 1.4) + "%";
+        v.style.color = r.valueColour || "var(--ink)";
+      }
+      track.appendChild(v);
+
+      row.appendChild(lab);
+      row.appendChild(track);
+      host.appendChild(row);
     });
+
+    var axis = document.getElementById(axisId);
+    axis.innerHTML = "";
+    for(var t = 0; t <= 4; t++){
+      var s = document.createElement("span");
+      s.textContent = fmt(lo + span * t / 4);
+      axis.appendChild(s);
+    }
+    return x;
+  }
+
+  function buildEngines(){
+    var g = group();
+    var rows = [
+      { label:"Lending margin", sub:randShort(G.capital) + " deployed · " + g.m.short,
+        value:g.lendingMargin, tone:"eng1", valueColour:"var(--eng1)" },
+      { label:"Credit life", sub: INS.clOn && g.m.clEligible
+          ? randShort(g.clPremiumIncome) + " premium" : "Not attached to this model",
+        value:g.clMargin, tone:"eng2", valueColour:"var(--eng2)" },
+      { label:"Funeral book", sub:num(INS.fnPolicies) + " policies · " + randShort(g.fnPremiumIncome) + " premium",
+        value:g.fnMargin, tone:"eng3", valueColour:"var(--eng3)" },
+      { label:"Fixed cost", sub:"Credit provider + insurance compliance",
+        value:-(G.fixed + g.insFixed), tone:"engneg", valueColour:"var(--engneg)" }
+    ];
+    drawBars("engines", "engaxis", rows, randShort);
+
+    var v = document.getElementById("engineVerdict");
+    var gd = grade(g.groupROC);
+    v.className = "callout " + gd;
+    var lendOnlyROC = (g.lendingMargin - G.fixed) / G.capital * 100;
+    var delta = g.groupROC - lendOnlyROC;
+
+    v.innerHTML = "<b>Group return " + pct(g.groupROC) + " on " + randShort(g.totalCapital) +
+      " of capital.</b> Lending alone would return " + pct(lendOnlyROC) + "; the insurance engines " +
+      (delta >= 0 ? "add " + pct(delta) : "cost " + pct(Math.abs(delta))) + ". " +
+      (g.insProfit > 0
+        ? randShort(g.insProfit) + " of annual profit comes from books that tie up " +
+          (g.st.capital === 0 ? "no capital at all" : randShort(g.insCapital)) +
+          ", which is why they can carry fixed cost the loan book cannot."
+        : "At this scale the insurance books do not yet cover their own compliance cost of " +
+          randShort(g.insFixed) + " — they need volume before they help.");
+  }
+
+  function buildLendingChart(){
+    var results = MODELS.map(compute);
+    var lo = 0, hi = hurdle();
+    results.forEach(function(r){ lo = Math.min(lo, r.rocPost); hi = Math.max(hi, r.rocPost); });
     lo = Math.floor(Math.min(lo, 0) / 10) * 10 - 5;
     hi = Math.ceil(hi / 10) * 10 + 5;
     if(hi - lo < 40) hi = lo + 40;
-    return {lo:lo, hi:hi};
-  }
+    var span = hi - lo;
+    function x(v){ return (v - lo) / span * 100; }
 
-  function buildChart(){
-    var results = MODELS.map(compute);
-    var b = scaleBounds(results);
-    var span = b.hi - b.lo;
-    function x(v){ return (v - b.lo) / span * 100; }
-
-    barsEl.innerHTML = "";
+    var host = document.getElementById("bars");
+    host.innerHTML = "";
     MODELS.forEach(function(m, idx){
       var r = results[idx];
       var g = grade(r.rocPost);
@@ -888,7 +1202,8 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       var lab = document.createElement("div");
       lab.className = "rowlabel";
       lab.innerHTML = m.short + "<span>" + randShort(m.L) + " over " + m.T +
-                      (m.T === 1 ? " month" : " months") + "</span>";
+                      (m.T === 1 ? " month" : " months") +
+                      (creditLifeActive(m) ? " · CL" : "") + "</span>";
 
       var track = document.createElement("div");
       track.className = "track";
@@ -921,26 +1236,60 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 
       row.appendChild(lab);
       row.appendChild(track);
-      barsEl.appendChild(row);
+      host.appendChild(row);
     });
 
     var pos = "calc(" + LABEL_COL + "px + (100% - " + LABEL_COL + "px) * " + (x(hurdle())/100) + ")";
-    var line  = document.getElementById("hurdleLine");
+    document.getElementById("hurdleLine").style.left = pos;
     var label = document.getElementById("hurdleLabel");
-    line.style.left = pos;
     label.style.left = pos;
     label.textContent = "Hurdle " + pct(hurdle());
 
-    axisEl.innerHTML = "";
+    var axis = document.getElementById("axis");
+    axis.innerHTML = "";
     for(var t = 0; t <= 4; t++){
       var s = document.createElement("span");
-      s.textContent = pct(b.lo + span * t / 4, 0);
-      axisEl.appendChild(s);
+      s.textContent = pct(lo + span * t / 4, 0);
+      axis.appendChild(s);
     }
   }
 
   /* ============================================================
-     Model panel
+     Tabs
+     ============================================================ */
+  var tabsEl = document.getElementById("tabs");
+  var tabDots = [];
+  function mountTabs(){
+    tabsEl.innerHTML = "";
+    tabDots = [];
+    MODELS.forEach(function(m){
+      var b = document.createElement("button");
+      b.className = "tab";
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      b.appendChild(dot);
+      b.appendChild(document.createTextNode(m.short));
+      b.addEventListener("click", function(){
+        if(selected === m.id) return;
+        selected = m.id;
+        mountModelControls();
+        render();
+      });
+      tabsEl.appendChild(b);
+      tabDots.push({btn:b, dot:dot, id:m.id, m:m});
+    });
+  }
+  function syncTabs(){
+    tabDots.forEach(function(t){
+      t.dot.className = "dot " + grade(compute(t.m).rocPost);
+      t.btn.setAttribute("aria-selected", t.id === selected ? "true" : "false");
+    });
+  }
+
+  /* ============================================================
+     Model controls and P&L
      ============================================================ */
   var mControlsEl = document.getElementById("mControls");
 
@@ -957,9 +1306,8 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       get:function(){ return m.L; }, set:function(v){ m.L = v; },
       fmt:function(v){ return rand(v); },
       caption: m.rateBasis === "shortterm" ? function(){
-        return m.L > 8000
-          ? "⚠ Above the R8 000 short-term ceiling"
-          : "Within the R8 000 short-term ceiling";
+        return m.L > 8000 ? "⚠ Above the R8 000 short-term ceiling"
+                          : "Within the R8 000 short-term ceiling";
       } : null
     });
 
@@ -968,16 +1316,14 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       get:function(){ return m.T; }, set:function(v){ m.T = v; },
       fmt:function(v){ return v + (v === 1 ? " month" : " months"); },
       caption: m.rateBasis === "shortterm" ? function(){
-        return m.T > 6
-          ? "⚠ Above the 6-month short-term ceiling"
-          : "Within the 6-month short-term ceiling";
+        return m.T > 6 ? "⚠ Above the 6-month short-term ceiling"
+                       : "Within the 6-month short-term ceiling";
       } : null
     });
 
     slider(mControlsEl, "model", {
       label:"Interest rate charged", min:6, max:72, step:0.1,
-      get:function(){ return rateOf(m); },
-      set:function(v){ m.ratePct = v; },
+      get:function(){ return rateOf(m); }, set:function(v){ m.ratePct = v; },
       fmt:function(v){ return pct(v) + " p.a. · " + pct(v/12, 2) + "/mo"; },
       caption:function(){
         var c = ceilingAnnual(m.rateBasis);
@@ -1002,7 +1348,12 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       label:"Loss given default", min:10, max:100, step:1,
       get:function(){ return m.lgd; }, set:function(v){ m.lgd = v; },
       fmt:function(v){ return pct(v, 0); },
-      caption:function(){ return "Share of principal unrecovered once an account defaults"; }
+      caption:function(){
+        var r = compute(m);
+        return creditLifeActive(m)
+          ? "Credit life cuts this to " + pct(r.effLgd, 0) + " effective"
+          : "Share of principal unrecovered once an account defaults";
+      }
     });
 
     slider(mControlsEl, "model", {
@@ -1023,8 +1374,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       get:function(){ return m.lag; }, set:function(v){ m.lag = v; },
       fmt:function(v){ return v + (v === 1 ? " month" : " months"); },
       caption:function(){
-        var r = compute(m);
-        return "Capital turns " + (12/r.cycleMonths).toFixed(1) + "× per year";
+        return "Capital turns " + (12/compute(m).cycleMonths).toFixed(1) + "× per year";
       }
     });
   }
@@ -1039,13 +1389,14 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
         m.amortising ? "Exact amortisation schedule, declining balance"
                      : "Single repayment at term, full principal outstanding throughout"],
       [m.nca ? "Initiation fee" : "Origination fee", r.initFee, false,
-        m.nca ? "R165 + 10% above R1 000, capped at R1 050"
+        m.nca ? "R165 + 10% above R1 000, capped at R1 050"
               : m.origPct + "% of the advance, no statutory cap"],
       [m.nca ? "Monthly service fee" : "Administration fee", r.serviceFee, false,
         m.nca ? "R60 per month" : rand(m.adminMonthly) + " per month"],
       ["__sum", r.gross, false, ""],
       ["Expected credit loss", -r.ecl, true,
-        pct(m.pd) + " default × " + pct(m.lgd, 0) + " loss given default"],
+        pct(m.pd) + " default × " + pct(r.effLgd, 0) + " effective loss" +
+        (creditLifeActive(m) ? " (after credit life relief)" : "")],
       ["Recovery cost", -r.collection, true, "Legal and collection spend, incurred only on defaults"],
       ["Origination &amp; servicing", -r.opex, true, "Bureau enquiry, affordability assessment, admin"],
       ["__grand", r.net, false, ""]
@@ -1083,7 +1434,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       ["Return on capital, after overhead", pct(r.rocPost)],
       ["Loans written per year", num(r.loansPerYear)],
       ["Accounts under management", num(r.activeAccounts)],
-      ["Annual profit on " + randShort(G.capital), rand(r.annualProfit)]
+      ["Credit life premium per loan", creditLifeActive(m) ? rand(r.clPremium) : "—"]
     ];
     var kv = document.getElementById("kv");
     kv.innerHTML = "";
@@ -1097,30 +1448,183 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     var v = document.getElementById("verdict");
     v.className = "callout " + g;
     var gap = r.rocPost - hurdle();
-    var msg;
     if(g === "good"){
-      msg = "<b>Clears the hurdle by " + pct(gap) + ".</b> At " + randShort(G.capital) +
-            " deployed this returns " + rand(r.annualProfit) + " a year, against " +
-            rand(hurdle()/100 * G.capital) + " from an index position of the same size. " +
-            "Defaults would have to reach " + pct(Math.max(0, r.pdHurdle)) +
-            " before the index wins.";
+      v.innerHTML = "<b>Clears the hurdle by " + pct(gap) + " on lending alone.</b> " +
+        "Defaults would have to reach " + pct(Math.max(0, r.pdHurdle)) +
+        " before the index wins — and that is before any insurance income.";
     } else if(g === "warn"){
-      msg = "<b>Falls " + pct(Math.abs(gap)) + " short of the hurdle.</b> It makes money — " +
-            rand(r.annualProfit) + " a year — but not enough to pay you for the illiquidity " +
-            "and the operational load. " +
-            (isFinite(r.minCapital)
-              ? "It would clear at a book of " + randShort(r.minCapital) + " or more."
-              : "No book size fixes this: the shortfall is in the unit economics, not the overhead.");
+      v.innerHTML = "<b>Falls " + pct(Math.abs(gap)) + " short on lending alone.</b> " +
+        rand(r.annualProfit) + " a year, which does not pay for the illiquidity. " +
+        "Whether the business works then depends entirely on the insurance engines above.";
     } else {
-      msg = "<b>Does not earn its cost of capital.</b> " +
-            (r.rocPost < 0
-              ? "It loses " + rand(Math.abs(r.annualProfit)) + " a year once compliance overhead is carried. "
-              : "It returns " + pct(r.rocPost) + " against a hurdle of " + pct(hurdle()) + ". ") +
-            (isFinite(r.minCapital)
-              ? "It would need a book of " + randShort(r.minCapital) + " to clear."
-              : "Scale will not rescue it — the per-loan margin is too thin.");
+      v.innerHTML = "<b>Does not earn its cost of capital on lending.</b> " +
+        (r.rocPost < 0 ? "It loses " + rand(Math.abs(r.annualProfit)) + " a year after overhead. "
+                       : "It returns " + pct(r.rocPost) + " against a hurdle of " + pct(hurdle()) + ". ") +
+        "Its case has to be made as a customer-acquisition channel for the insurance books, not as a lending business.";
     }
-    v.innerHTML = msg;
+  }
+
+  /* ============================================================
+     Insurance controls
+     ============================================================ */
+  function mountInsurance(){
+    var clHost = document.getElementById("clControls");
+    var fnHost = document.getElementById("fnControls");
+
+    slider(clHost, "ins", {
+      label:"Premium rate", min:1, max:4.5, step:0.05,
+      get:function(){ return INS.clRatePer1000; }, set:function(v){ INS.clRatePer1000 = v; },
+      fmt:function(v){ return "R" + v.toFixed(2) + " per R1 000"; },
+      caption:function(){
+        return INS.clRatePer1000 >= 4.5
+          ? "At the regulated ceiling of R4.50 per R1 000 of the deferred amount"
+          : "Below the R4.50 ceiling";
+      }
+    });
+
+    slider(clHost, "ins", {
+      label:"Take-up rate", min:0, max:100, step:1,
+      get:function(){ return INS.clTakeup; }, set:function(v){ INS.clTakeup = v; },
+      fmt:function(v){ return pct(v, 0); },
+      caption:function(){ return "Borrowers hold a statutory right to substitute their own policy"; }
+    });
+
+    slider(clHost, "ins", {
+      label:"Claims ratio", min:5, max:90, step:1,
+      get:function(){ return INS.clLossRatio; }, set:function(v){ INS.clLossRatio = v; },
+      fmt:function(v){ return pct(v, 0) + " of premium"; },
+      caption:function(){ return "Market ran under 10% before the 2017 cap — assume regulatory pressure downward"; }
+    });
+
+    slider(clHost, "ins", {
+      label:"Defaults settled by an insured event", min:0, max:50, step:1,
+      get:function(){ return INS.clDefaultsCovered; }, set:function(v){ INS.clDefaultsCovered = v; },
+      fmt:function(v){ return pct(v, 0); },
+      caption:function(){ return "Death, disability and retrenchment claims pay off the loan, cutting effective loss"; }
+    });
+
+    slider(fnHost, "ins", {
+      label:"Policies in force", min:0, max:20000, step:100,
+      get:function(){ return INS.fnPolicies; }, set:function(v){ INS.fnPolicies = v; },
+      fmt:function(v){ return num(v) + " policies"; },
+      caption:function(){
+        var g = group();
+        var acc = g.r.activeAccounts;
+        return acc > 0
+          ? (INS.fnPolicies / acc * 100).toFixed(0) + "% of loan accounts, or " +
+            num(Math.max(0, INS.fnPolicies - acc)) + " sold beyond the book"
+          : "Sold independently of the loan book";
+      }
+    });
+
+    slider(fnHost, "ins", {
+      label:"Average monthly premium", min:25, max:400, step:5,
+      get:function(){ return INS.fnPremium; }, set:function(v){ INS.fnPremium = v; },
+      fmt:function(v){ return rand(v) + " / month"; },
+      caption:function(){ return "Market range is roughly R25–R150 for R10 000–R100 000 of cover"; }
+    });
+
+    slider(fnHost, "ins", {
+      label:"Claims ratio", min:10, max:90, step:1,
+      get:function(){ return INS.fnLossRatio; }, set:function(v){ INS.fnLossRatio = v; },
+      fmt:function(v){ return pct(v, 0) + " of premium"; }
+    });
+
+    slider(fnHost, "ins", {
+      label:"Annual lapse rate", min:0, max:60, step:1,
+      get:function(){ return INS.fnLapse; }, set:function(v){ INS.fnLapse = v; },
+      fmt:function(v){ return pct(v, 0) + " / yr"; },
+      caption:function(){ return "Around a quarter of funeral policies do not survive year one"; }
+    });
+
+    slider(fnHost, "ins", {
+      label:"Acquisition cost per policy", min:0, max:1500, step:25,
+      get:function(){ return INS.fnAcqCost; }, set:function(v){ INS.fnAcqCost = v; },
+      fmt:function(v){ return rand(v); },
+      caption:function(){ return "Far lower into an existing debit-order relationship than sold cold"; }
+    });
+
+    slider(fnHost, "ins", {
+      label:"Admin cost per policy", min:0, max:60, step:1,
+      get:function(){ return INS.fnAdminMonthly; }, set:function(v){ INS.fnAdminMonthly = v; },
+      fmt:function(v){ return rand(v) + " / month"; }
+    });
+
+    var tg = document.getElementById("clToggle");
+    tg.addEventListener("click", function(){
+      INS.clOn = !INS.clOn;
+      render();
+    });
+  }
+
+  function syncInsurance(){
+    syncBucket("ins");
+    var g = group();
+
+    var tg = document.getElementById("clToggle");
+    tg.setAttribute("aria-pressed", INS.clOn ? "true" : "false");
+    tg.textContent = INS.clOn ? "On" : "Off";
+
+    var clPairs = INS.clOn && g.m.clEligible ? [
+      ["Premium per loan", rand(g.r.clPremium)],
+      ["Annual premium income", rand(g.clPremiumIncome)],
+      [g.st.carriesRisk ? "Claims at " + pct(INS.clLossRatio,0) : "Commission at " + pct(g.st.clComm,1),
+        g.st.carriesRisk ? "−" + rand(g.clPremiumIncome * INS.clLossRatio/100)
+                         : rand(g.clPremiumIncome * g.st.clComm/100)],
+      ["Net annual margin", rand(g.clMargin)],
+      ["Effective loss given default", pct(g.r.effLgd, 0) + " (from " + pct(g.m.lgd, 0) + ")"]
+    ] : [
+      ["Status", INS.clOn ? "Not eligible on " + g.m.short : "Switched off"],
+      ["Reason", INS.clOn ? "Business lending, not consumer credit" : "—"]
+    ];
+
+    var clKv = document.getElementById("clKv");
+    clKv.innerHTML = "";
+    clPairs.forEach(function(p){
+      var dt = document.createElement("dt"); dt.textContent = p[0];
+      var dd = document.createElement("dd"); dd.textContent = p[1];
+      clKv.appendChild(dt); clKv.appendChild(dd);
+    });
+
+    var fnPairs = g.st.carriesRisk ? [
+      ["Annual premium income", rand(g.fnPremiumIncome)],
+      ["Claims", "−" + rand(g.fnClaims)],
+      ["Administration", "−" + rand(g.fnAdmin)],
+      ["Replacing lapsed policies", "−" + rand(g.fnAcq)],
+      ["Cell fee at " + pct(g.st.cellFee, 0), "−" + rand(g.fnCellFee)],
+      ["Net annual margin", rand(g.fnMargin)]
+    ] : [
+      ["Annual premium income", rand(g.fnPremiumIncome)],
+      ["Commission at " + pct(g.st.fnComm, 0), rand(g.fnPremiumIncome * g.st.fnComm/100)],
+      ["Replacing lapsed policies", "−" + rand(g.fnAcq)],
+      ["Net annual margin", rand(g.fnMargin)]
+    ];
+
+    var fnKv = document.getElementById("fnKv");
+    fnKv.innerHTML = "";
+    fnPairs.forEach(function(p){
+      var dt = document.createElement("dt"); dt.textContent = p[0];
+      var dd = document.createElement("dd"); dd.textContent = p[1];
+      if(p[0].indexOf("Net annual") === 0){
+        dd.style.color = p[1].indexOf("−") === 0 ? "var(--bad)" : "var(--good)";
+      }
+      fnKv.appendChild(dt); fnKv.appendChild(dd);
+    });
+
+    var fv = document.getElementById("fnVerdict");
+    var perPolicy = INS.fnPolicies > 0 ? g.fnMargin / INS.fnPolicies : 0;
+    var lendingPerAccount = g.r.activeAccounts > 0 ? g.lendingMargin / g.r.activeAccounts : 0;
+    fv.className = "callout " + (g.fnMargin > 0 ? "good" : "bad");
+    if(g.fnMargin > 0){
+      fv.innerHTML = "<b>" + rand(perPolicy) + " of margin per policy per year, with no lending capital behind it.</b> " +
+        "A loan account earns " + rand(lendingPerAccount) + " a year and ties up " + rand(g.r.avgPerLoan) + " to do it. " +
+        "Past roughly " + num(Math.ceil((G.fixed + g.insFixed) / Math.max(1, perPolicy))) +
+        " policies the funeral book alone covers the group's entire fixed cost base.";
+    } else {
+      fv.innerHTML = "<b>The funeral book is losing money at these assumptions.</b> " +
+        "Lapse at " + pct(INS.fnLapse, 0) + " against an acquisition cost of " + rand(INS.fnAcqCost) +
+        " means you are paying to replace customers faster than they pay you.";
+    }
   }
 
   /* ============================================================
@@ -1131,19 +1635,21 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     var h2 = document.getElementById("gControls2");
 
     slider(h1, "global", {
-      label:"Capital deployed into the book", min:250000, max:20000000, step:250000,
+      label:"Capital deployed into the loan book", min:250000, max:20000000, step:250000,
       get:function(){ return G.capital; }, set:function(v){ G.capital = v; },
       fmt:function(v){ return randShort(v); },
       caption:function(){
-        return "Fixed cost absorbs " + pct(G.fixed / G.capital * 100) + " of capital before a loan is written";
+        return "Fixed cost absorbs " + pct(G.fixed / G.capital * 100) + " of lending capital before a loan is written";
       }
     });
 
     slider(h1, "global", {
-      label:"Fixed annual compliance cost", min:0, max:800000, step:5000,
+      label:"Fixed annual credit-provider cost", min:0, max:800000, step:5000,
       get:function(){ return G.fixed; }, set:function(v){ G.fixed = v; },
       fmt:function(v){ return rand(v) + " / yr"; },
-      caption:function(){ return "NCR renewal, audit, bureau access, legal, loan software, payment rails"; }
+      caption:function(){
+        return "Plus " + rand(structure().fixed) + " for the " + structure().name.toLowerCase() + " structure";
+      }
     });
 
     slider(h1, "global", {
@@ -1151,8 +1657,7 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       get:function(){ return G.repo; }, set:function(v){ G.repo = v; },
       fmt:function(v){ return pct(v, 2); },
       caption:function(){
-        return "Prime " + pct(G.repo + 3.5, 2) + " · unsecured ceiling " +
-               pct(ceilingAnnual("nca_unsecured"));
+        return "Prime " + pct(G.repo + 3.5, 2) + " · unsecured ceiling " + pct(ceilingAnnual("nca_unsecured"));
       }
     });
 
@@ -1189,31 +1694,31 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       "<b>Hurdle " + pct(hurdle()) + ".</b> The S&amp;P at " + pct(G.spNominal) +
       " in dollars becomes " + pct(zarIndexReturn()) + " in rands once " + pct(G.zarDrift) +
       " of currency drift is compounded in. Add " + pct(G.riskPremium) +
-      " for capital you cannot sell on a Tuesday, and that is the number a loan book has to beat.";
+      " for capital you cannot sell on a Tuesday, and that is the number the group has to beat.";
   }
 
   /* ============================================================
-     Sequencing recommendation
+     Sequencing
      ============================================================ */
   function buildSequence(){
+    var g = group();
     var ranked = MODELS.map(function(m){ return {m:m, r:compute(m)}; })
-                       .sort(function(a, b){ return b.r.rocPost - a.r.rocPost; });
+                       .sort(function(a,b){ return b.r.rocPost - a.r.rocPost; });
     var clearing = ranked.filter(function(x){ return x.r.rocPost >= hurdle(); }).length;
 
     document.getElementById("seqNote").innerHTML =
-      "Ranked by net return on capital at a " + randShort(G.capital) + " book. " +
+      "Lending models ranked on their own merits at a " + randShort(G.capital) + " book. " +
       (clearing === 0
-        ? "At this size <b>nothing clears the hurdle</b> — fixed compliance cost is consuming " +
-          pct(G.fixed/G.capital*100) + " of capital before a single loan is written."
+        ? "<b>None clears the hurdle on lending alone</b> — which makes the insurance engines not a bolt-on but the actual business case."
         : clearing === 1
-        ? "Exactly one model clears the hurdle. Fund that one properly rather than splitting capital four ways — " +
-          "each additional book carries its own overhead and starves the one that works."
-        : clearing + " models clear the hurdle. Launch the strongest first and let its performance data fund the next.");
+        ? "One clears on lending alone. Fund it properly rather than splitting capital four ways, and attach both insurance books to it."
+        : clearing + " clear on lending alone. Launch the strongest first and let its book seed the funeral policies.") +
+      " Group return including insurance is <b>" + pct(g.groupROC) + "</b>.";
 
     var seq = document.getElementById("seq");
     seq.innerHTML = "";
     ranked.forEach(function(x, idx){
-      var g = grade(x.r.rocPost);
+      var gr = grade(x.r.rocPost);
       var row = document.createElement("div");
       row.className = "seqrow";
 
@@ -1223,24 +1728,22 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
 
       var nm = document.createElement("div");
       nm.className = "nm";
-      var pillTxt = g === "good" ? "Fund it" : g === "warn" ? "Hold" : "Not at this size";
+      var pillTxt = gr === "good" ? "Fund it" : gr === "warn" ? "Hold" : "Not at this size";
       nm.innerHTML = x.m.name + "<small>" + x.m.note + "</small>" +
-                     "<span class='pill " + g + "'>" + pillTxt + "</span>";
+                     "<span class='pill " + gr + "'>" + pillTxt + "</span>";
 
       var sc = document.createElement("div");
       sc.className = "sc";
-      sc.style.color = gradeColour(g);
+      sc.style.color = gradeColour(gr);
       sc.textContent = pct(x.r.rocPost);
 
-      row.appendChild(ord);
-      row.appendChild(nm);
-      row.appendChild(sc);
+      row.appendChild(ord); row.appendChild(nm); row.appendChild(sc);
       seq.appendChild(row);
     });
   }
 
   /* ============================================================
-     Regulatory reference table
+     Regulatory reference
      ============================================================ */
   function buildReference(){
     var mult = G.ncaMult.toFixed(1);
@@ -1248,20 +1751,27 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
       ["Unsecured credit", "(repo × " + mult + ") + 20%", pct(ceilingAnnual("nca_unsecured")) + " p.a.",
         "Personal and payroll-deduction loans"],
       ["Short-term credit", "5% per month, first loan", "60% p.a. nominal",
-        "≤ R8 000 over ≤ 6 months. 3%/mo on later loans in the same calendar year"],
+        "≤ R8 000 over ≤ 6 months. 3%/mo on later loans in the same calendar year"],
       ["Other credit agreements", "(repo × " + mult + ") + 10%", pct(ceilingAnnual("nca_other")) + " p.a.",
         "Asset-backed lending and instalment sale"],
-      ["Credit facilities", "(repo × " + mult + ") + 10%", pct(ceilingAnnual("nca_facility")) + " p.a.",
-        "Revolving facilities and store cards"],
-      ["Mortgage agreements", "(repo × " + mult + ") + 5%", pct(ceilingAnnual("nca_mortgage")) + " p.a.",
-        "Property-secured lending"],
-      ["Initiation fee", "R165 + 10% above R1 000", "R1 050 cap",
-        "Once-off per agreement, excl VAT"],
+      ["Initiation fee", "R165 + 10% above R1 000", "R1 050 cap", "Once-off per agreement, excl VAT"],
       ["Monthly service fee", "Flat", "R60 / month", "Excl VAT"],
       ["Juristic-person exemption", "Turnover or assets ≥ R1m", "NCA does not apply",
         "No rate cap, no fee cap, no prescribed affordability assessment"],
       ["NCR registration", "Mandatory, every provider", "R550 + R250/branch",
-        "The old R500 000 threshold fell away in 2016. Renewal due 31 July annually"]
+        "The old R500 000 threshold fell away in 2016. Renewal due 31 July annually"],
+      ["Credit life premium", "Per R1 000 of deferred amount", "R4.50 (R2.00 on mortgage)",
+        "Regulations in force from 9 August 2017"],
+      ["Credit life minimum benefits", "Prescribed", "Death, disability, retrenchment",
+        "Borrower may substitute their own policy at any time"],
+      ["Credit life commission", "Where you do not carry the risk", "7.5% of premium",
+        "The 22.5% band was removed from 1 January 2019"],
+      ["Funeral commission", "Where you do not carry the risk", "Not capped",
+        "Unlike credit life, funeral and risk classes are uncapped"],
+      ["Microinsurance cell captive", "Cell inside a licensed insurer", "R250 000 capital",
+        "Underwriting profit without your own licence"],
+      ["Own microinsurance licence", "15% of net written premium", "R4m floor",
+        "Versus R15m for a conventional insurer"]
     ];
     var body = document.getElementById("refBody");
     body.innerHTML = "";
@@ -1278,36 +1788,31 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
   }
 
   /* ============================================================
-     Headline figures
+     Headline
      ============================================================ */
   function buildHeadline(){
-    var results = MODELS.map(compute);
-    var h = hurdle();
-    var clearing = results.filter(function(r){ return r.rocPost >= h; }).length;
+    var g = group();
 
-    var bestIdx = 0;
-    for(var i = 1; i < results.length; i++){
-      if(results[i].rocPost > results[bestIdx].rocPost) bestIdx = i;
-    }
-    var best = results[bestIdx];
+    var hg = document.getElementById("hGroup");
+    hg.textContent = pct(g.groupROC);
+    hg.className = "v " + grade(g.groupROC);
+    document.getElementById("hGroupSub").textContent =
+      (g.groupROC >= hurdle() ? "Clears" : "Below") + " the hurdle of " + pct(hurdle());
 
-    document.getElementById("hHurdle").textContent = pct(h);
+    document.getElementById("hCapital").textContent = randShort(g.totalCapital);
+    document.getElementById("hCapitalSub").textContent =
+      randShort(G.capital) + " lending + " + randShort(g.insCapital) + " insurance" +
+      (g.st.carriesRisk && g.insCapital > g.st.capital ? " (scaled to premium)" : "");
 
-    var cnt = document.getElementById("hCount");
-    cnt.textContent = clearing + " of " + MODELS.length;
-    cnt.className = "v " + (clearing === 0 ? "bad" : clearing === 1 ? "warn" : "good");
-    document.getElementById("hCountSub").textContent =
-      clearing === 0 ? "No book earns its cost of capital at this size"
-      : clearing === 1 ? "Only one book earns its keep at this size"
-      : clearing + " books beat the index on a risk-adjusted basis";
-
-    var hb = document.getElementById("hBest");
-    hb.textContent = pct(best.rocPost);
-    hb.className = "v " + grade(best.rocPost);
-    document.getElementById("hBestSub").innerHTML = MODELS[bestIdx].name;
+    var hi = document.getElementById("hInsShare");
+    hi.textContent = g.insProfit > 0 ? pct(Math.max(0, Math.min(100, g.insShare)), 0) : "—";
+    document.getElementById("hInsShareSub").textContent =
+      g.insProfit > 0
+        ? randShort(g.insProfit) + " a year from credit life and funeral"
+        : "Insurance books not yet covering their compliance cost";
 
     document.getElementById("hMin").textContent =
-      isFinite(best.minCapital) ? randShort(best.minCapital) : "—";
+      isFinite(g.minCapital) ? (g.minCapital === 0 ? "None" : randShort(g.minCapital)) : "—";
 
     document.getElementById("stampRepo").textContent = pct(G.repo, 2);
     document.getElementById("stampPrime").textContent = pct(G.repo + 3.5, 2);
@@ -1318,7 +1823,10 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
      ============================================================ */
   function render(){
     buildHeadline();
-    buildChart();
+    syncStructures();
+    buildEngines();
+    syncInsurance();
+    buildLendingChart();
     syncTabs();
     syncModelPanel();
     syncBucket("global");
@@ -1327,15 +1835,17 @@ table{width:100%;border-collapse:collapse;font-size:13.5px}
     buildReference();
   }
 
+  mountStructures();
   mountTabs();
   mountGlobals();
+  mountInsurance();
   mountModelControls();
   render();
 
   var resizeTimer = null;
   window.addEventListener("resize", function(){
     if(resizeTimer) clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(buildChart, 120);
+    resizeTimer = setTimeout(function(){ buildEngines(); buildLendingChart(); }, 120);
   });
 })();
 </script>
