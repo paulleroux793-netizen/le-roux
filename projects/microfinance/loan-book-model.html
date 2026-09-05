@@ -1,0 +1,1341 @@
+<title>Loan Book Hurdle Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+:root{
+  --paper:#F5F4F1;
+  --surface:#FFFFFF;
+  --surface-2:#EEEDE8;
+  --ink:#14191B;
+  --ink-2:#3D4749;
+  --muted:#5C6669;
+  --line:#DDDBD4;
+  --line-2:#C9C6BD;
+  --accent:#0D6E64;
+  --accent-soft:#DCEBE8;
+  --on-accent:#FFFFFF;
+  --brass:#A87833;
+  --brass-soft:#F0E5D2;
+  --good:#1D7A4F;
+  --good-soft:#DDEEE4;
+  --warn:#A86B10;
+  --warn-soft:#F5E8D2;
+  --bad:#A33A32;
+  --bad-soft:#F6E0DD;
+  --shadow:0 1px 2px rgba(20,25,27,.06),0 8px 24px -12px rgba(20,25,27,.18);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#101416;
+    --surface:#171C1F;
+    --surface-2:#1F262A;
+    --ink:#E9EAE6;
+    --ink-2:#C2C7C7;
+    --muted:#939EA1;
+    --line:#262D31;
+    --line-2:#354045;
+    --accent:#4BAFA1;
+    --accent-soft:#12302D;
+    --on-accent:#0B1113;
+    --brass:#CFA25C;
+    --brass-soft:#2E2618;
+    --good:#54B884;
+    --good-soft:#13301F;
+    --warn:#D6A143;
+    --warn-soft:#31280F;
+    --bad:#E1786D;
+    --bad-soft:#361B18;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101416;
+  --surface:#171C1F;
+  --surface-2:#1F262A;
+  --ink:#E9EAE6;
+  --ink-2:#C2C7C7;
+  --muted:#939EA1;
+  --line:#262D31;
+  --line-2:#354045;
+  --accent:#4BAFA1;
+  --accent-soft:#12302D;
+    --on-accent:#0B1113;
+  --brass:#CFA25C;
+  --brass-soft:#2E2618;
+  --good:#54B884;
+  --good-soft:#13301F;
+  --warn:#D6A143;
+  --warn-soft:#31280F;
+  --bad:#E1786D;
+  --bad-soft:#361B18;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -12px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:15px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 88px}
+
+/* ---------- masthead ---------- */
+.masthead{
+  border-bottom:1px solid var(--line);
+  padding:40px 0 26px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:24px;
+  align-items:flex-end;
+  justify-content:space-between;
+}
+.masthead h1{
+  font-family:Newsreader,Georgia,serif;
+  font-weight:500;
+  font-size:clamp(30px,4.4vw,44px);
+  line-height:1.08;
+  letter-spacing:-.015em;
+  margin:0 0 10px;
+  text-wrap:balance;
+}
+.dek{color:var(--muted);max-width:60ch;margin:0;font-size:15px}
+.stamp{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11.5px;
+  line-height:1.7;
+  color:var(--muted);
+  text-align:right;
+  white-space:nowrap;
+}
+.stamp b{color:var(--ink);font-weight:600}
+
+/* ---------- section furniture ---------- */
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;
+  font-weight:600;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin:0 0 4px;
+}
+section{margin-top:44px}
+section > h2{
+  font-family:Newsreader,Georgia,serif;
+  font-weight:500;
+  font-size:24px;
+  letter-spacing:-.01em;
+  margin:0 0 6px;
+}
+.note{color:var(--muted);font-size:13.5px;margin:0 0 20px;max-width:72ch}
+
+/* ---------- headline verdict ---------- */
+.headline{
+  margin-top:30px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(210px,1fr));
+  gap:1px;
+  background:var(--line);
+  border:1px solid var(--line);
+  border-radius:3px;
+  overflow:hidden;
+}
+.hfig{background:var(--surface);padding:18px 20px}
+.hfig .k{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:8px;
+}
+.hfig .v{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:27px;font-weight:500;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;line-height:1.1;
+}
+.hfig .sub{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.4}
+.v.teal{color:var(--accent)} .v.brass{color:var(--brass)}
+.v.good{color:var(--good)} .v.warn{color:var(--warn)} .v.bad{color:var(--bad)}
+
+/* ---------- comparison chart ---------- */
+.chart{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:3px;
+  padding:26px 26px 18px;
+  position:relative;
+}
+.bars{display:flex;flex-direction:column;gap:20px;position:relative}
+.plot{position:relative}
+.hurdleline{
+  position:absolute;top:-8px;bottom:-8px;width:0;
+  border-left:1px dashed var(--brass);
+  z-index:3;pointer-events:none;
+}
+.hurdlelabel{
+  position:absolute;top:-24px;transform:translateX(-50%);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;font-weight:600;letter-spacing:.06em;
+  color:var(--brass);background:var(--surface);
+  padding:0 6px;white-space:nowrap;z-index:4;
+}
+.row{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
+.rowlabel{font-size:13.5px;font-weight:600;line-height:1.25}
+.rowlabel span{display:block;font-weight:400;font-size:11.5px;color:var(--muted);margin-top:2px}
+.track{
+  position:relative;height:34px;
+  background:var(--surface-2);
+  border-radius:2px;
+}
+.zero{position:absolute;top:-4px;bottom:-4px;width:1px;background:var(--line-2);z-index:2}
+.bar{
+  position:absolute;top:0;height:34px;border-radius:2px;
+  transition:left .18s ease,width .18s ease,background .18s ease;
+}
+.bar.good{background:var(--good)} .bar.warn{background:var(--warn)} .bar.bad{background:var(--bad)}
+.barval{
+  position:absolute;top:50%;transform:translateY(-50%);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;
+  z-index:3;white-space:nowrap;
+}
+.axis{
+  display:flex;justify-content:space-between;
+  margin-left:166px;margin-top:8px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums;
+}
+
+/* ---------- model selector ---------- */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.tab{
+  font:inherit;font-size:13px;font-weight:600;
+  padding:8px 14px;cursor:pointer;
+  background:var(--surface);color:var(--ink-2);
+  border:1px solid var(--line-2);border-radius:2px;
+  display:flex;align-items:center;gap:9px;
+  transition:all .14s ease;
+}
+.tab:hover{border-color:var(--accent);color:var(--ink)}
+.tab[aria-selected="true"]{
+  background:var(--accent);border-color:var(--accent);color:var(--on-accent);
+}
+.tab .dot{width:7px;height:7px;border-radius:50%;flex:none}
+.tab .dot.good{background:var(--good)} .tab .dot.warn{background:var(--warn)} .tab .dot.bad{background:var(--bad)}
+.tab[aria-selected="true"] .dot{box-shadow:0 0 0 2px var(--accent)}
+.tab:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* ---------- panels ---------- */
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:20px;align-items:start}
+.panel{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:3px;
+  padding:22px 24px;
+}
+.panel h3{
+  font-family:Newsreader,Georgia,serif;
+  font-weight:500;font-size:18px;margin:0 0 2px;
+}
+.panel .phint{font-size:12.5px;color:var(--muted);margin:0 0 18px}
+
+/* ---------- controls ---------- */
+.ctrl{padding:11px 0;border-bottom:1px solid var(--line)}
+.ctrl:last-child{border-bottom:0;padding-bottom:0}
+.ctrl-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:7px}
+.ctrl label{font-size:13px;font-weight:500;color:var(--ink-2)}
+.ctrl .val{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;
+  color:var(--ink);white-space:nowrap;
+}
+.ctrl .cap{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;color:var(--brass);margin-top:5px;letter-spacing:.02em;
+}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:3px;border-radius:2px;
+  background:var(--line-2);outline:none;margin:5px 0 0;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:15px;height:15px;border-radius:50%;
+  background:var(--accent);cursor:pointer;
+  border:2px solid var(--surface);
+  box-shadow:0 0 0 1px var(--accent);
+}
+input[type=range]::-moz-range-thumb{
+  width:13px;height:13px;border-radius:50%;
+  background:var(--accent);cursor:pointer;
+  border:2px solid var(--surface);box-shadow:0 0 0 1px var(--accent);
+}
+input[type=range]:focus-visible{outline:2px solid var(--brass);outline-offset:4px}
+
+/* ---------- waterfall ---------- */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+.wf td{padding:8px 0;border-bottom:1px solid var(--line)}
+.wf td:last-child{
+  text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-variant-numeric:tabular-nums;font-weight:500;
+}
+.wf .lbl{color:var(--ink-2)}
+.wf .lbl small{display:block;color:var(--muted);font-size:11.5px;line-height:1.35;margin-top:1px}
+.wf .neg td:last-child{color:var(--bad)}
+.wf .sum td{
+  font-weight:700;border-bottom:2px solid var(--line-2);
+  border-top:1px solid var(--line-2);
+}
+.wf .grand td{
+  font-weight:700;font-size:15px;border-bottom:0;
+  padding-top:12px;
+}
+.wf .grand td:last-child{font-size:17px}
+
+.kv{display:grid;grid-template-columns:1fr auto;gap:9px 16px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)}
+.kv dt{font-size:12.5px;color:var(--muted)}
+.kv dd{
+  margin:0;text-align:right;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;
+}
+
+/* ---------- verdict callout ---------- */
+.callout{
+  margin-top:18px;padding:14px 16px;border-radius:2px;
+  border-left:3px solid var(--accent);
+  background:var(--accent-soft);
+  font-size:13.5px;line-height:1.5;
+}
+.callout.good{border-left-color:var(--good);background:var(--good-soft)}
+.callout.warn{border-left-color:var(--warn);background:var(--warn-soft)}
+.callout.bad{border-left-color:var(--bad);background:var(--bad-soft)}
+.callout b{font-weight:700}
+
+/* ---------- sequencing ---------- */
+.seq{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:3px;overflow:hidden}
+.seqrow{
+  background:var(--surface);
+  display:grid;grid-template-columns:46px 1fr auto;
+  gap:18px;align-items:center;padding:16px 20px;
+}
+.seqrow .ord{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:20px;font-weight:600;color:var(--brass);
+  font-variant-numeric:tabular-nums;
+}
+.seqrow .nm{font-weight:600;font-size:14.5px}
+.seqrow .nm small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.45}
+.seqrow .sc{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;
+}
+.pill{
+  display:inline-block;font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  padding:3px 7px;border-radius:2px;margin-top:6px;
+}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+
+/* ---------- reference table ---------- */
+.scroller{overflow-x:auto;border:1px solid var(--line);border-radius:3px;background:var(--surface)}
+.ref{font-size:13px;min-width:640px}
+.ref th{
+  text-align:left;padding:11px 16px;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:600;
+  border-bottom:1px solid var(--line-2);white-space:nowrap;
+}
+.ref td{padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+.ref tr:last-child td{border-bottom:0}
+.ref td.num{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-variant-numeric:tabular-nums;white-space:nowrap;
+}
+.ref td:first-child{font-weight:600}
+
+.caveat{
+  margin-top:40px;padding:20px 22px;
+  border:1px solid var(--line-2);border-radius:3px;
+  background:var(--surface-2);
+  font-size:13px;line-height:1.6;color:var(--ink-2);
+}
+.caveat h4{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 10px;font-weight:600;
+}
+.caveat p{margin:0 0 9px}
+.caveat p:last-child{margin-bottom:0}
+.caveat b{color:var(--ink)}
+
+@media (max-width:860px){
+  .split{grid-template-columns:1fr}
+  .row{grid-template-columns:1fr;gap:6px}
+  .axis{margin-left:0}
+  .hurdleline{display:none}
+  .hurdlelabel{display:none}
+  .stamp{text-align:left}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+
+<div class="wrap">
+
+<header class="masthead">
+  <div>
+    <p class="eyebrow">Dr Chalita le Roux Group &middot; Capital allocation</p>
+    <h1>Loan Book Hurdle Model</h1>
+    <p class="dek">Four South African lending models, costed against the one benchmark that matters: what the same rand would have done sitting in the S&amp;P 500. Adjust the assumptions &mdash; the ranking recalculates.</p>
+  </div>
+  <div class="stamp">
+    SARB repo <b id="stampRepo">7.00%</b><br>
+    Prime <b id="stampPrime">10.50%</b><br>
+    Basis <b>Aug 2026</b><br>
+    Currency <b>ZAR</b>
+  </div>
+</header>
+
+<div class="headline">
+  <div class="hfig">
+    <div class="k">Hurdle rate</div>
+    <div class="v brass" id="hHurdle">24.9%</div>
+    <div class="sub">S&amp;P 500 in rand terms, plus a premium for illiquidity and concentration</div>
+  </div>
+  <div class="hfig">
+    <div class="k">Models clearing it</div>
+    <div class="v" id="hCount">1 of 4</div>
+    <div class="sub" id="hCountSub">Only one book earns its keep at this size</div>
+  </div>
+  <div class="hfig">
+    <div class="k">Best net return on capital</div>
+    <div class="v good" id="hBest">30.8%</div>
+    <div class="sub" id="hBestSub">Payroll-deduction consumer</div>
+  </div>
+  <div class="hfig">
+    <div class="k">Minimum viable book</div>
+    <div class="v" id="hMin">R1.83m</div>
+    <div class="sub">Below this, fixed compliance cost sinks every model</div>
+  </div>
+</div>
+
+<section>
+  <p class="eyebrow">Comparison</p>
+  <h2>Net return on capital, after compliance overhead</h2>
+  <p class="note">Return is measured against <em>capital-months actually tied up</em> &mdash; not principal advanced &mdash; so short-dated books get proper credit for redeploying the same rand several times a year. Fixed annual costs are spread across the whole book.</p>
+  <div class="chart">
+    <div class="plot">
+      <div class="hurdlelabel" id="hurdleLabel">Hurdle 24.9%</div>
+      <div class="hurdleline" id="hurdleLine"></div>
+      <div class="bars" id="bars"></div>
+    </div>
+    <div class="axis" id="axis"></div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Model detail</p>
+  <h2>Unit economics, one loan at a time</h2>
+  <p class="note">Select a lending model to inspect and adjust its assumptions. Interest is computed off an exact amortisation schedule; fees follow the National Credit Act caps where the model is NCA-regulated.</p>
+
+  <div class="tabs" id="tabs" role="tablist"></div>
+
+  <div class="split">
+    <div class="panel">
+      <h3 id="mName">Payroll-deduction consumer</h3>
+      <p class="phint" id="mHint"></p>
+      <div id="mControls"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Profit and loss per loan</h3>
+      <p class="phint">All figures exclude VAT. Fee income is shown net &mdash; VAT collected on fees is paid over to SARS and is not lender revenue.</p>
+      <table class="wf"><tbody id="wf"></tbody></table>
+      <dl class="kv" id="kv"></dl>
+      <div class="callout" id="verdict"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Portfolio assumptions</p>
+  <h2>Capital, overhead, and the benchmark</h2>
+  <p class="note">These apply across all four models. The hurdle is built up rather than assumed: a rand-denominated S&amp;P 500 return, plus the premium a private loan book must pay you for being illiquid, concentrated, and operationally demanding.</p>
+  <div class="split">
+    <div class="panel">
+      <h3>Capital &amp; overhead</h3>
+      <p class="phint">Fixed costs are the price of being a registered credit provider, whether you write one loan or ten thousand.</p>
+      <div id="gControls1"></div>
+    </div>
+    <div class="panel">
+      <h3>Opportunity cost</h3>
+      <p class="phint">What you give up by not simply buying the index.</p>
+      <div id="gControls2"></div>
+      <div class="callout" id="hurdleExplain"></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="eyebrow">Recommendation</p>
+  <h2>Sequence, don't spread</h2>
+  <p class="note" id="seqNote"></p>
+  <div class="seq" id="seq"></div>
+</section>
+
+<section>
+  <p class="eyebrow">Regulatory reference</p>
+  <h2>What the National Credit Act permits</h2>
+  <p class="note">Rate ceilings are repo-linked, so they move with SARB. The figures below recalculate from the repo rate set above. Every credit provider must register with the NCR regardless of book size &mdash; the old R500,000 threshold was removed in 2016.</p>
+  <div class="scroller">
+    <table class="ref">
+      <thead>
+        <tr><th>Sub-sector</th><th>Ceiling formula</th><th>At current repo</th><th>Applies to</th></tr>
+      </thead>
+      <tbody id="refBody"></tbody>
+    </table>
+  </div>
+
+  <div class="caveat">
+    <h4>Assumptions you must verify before committing capital</h4>
+    <p><b>The rate-cap formula is contested in public sources.</b> Practitioner commentary splits between <b>(repo &times; 2.2) + 20%</b> and <b>repo + 21%</b> for unsecured credit &mdash; a gap of roughly seven percentage points of gross yield. This model uses the multiplier form and exposes it as an input. Confirm the current schedule against the Government Gazette before pricing a single loan.</p>
+    <p><b>The juristic-person exemption is the single largest structural lever here.</b> Under section 4(1) of the Act, a credit agreement falls outside the NCA entirely where the borrower is a juristic person whose asset value or annual turnover meets or exceeds R1 million. That removes rate caps, fee caps, and the prescribed affordability assessment from SME lending to established businesses &mdash; which is why the SME model is priced contractually rather than at a ceiling.</p>
+    <p><b>Not modelled, and each one is real:</b> the <em>in duplum</em> rule capping accrued interest and fees at the outstanding principal on default; reckless-lending exposure under sections 80&ndash;83, which can void an agreement entirely; FICA obligations as an accountable institution; POPIA; mandatory credit bureau reporting; and Debt Collectors Act registration if you collect in-house.</p>
+    <p>This is a commercial model, not legal advice. The licensing path needs sign-off from a credit-regulatory attorney before a rand goes out the door.</p>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     Global assumptions
+     ============================================================ */
+  var G = {
+    repo:        7.00,      // SARB repo rate, %
+    capital:     3000000,   // rand deployed into the book
+    fixed:       273000,    // fixed annual cost of being a credit provider
+    spNominal:   10.0,      // S&P 500 long-run nominal return, USD %
+    zarDrift:    4.5,       // long-run ZAR depreciation vs USD, %
+    riskPremium: 10.0,      // premium demanded for illiquid concentrated private credit
+    ncaMult:     2.2        // repo multiplier in the NCA ceiling formula
+  };
+
+  /* ============================================================
+     Lending models
+     rateBasis determines the statutory ceiling:
+       nca_unsecured -> (repo * mult) + 20
+       nca_other     -> (repo * mult) + 10
+       shortterm     -> 5% per month on a first loan in a calendar year
+       contract      -> outside the NCA, priced by agreement
+     ============================================================ */
+  var MODELS = [
+    {
+      id:"payroll",
+      name:"Payroll-deduction consumer",
+      short:"Payroll",
+      hint:"Repaid by deduction at source through an employer partnership. Default risk collapses because you sit ahead of the borrower's other creditors in the pay run.",
+      rateBasis:"nca_unsecured", nca:true,
+      L:15000, T:18, amortising:true, ratePct:null,
+      pd:6.0, lgd:55, opex:700, collCost:1200, lag:1.0,
+      note:"Needs employer relationships before it needs capital. That is a sales problem, not a lending one."
+    },
+    {
+      id:"sme",
+      name:"SME invoice &amp; working capital",
+      short:"SME finance",
+      hint:"Advances against ceded debtors and short working-capital facilities. Where the borrower is a juristic person turning over R1m or more, the NCA does not apply &mdash; no rate cap, no fee cap, no prescribed affordability test.",
+      rateBasis:"contract", nca:false,
+      L:250000, T:3, amortising:false, ratePct:36.0,
+      pd:5.0, lgd:35, opex:6000, collCost:25000, lag:0.5,
+      origPct:1.5, adminMonthly:500,
+      note:"Plays directly to a chartered accountant's edge: you can read a set of financials better than any scorecard can."
+    },
+    {
+      id:"shortterm",
+      name:"Short-term unsecured",
+      short:"Short-term",
+      hint:"The classic microloan: up to R8 000 over six months or less, capped at 5% per month on a borrower's first loan in a calendar year and 3% thereafter.",
+      rateBasis:"shortterm", nca:true,
+      L:4000, T:1, amortising:false, ratePct:null,
+      pd:12.0, lgd:75, opex:250, collCost:800, lag:0.5,
+      note:"Enormous capital velocity, knife-edge margins. Viable only if origination is fully automated and defaults are held down by debit-order collection."
+    },
+    {
+      id:"asset",
+      name:"Asset-backed lending",
+      short:"Asset-backed",
+      hint:"Vehicle and equipment finance secured over the asset. Loss given default is low because you can recover the security, but capital is locked up for years.",
+      rateBasis:"nca_other", nca:true,
+      L:180000, T:30, amortising:true, ratePct:null,
+      pd:10.0, lgd:35, opex:4500, collCost:18000, lag:1.5,
+      note:"At a R1m&ndash;R5m book you could fund roughly twenty deals and then have no liquidity for two and a half years."
+    }
+  ];
+
+  var selected = "payroll";
+
+  function modelById(id){
+    for(var i=0;i<MODELS.length;i++){ if(MODELS[i].id === id) return MODELS[i]; }
+    return MODELS[0];
+  }
+
+  /* ============================================================
+     Statutory ceilings
+     ============================================================ */
+  function ceilingAnnual(basis){
+    switch(basis){
+      case "nca_unsecured": return G.repo * G.ncaMult + 20;
+      case "nca_other":     return G.repo * G.ncaMult + 10;
+      case "nca_facility":  return G.repo * G.ncaMult + 10;
+      case "nca_mortgage":  return G.repo * G.ncaMult + 5;
+      case "shortterm":     return 5 * 12;   // 5% per month expressed as nominal annual
+      default:              return null;     // contractual, no ceiling
+    }
+  }
+
+  function rateOf(m){
+    var c = ceilingAnnual(m.rateBasis);
+    return (m.ratePct === null) ? c : m.ratePct;
+  }
+
+  // NCA initiation fee: R165 + 10% of principal above R1 000, capped at R1 050
+  function ncaInitiationFee(L){
+    return Math.min(165 + 0.10 * Math.max(0, L - 1000), 1050);
+  }
+
+  /* ============================================================
+     Amortisation
+
+     Returns exact interest earned and capital-months tied up.
+     Capital-months is the correct denominator for return on capital:
+     an amortising loan returns principal progressively, so it ties up
+     far less than its face value over its life. Using face value
+     understates the return on every amortising book.
+     ============================================================ */
+  function schedule(L, i, n, amortising){
+    if(n <= 0) return {interest:0, capMonths:0};
+    if(!amortising || i <= 0){
+      return {interest: L * i * n, capMonths: L * n};
+    }
+    var pmt = L * i / (1 - Math.pow(1 + i, -n));
+    var bal = L, capMonths = 0, interest = 0;
+    for(var k = 0; k < n; k++){
+      capMonths += bal;              // capital committed through month k
+      var accrued = bal * i;
+      interest += accrued;
+      bal = bal + accrued - pmt;
+      if(bal < 0) bal = 0;
+    }
+    return {interest:interest, capMonths:capMonths};
+  }
+
+  /* ============================================================
+     Hurdle: the S&P 500 compounded with rand drift, plus a premium
+     ============================================================ */
+  function zarIndexReturn(){
+    return ((1 + G.spNominal/100) * (1 + G.zarDrift/100) - 1) * 100;
+  }
+  function hurdle(){
+    return zarIndexReturn() + G.riskPremium;
+  }
+
+  /* ============================================================
+     Core engine
+     ============================================================ */
+  function compute(m){
+    var cap = ceilingAnnual(m.rateBasis);
+    var annualRate = rateOf(m);
+    var i = annualRate / 100 / 12;
+    var n = Math.max(1, Math.round(m.T));
+
+    var s = schedule(m.L, i, n, m.amortising);
+
+    var initFee, serviceFee;
+    if(m.nca){
+      initFee    = ncaInitiationFee(m.L);
+      serviceFee = 60 * n;                       // R60 per month, excl VAT
+    } else {
+      initFee    = (m.origPct/100) * m.L;
+      serviceFee = (m.adminMonthly || 0) * n;
+    }
+
+    var gross = s.interest + initFee + serviceFee;
+
+    var pd  = m.pd / 100;
+    var lgd = m.lgd / 100;
+    var ecl        = m.L * pd * lgd;
+    var collection = pd * m.collCost;
+    var opex       = m.opex;
+
+    var net = gross - ecl - collection - opex;
+
+    var capMonths = s.capMonths + m.L * m.lag;   // schedule plus idle redeployment time
+
+    var rocPre    = capMonths > 0 ? (net * 12 / capMonths) * 100 : 0;
+    var fixedDrag = G.capital > 0 ? (G.fixed / G.capital) * 100 : 0;
+    var rocPost   = rocPre - fixedDrag;
+
+    var cycleMonths    = n + m.lag;
+    var loansPerYear   = capMonths > 0 ? G.capital * 12 / capMonths : 0;
+    var avgPerLoan     = capMonths / cycleMonths;
+    var activeAccounts = avgPerLoan > 0 ? G.capital / avgPerLoan : 0;
+
+    // break-even default rates, holding everything else constant
+    var lossPerUnitPd = m.L * lgd + m.collCost;
+    var pdZero   = lossPerUnitPd > 0 ? (gross - opex) / lossPerUnitPd * 100 : 0;
+    var netAtHurdle = (hurdle() + fixedDrag) / 100 * capMonths / 12;
+    var pdHurdle = lossPerUnitPd > 0 ? (gross - opex - netAtHurdle) / lossPerUnitPd * 100 : 0;
+
+    // smallest book that still clears the hurdle after fixed cost
+    var minCapital = (rocPre > hurdle()) ? G.fixed / ((rocPre - hurdle())/100) : Infinity;
+
+    return {
+      cap:cap, annualRate:annualRate,
+      interest:s.interest, initFee:initFee, serviceFee:serviceFee, gross:gross,
+      ecl:ecl, collection:collection, opex:opex, net:net,
+      capMonths:capMonths, avgPerLoan:avgPerLoan,
+      rocPre:rocPre, fixedDrag:fixedDrag, rocPost:rocPost,
+      loansPerYear:loansPerYear, activeAccounts:activeAccounts, cycleMonths:cycleMonths,
+      pdZero:pdZero, pdHurdle:pdHurdle, minCapital:minCapital,
+      annualProfit: rocPost/100 * G.capital
+    };
+  }
+
+  function grade(rocPost){
+    var h = hurdle();
+    if(rocPost >= h) return "good";
+    if(rocPost >= h * 0.6) return "warn";
+    return "bad";
+  }
+  function gradeColour(g){
+    return g === "good" ? "var(--good)" : g === "warn" ? "var(--warn)" : "var(--bad)";
+  }
+
+  /* ============================================================
+     Formatting
+     ============================================================ */
+  function pct(x, dp){ return x.toFixed(dp === undefined ? 1 : dp) + "%"; }
+  function rand(x){
+    var neg = x < 0;
+    var s = Math.round(Math.abs(x)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return (neg ? "−R" : "R") + s;
+  }
+  function randShort(x){
+    if(!isFinite(x)) return "—";
+    if(x >= 1e6) return "R" + (x/1e6).toFixed(2) + "m";
+    if(x >= 1e3) return "R" + Math.round(x/1e3) + "k";
+    return "R" + Math.round(x);
+  }
+  function num(x){
+    return Math.round(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  }
+
+  /* ============================================================
+     Sliders
+
+     Each slider registers a sync() so a re-render refreshes values and
+     captions without tearing down the input the user may be dragging.
+     ============================================================ */
+  var registry = { model: [], global: [] };
+
+  function slider(host, bucket, cfg){
+    var wrap = document.createElement("div");
+    wrap.className = "ctrl";
+
+    var top = document.createElement("div");
+    top.className = "ctrl-top";
+
+    var id = "c_" + bucket + "_" + registry[bucket].length;
+    var lab = document.createElement("label");
+    lab.innerHTML = cfg.label;          // labels carry entities, so innerHTML
+    lab.setAttribute("for", id);
+
+    var val = document.createElement("span");
+    val.className = "val";
+
+    top.appendChild(lab);
+    top.appendChild(val);
+
+    var input = document.createElement("input");
+    input.type = "range";
+    input.id = id;
+    input.min = cfg.min; input.max = cfg.max; input.step = cfg.step;
+    input.value = cfg.get();
+
+    wrap.appendChild(top);
+    wrap.appendChild(input);
+
+    var capEl = null;
+    if(cfg.caption){
+      capEl = document.createElement("div");
+      capEl.className = "cap";
+      wrap.appendChild(capEl);
+    }
+
+    function sync(){
+      // Never fight the user for the handle they are currently dragging.
+      // Otherwise read the model, not the input: `step` snaps input.value to
+      // the nearest increment, which would report a rate above its own
+      // statutory ceiling.
+      var v;
+      if(document.activeElement === input){
+        v = parseFloat(input.value);
+      } else {
+        v = cfg.get();
+        input.value = v;
+      }
+      val.innerHTML = cfg.fmt(v);
+      if(capEl) capEl.innerHTML = cfg.caption();
+    }
+    sync();
+
+    input.addEventListener("input", function(){
+      cfg.set(parseFloat(input.value));
+      render();
+    });
+
+    host.appendChild(wrap);
+    registry[bucket].push(sync);
+  }
+
+  function syncBucket(bucket){
+    for(var i=0;i<registry[bucket].length;i++) registry[bucket][i]();
+  }
+
+  /* ============================================================
+     Tabs — built once, state synced
+     ============================================================ */
+  var tabsEl = document.getElementById("tabs");
+  var tabDots = [];
+
+  function mountTabs(){
+    tabsEl.innerHTML = "";
+    tabDots = [];
+    MODELS.forEach(function(m){
+      var b = document.createElement("button");
+      b.className = "tab";
+      b.type = "button";
+      b.setAttribute("role", "tab");
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      b.appendChild(dot);
+      b.appendChild(document.createTextNode(m.short));
+      b.addEventListener("click", function(){
+        if(selected === m.id) return;
+        selected = m.id;
+        mountModelControls();
+        render();
+      });
+      tabsEl.appendChild(b);
+      tabDots.push({btn:b, dot:dot, id:m.id, m:m});
+    });
+  }
+
+  function syncTabs(){
+    tabDots.forEach(function(t){
+      var r = compute(t.m);
+      t.dot.className = "dot " + grade(r.rocPost);
+      t.btn.setAttribute("aria-selected", t.id === selected ? "true" : "false");
+    });
+  }
+
+  /* ============================================================
+     Comparison chart
+     ============================================================ */
+  var barsEl = document.getElementById("bars");
+  var axisEl = document.getElementById("axis");
+  var LABEL_COL = 166;   // 150px label column + 16px gap
+
+  function scaleBounds(results){
+    var lo = 0, hi = hurdle();
+    results.forEach(function(r){
+      lo = Math.min(lo, r.rocPost);
+      hi = Math.max(hi, r.rocPost);
+    });
+    lo = Math.floor(Math.min(lo, 0) / 10) * 10 - 5;
+    hi = Math.ceil(hi / 10) * 10 + 5;
+    if(hi - lo < 40) hi = lo + 40;
+    return {lo:lo, hi:hi};
+  }
+
+  function buildChart(){
+    var results = MODELS.map(compute);
+    var b = scaleBounds(results);
+    var span = b.hi - b.lo;
+    function x(v){ return (v - b.lo) / span * 100; }
+
+    barsEl.innerHTML = "";
+    MODELS.forEach(function(m, idx){
+      var r = results[idx];
+      var g = grade(r.rocPost);
+
+      var row = document.createElement("div");
+      row.className = "row";
+
+      var lab = document.createElement("div");
+      lab.className = "rowlabel";
+      lab.innerHTML = m.short + "<span>" + randShort(m.L) + " over " + m.T +
+                      (m.T === 1 ? " month" : " months") + "</span>";
+
+      var track = document.createElement("div");
+      track.className = "track";
+
+      var zero = document.createElement("div");
+      zero.className = "zero";
+      zero.style.left = x(0) + "%";
+      track.appendChild(zero);
+
+      var bar = document.createElement("div");
+      bar.className = "bar " + g;
+      var from = Math.min(0, r.rocPost), to = Math.max(0, r.rocPost);
+      bar.style.left = x(from) + "%";
+      bar.style.width = Math.max(0.4, x(to) - x(from)) + "%";
+      track.appendChild(bar);
+
+      var v = document.createElement("div");
+      v.className = "barval";
+      v.textContent = pct(r.rocPost);
+      var endPct = x(to);
+      if(endPct > 80){
+        v.style.left = (endPct - 1.2) + "%";
+        v.style.transform = "translate(-100%,-50%)";
+        v.style.color = "var(--on-accent)";
+      } else {
+        v.style.left = (endPct + 1.4) + "%";
+        v.style.color = gradeColour(g);
+      }
+      track.appendChild(v);
+
+      row.appendChild(lab);
+      row.appendChild(track);
+      barsEl.appendChild(row);
+    });
+
+    var pos = "calc(" + LABEL_COL + "px + (100% - " + LABEL_COL + "px) * " + (x(hurdle())/100) + ")";
+    var line  = document.getElementById("hurdleLine");
+    var label = document.getElementById("hurdleLabel");
+    line.style.left = pos;
+    label.style.left = pos;
+    label.textContent = "Hurdle " + pct(hurdle());
+
+    axisEl.innerHTML = "";
+    for(var t = 0; t <= 4; t++){
+      var s = document.createElement("span");
+      s.textContent = pct(b.lo + span * t / 4, 0);
+      axisEl.appendChild(s);
+    }
+  }
+
+  /* ============================================================
+     Model panel
+     ============================================================ */
+  var mControlsEl = document.getElementById("mControls");
+
+  function mountModelControls(){
+    var m = modelById(selected);
+    registry.model = [];
+    mControlsEl.innerHTML = "";
+
+    document.getElementById("mName").innerHTML = m.name;
+    document.getElementById("mHint").innerHTML = m.hint;
+
+    slider(mControlsEl, "model", {
+      label:"Average loan size", min:1000, max:500000, step:1000,
+      get:function(){ return m.L; }, set:function(v){ m.L = v; },
+      fmt:function(v){ return rand(v); },
+      caption: m.rateBasis === "shortterm" ? function(){
+        return m.L > 8000
+          ? "⚠ Above the R8 000 short-term ceiling"
+          : "Within the R8 000 short-term ceiling";
+      } : null
+    });
+
+    slider(mControlsEl, "model", {
+      label:"Term", min:1, max:60, step:1,
+      get:function(){ return m.T; }, set:function(v){ m.T = v; },
+      fmt:function(v){ return v + (v === 1 ? " month" : " months"); },
+      caption: m.rateBasis === "shortterm" ? function(){
+        return m.T > 6
+          ? "⚠ Above the 6-month short-term ceiling"
+          : "Within the 6-month short-term ceiling";
+      } : null
+    });
+
+    slider(mControlsEl, "model", {
+      label:"Interest rate charged", min:6, max:72, step:0.1,
+      get:function(){ return rateOf(m); },
+      set:function(v){ m.ratePct = v; },
+      fmt:function(v){ return pct(v) + " p.a. · " + pct(v/12, 2) + "/mo"; },
+      caption:function(){
+        var c = ceilingAnnual(m.rateBasis);
+        if(c === null) return "Outside the NCA — priced by agreement, no statutory ceiling";
+        return (rateOf(m) > c + 1e-9 ? "⚠ Exceeds the ceiling of " : "Statutory ceiling ") +
+               pct(c) + " p.a.";
+      }
+    });
+
+    slider(mControlsEl, "model", {
+      label:"Default rate (PD)", min:0, max:40, step:0.5,
+      get:function(){ return m.pd; }, set:function(v){ m.pd = v; },
+      fmt:function(v){ return pct(v); },
+      caption:function(){
+        var r = compute(m);
+        return "Breaks even at " + pct(r.pdZero) +
+               " · clears the hurdle below " + pct(Math.max(0, r.pdHurdle));
+      }
+    });
+
+    slider(mControlsEl, "model", {
+      label:"Loss given default", min:10, max:100, step:1,
+      get:function(){ return m.lgd; }, set:function(v){ m.lgd = v; },
+      fmt:function(v){ return pct(v, 0); },
+      caption:function(){ return "Share of principal unrecovered once an account defaults"; }
+    });
+
+    slider(mControlsEl, "model", {
+      label:"Cost to originate &amp; service", min:0, max:12000, step:50,
+      get:function(){ return m.opex; }, set:function(v){ m.opex = v; },
+      fmt:function(v){ return rand(v) + " / loan"; },
+      caption:function(){ return "Every rand automated out of here drops straight to net"; }
+    });
+
+    slider(mControlsEl, "model", {
+      label:"Recovery cost per default", min:0, max:40000, step:100,
+      get:function(){ return m.collCost; }, set:function(v){ m.collCost = v; },
+      fmt:function(v){ return rand(v); }
+    });
+
+    slider(mControlsEl, "model", {
+      label:"Idle time between loans", min:0, max:6, step:0.25,
+      get:function(){ return m.lag; }, set:function(v){ m.lag = v; },
+      fmt:function(v){ return v + (v === 1 ? " month" : " months"); },
+      caption:function(){
+        var r = compute(m);
+        return "Capital turns " + (12/r.cycleMonths).toFixed(1) + "× per year";
+      }
+    });
+  }
+
+  function syncModelPanel(){
+    var m = modelById(selected);
+    var r = compute(m);
+    syncBucket("model");
+
+    var rows = [
+      ["Interest earned", r.interest, false,
+        m.amortising ? "Exact amortisation schedule, declining balance"
+                     : "Single repayment at term, full principal outstanding throughout"],
+      [m.nca ? "Initiation fee" : "Origination fee", r.initFee, false,
+        m.nca ? "R165 + 10% above R1 000, capped at R1 050"
+              : m.origPct + "% of the advance, no statutory cap"],
+      [m.nca ? "Monthly service fee" : "Administration fee", r.serviceFee, false,
+        m.nca ? "R60 per month" : rand(m.adminMonthly) + " per month"],
+      ["__sum", r.gross, false, ""],
+      ["Expected credit loss", -r.ecl, true,
+        pct(m.pd) + " default × " + pct(m.lgd, 0) + " loss given default"],
+      ["Recovery cost", -r.collection, true, "Legal and collection spend, incurred only on defaults"],
+      ["Origination &amp; servicing", -r.opex, true, "Bureau enquiry, affordability assessment, admin"],
+      ["__grand", r.net, false, ""]
+    ];
+
+    var wf = document.getElementById("wf");
+    wf.innerHTML = "";
+    rows.forEach(function(row){
+      var tr = document.createElement("tr");
+      if(row[0] === "__sum") tr.className = "sum";
+      else if(row[0] === "__grand") tr.className = "grand";
+      else if(row[2]) tr.className = "neg";
+
+      var td1 = document.createElement("td");
+      td1.className = "lbl";
+      var name = row[0] === "__sum" ? "Gross revenue"
+               : row[0] === "__grand" ? "Net per loan" : row[0];
+      td1.innerHTML = name + (row[3] ? "<small>" + row[3] + "</small>" : "");
+
+      var td2 = document.createElement("td");
+      td2.textContent = rand(row[1]);
+      if(row[0] === "__grand") td2.style.color = row[1] >= 0 ? "var(--good)" : "var(--bad)";
+
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      wf.appendChild(tr);
+    });
+
+    var g = grade(r.rocPost);
+    var pairs = [
+      ["Average capital per loan", rand(r.avgPerLoan)],
+      ["Capital turns per year", (12 / r.cycleMonths).toFixed(1) + "×"],
+      ["Return on capital, before overhead", pct(r.rocPre)],
+      ["Fixed compliance drag", "−" + pct(r.fixedDrag)],
+      ["Return on capital, after overhead", pct(r.rocPost)],
+      ["Loans written per year", num(r.loansPerYear)],
+      ["Accounts under management", num(r.activeAccounts)],
+      ["Annual profit on " + randShort(G.capital), rand(r.annualProfit)]
+    ];
+    var kv = document.getElementById("kv");
+    kv.innerHTML = "";
+    pairs.forEach(function(p){
+      var dt = document.createElement("dt"); dt.textContent = p[0];
+      var dd = document.createElement("dd"); dd.textContent = p[1];
+      if(p[0].indexOf("after overhead") > -1) dd.style.color = gradeColour(g);
+      kv.appendChild(dt); kv.appendChild(dd);
+    });
+
+    var v = document.getElementById("verdict");
+    v.className = "callout " + g;
+    var gap = r.rocPost - hurdle();
+    var msg;
+    if(g === "good"){
+      msg = "<b>Clears the hurdle by " + pct(gap) + ".</b> At " + randShort(G.capital) +
+            " deployed this returns " + rand(r.annualProfit) + " a year, against " +
+            rand(hurdle()/100 * G.capital) + " from an index position of the same size. " +
+            "Defaults would have to reach " + pct(Math.max(0, r.pdHurdle)) +
+            " before the index wins.";
+    } else if(g === "warn"){
+      msg = "<b>Falls " + pct(Math.abs(gap)) + " short of the hurdle.</b> It makes money — " +
+            rand(r.annualProfit) + " a year — but not enough to pay you for the illiquidity " +
+            "and the operational load. " +
+            (isFinite(r.minCapital)
+              ? "It would clear at a book of " + randShort(r.minCapital) + " or more."
+              : "No book size fixes this: the shortfall is in the unit economics, not the overhead.");
+    } else {
+      msg = "<b>Does not earn its cost of capital.</b> " +
+            (r.rocPost < 0
+              ? "It loses " + rand(Math.abs(r.annualProfit)) + " a year once compliance overhead is carried. "
+              : "It returns " + pct(r.rocPost) + " against a hurdle of " + pct(hurdle()) + ". ") +
+            (isFinite(r.minCapital)
+              ? "It would need a book of " + randShort(r.minCapital) + " to clear."
+              : "Scale will not rescue it — the per-loan margin is too thin.");
+    }
+    v.innerHTML = msg;
+  }
+
+  /* ============================================================
+     Global assumption panels
+     ============================================================ */
+  function mountGlobals(){
+    var h1 = document.getElementById("gControls1");
+    var h2 = document.getElementById("gControls2");
+
+    slider(h1, "global", {
+      label:"Capital deployed into the book", min:250000, max:20000000, step:250000,
+      get:function(){ return G.capital; }, set:function(v){ G.capital = v; },
+      fmt:function(v){ return randShort(v); },
+      caption:function(){
+        return "Fixed cost absorbs " + pct(G.fixed / G.capital * 100) + " of capital before a loan is written";
+      }
+    });
+
+    slider(h1, "global", {
+      label:"Fixed annual compliance cost", min:0, max:800000, step:5000,
+      get:function(){ return G.fixed; }, set:function(v){ G.fixed = v; },
+      fmt:function(v){ return rand(v) + " / yr"; },
+      caption:function(){ return "NCR renewal, audit, bureau access, legal, loan software, payment rails"; }
+    });
+
+    slider(h1, "global", {
+      label:"SARB repo rate", min:3, max:14, step:0.25,
+      get:function(){ return G.repo; }, set:function(v){ G.repo = v; },
+      fmt:function(v){ return pct(v, 2); },
+      caption:function(){
+        return "Prime " + pct(G.repo + 3.5, 2) + " · unsecured ceiling " +
+               pct(ceilingAnnual("nca_unsecured"));
+      }
+    });
+
+    slider(h1, "global", {
+      label:"NCA ceiling repo multiplier", min:1.0, max:3.0, step:0.1,
+      get:function(){ return G.ncaMult; }, set:function(v){ G.ncaMult = v; },
+      fmt:function(v){ return v.toFixed(1) + "×"; },
+      caption:function(){ return "Practitioner sources disagree — verify against the Gazette"; }
+    });
+
+    slider(h2, "global", {
+      label:"S&amp;P 500 long-run return (USD)", min:4, max:16, step:0.5,
+      get:function(){ return G.spNominal; }, set:function(v){ G.spNominal = v; },
+      fmt:function(v){ return pct(v) + " nominal"; }
+    });
+
+    slider(h2, "global", {
+      label:"Rand depreciation vs dollar", min:0, max:12, step:0.5,
+      get:function(){ return G.zarDrift; }, set:function(v){ G.zarDrift = v; },
+      fmt:function(v){ return pct(v) + " / yr"; },
+      caption:function(){ return "Index return in rand terms: " + pct(zarIndexReturn()); }
+    });
+
+    slider(h2, "global", {
+      label:"Illiquidity &amp; concentration premium", min:0, max:25, step:0.5,
+      get:function(){ return G.riskPremium; }, set:function(v){ G.riskPremium = v; },
+      fmt:function(v){ return "+" + pct(v); },
+      caption:function(){ return "What a private book must pay you over a liquid index"; }
+    });
+  }
+
+  function syncHurdleExplain(){
+    document.getElementById("hurdleExplain").innerHTML =
+      "<b>Hurdle " + pct(hurdle()) + ".</b> The S&amp;P at " + pct(G.spNominal) +
+      " in dollars becomes " + pct(zarIndexReturn()) + " in rands once " + pct(G.zarDrift) +
+      " of currency drift is compounded in. Add " + pct(G.riskPremium) +
+      " for capital you cannot sell on a Tuesday, and that is the number a loan book has to beat.";
+  }
+
+  /* ============================================================
+     Sequencing recommendation
+     ============================================================ */
+  function buildSequence(){
+    var ranked = MODELS.map(function(m){ return {m:m, r:compute(m)}; })
+                       .sort(function(a, b){ return b.r.rocPost - a.r.rocPost; });
+    var clearing = ranked.filter(function(x){ return x.r.rocPost >= hurdle(); }).length;
+
+    document.getElementById("seqNote").innerHTML =
+      "Ranked by net return on capital at a " + randShort(G.capital) + " book. " +
+      (clearing === 0
+        ? "At this size <b>nothing clears the hurdle</b> — fixed compliance cost is consuming " +
+          pct(G.fixed/G.capital*100) + " of capital before a single loan is written."
+        : clearing === 1
+        ? "Exactly one model clears the hurdle. Fund that one properly rather than splitting capital four ways — " +
+          "each additional book carries its own overhead and starves the one that works."
+        : clearing + " models clear the hurdle. Launch the strongest first and let its performance data fund the next.");
+
+    var seq = document.getElementById("seq");
+    seq.innerHTML = "";
+    ranked.forEach(function(x, idx){
+      var g = grade(x.r.rocPost);
+      var row = document.createElement("div");
+      row.className = "seqrow";
+
+      var ord = document.createElement("div");
+      ord.className = "ord";
+      ord.textContent = idx + 1;
+
+      var nm = document.createElement("div");
+      nm.className = "nm";
+      var pillTxt = g === "good" ? "Fund it" : g === "warn" ? "Hold" : "Not at this size";
+      nm.innerHTML = x.m.name + "<small>" + x.m.note + "</small>" +
+                     "<span class='pill " + g + "'>" + pillTxt + "</span>";
+
+      var sc = document.createElement("div");
+      sc.className = "sc";
+      sc.style.color = gradeColour(g);
+      sc.textContent = pct(x.r.rocPost);
+
+      row.appendChild(ord);
+      row.appendChild(nm);
+      row.appendChild(sc);
+      seq.appendChild(row);
+    });
+  }
+
+  /* ============================================================
+     Regulatory reference table
+     ============================================================ */
+  function buildReference(){
+    var mult = G.ncaMult.toFixed(1);
+    var rows = [
+      ["Unsecured credit", "(repo × " + mult + ") + 20%", pct(ceilingAnnual("nca_unsecured")) + " p.a.",
+        "Personal and payroll-deduction loans"],
+      ["Short-term credit", "5% per month, first loan", "60% p.a. nominal",
+        "≤ R8 000 over ≤ 6 months. 3%/mo on later loans in the same calendar year"],
+      ["Other credit agreements", "(repo × " + mult + ") + 10%", pct(ceilingAnnual("nca_other")) + " p.a.",
+        "Asset-backed lending and instalment sale"],
+      ["Credit facilities", "(repo × " + mult + ") + 10%", pct(ceilingAnnual("nca_facility")) + " p.a.",
+        "Revolving facilities and store cards"],
+      ["Mortgage agreements", "(repo × " + mult + ") + 5%", pct(ceilingAnnual("nca_mortgage")) + " p.a.",
+        "Property-secured lending"],
+      ["Initiation fee", "R165 + 10% above R1 000", "R1 050 cap",
+        "Once-off per agreement, excl VAT"],
+      ["Monthly service fee", "Flat", "R60 / month", "Excl VAT"],
+      ["Juristic-person exemption", "Turnover or assets ≥ R1m", "NCA does not apply",
+        "No rate cap, no fee cap, no prescribed affordability assessment"],
+      ["NCR registration", "Mandatory, every provider", "R550 + R250/branch",
+        "The old R500 000 threshold fell away in 2016. Renewal due 31 July annually"]
+    ];
+    var body = document.getElementById("refBody");
+    body.innerHTML = "";
+    rows.forEach(function(r){
+      var tr = document.createElement("tr");
+      r.forEach(function(cell, i){
+        var td = document.createElement("td");
+        if(i === 1 || i === 2) td.className = "num";
+        td.innerHTML = cell;
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  /* ============================================================
+     Headline figures
+     ============================================================ */
+  function buildHeadline(){
+    var results = MODELS.map(compute);
+    var h = hurdle();
+    var clearing = results.filter(function(r){ return r.rocPost >= h; }).length;
+
+    var bestIdx = 0;
+    for(var i = 1; i < results.length; i++){
+      if(results[i].rocPost > results[bestIdx].rocPost) bestIdx = i;
+    }
+    var best = results[bestIdx];
+
+    document.getElementById("hHurdle").textContent = pct(h);
+
+    var cnt = document.getElementById("hCount");
+    cnt.textContent = clearing + " of " + MODELS.length;
+    cnt.className = "v " + (clearing === 0 ? "bad" : clearing === 1 ? "warn" : "good");
+    document.getElementById("hCountSub").textContent =
+      clearing === 0 ? "No book earns its cost of capital at this size"
+      : clearing === 1 ? "Only one book earns its keep at this size"
+      : clearing + " books beat the index on a risk-adjusted basis";
+
+    var hb = document.getElementById("hBest");
+    hb.textContent = pct(best.rocPost);
+    hb.className = "v " + grade(best.rocPost);
+    document.getElementById("hBestSub").innerHTML = MODELS[bestIdx].name;
+
+    document.getElementById("hMin").textContent =
+      isFinite(best.minCapital) ? randShort(best.minCapital) : "—";
+
+    document.getElementById("stampRepo").textContent = pct(G.repo, 2);
+    document.getElementById("stampPrime").textContent = pct(G.repo + 3.5, 2);
+  }
+
+  /* ============================================================
+     Render
+     ============================================================ */
+  function render(){
+    buildHeadline();
+    buildChart();
+    syncTabs();
+    syncModelPanel();
+    syncBucket("global");
+    syncHurdleExplain();
+    buildSequence();
+    buildReference();
+  }
+
+  mountTabs();
+  mountGlobals();
+  mountModelControls();
+  render();
+
+  var resizeTimer = null;
+  window.addEventListener("resize", function(){
+    if(resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(buildChart, 120);
+  });
+})();
+</script>
